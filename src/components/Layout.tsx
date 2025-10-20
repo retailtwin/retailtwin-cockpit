@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Activity } from "lucide-react";
+import retailTwinLabsLogo from "@/assets/retail-twin-labs-logo.png";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,11 +15,10 @@ export const Layout = ({ children }: LayoutProps) => {
       <nav className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2">
-              <Activity className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold tracking-tight">
-                <span className="text-primary">AIFO</span>
-                <span className="text-foreground ml-1">— AI Flow Optimiser</span>
+            <Link to="/" className="flex items-center gap-3">
+              <img src={retailTwinLabsLogo} alt="Retail Twin Labs" className="h-8" />
+              <span className="text-lg font-semibold tracking-tight text-muted-foreground">
+                — AI Flow Optimiser
               </span>
             </Link>
 

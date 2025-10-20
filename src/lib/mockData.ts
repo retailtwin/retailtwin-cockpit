@@ -10,6 +10,16 @@ export const products = [
   "Product Delta",
 ];
 
+// Summary metrics
+export const summaryMetrics = {
+  locations: 4,
+  skus: 523,
+  days: 21,
+  skuLocDays: 43932,
+  serviceLevel: 87.3,
+  serviceLevelSimulated: 94.8,
+};
+
 // Generate 21-day sparkline data
 const generateSparkline = (baseValue: number, variance: number) => {
   return Array.from({ length: 21 }, (_, i) => ({
@@ -54,11 +64,11 @@ export const kpiData = {
     sparkline: generateSparkline(142, 20),
     tooltip: "Estimated revenue lost due to stockouts",
   },
-  overstockDays: {
-    value: 87,
-    delta7d: 4.2,
-    sparkline: generateSparkline(87, 15),
-    tooltip: "Days of excess inventory beyond buffer targets",
+  missedThroughputValueSimulated: {
+    value: "€58K",
+    delta7d: -28.4,
+    sparkline: generateSparkline(58, 12),
+    tooltip: "Projected revenue loss after buffer optimization",
   },
   redundantInventoryValue: {
     value: "€284K",
@@ -66,4 +76,18 @@ export const kpiData = {
     sparkline: generateSparkline(284, 40),
     tooltip: "Value of inventory beyond optimal buffer levels",
   },
+  redundantInventoryValueSimulated: {
+    value: "€112K",
+    delta7d: -18.7,
+    sparkline: generateSparkline(112, 25),
+    tooltip: "Projected redundant inventory after optimization",
+  },
 };
+
+// Graph data for inventory flow visualization
+export const inventoryFlowData = Array.from({ length: 21 }, (_, i) => ({
+  day: i + 1,
+  sales: 45 + Math.random() * 20 - 10,
+  inventory: 180 + Math.random() * 60 - 30 - i * 2,
+  inventorySimulated: 140 + Math.random() * 40 - 20 - i * 1.5,
+}));
