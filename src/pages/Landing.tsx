@@ -48,26 +48,13 @@ const Landing = () => {
         <div className="grid md:grid-cols-3 gap-8">
           <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50">
             <CardHeader>
-              <div className="h-14 w-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
-                <AlertTriangle className="h-7 w-7 text-destructive" />
-              </div>
-              <CardTitle className="text-2xl">See risks early</CardTitle>
-              <CardDescription className="text-base pt-2">
-                Spot stockouts and overstock before they hurt your cash flow. 
-                Real-time visibility into buffer health across your network.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50">
-            <CardHeader>
               <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                <Zap className="h-7 w-7 text-primary" />
+                <Target className="h-7 w-7 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Run scenarios in minutes</CardTitle>
+              <CardTitle className="text-2xl">Set rules once, enforce everywhere</CardTitle>
               <CardDescription className="text-base pt-2">
-                Compare current vs. simulated inventory turns and service levels. 
-                Test buffer adjustments without risk.
+                Define lead times, pack sizes, MOQs, and constraints. 
+                The system automatically applies them across all reorder calculations.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -75,12 +62,25 @@ const Landing = () => {
           <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50">
             <CardHeader>
               <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-6">
-                <Target className="h-7 w-7 text-accent" />
+                <Zap className="h-7 w-7 text-accent" />
               </div>
-              <CardTitle className="text-2xl">Targets that adapt daily</CardTitle>
+              <CardTitle className="text-2xl">Free up cash in minutes</CardTitle>
               <CardDescription className="text-base pt-2">
-                Dynamic Buffer Management recalibrates reorder points based on 
-                actual demand patterns, reducing guesswork.
+                Run scenarios to identify excess inventory and missed sales. 
+                Get automated insights that release capital and improve flow.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50">
+            <CardHeader>
+              <div className="h-14 w-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
+                <AlertTriangle className="h-7 w-7 text-destructive" />
+              </div>
+              <CardTitle className="text-2xl">Scale across your network</CardTitle>
+              <CardDescription className="text-base pt-2">
+                From single warehouse to multi-echelon distribution. 
+                Works wherever you have sales and inventory data.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -88,10 +88,10 @@ const Landing = () => {
       </section>
 
       {/* Logos Strip */}
-      <section className="bg-muted/30 py-12">
+      {/* <section className="bg-muted/30 py-12">
         <div className="container mx-auto px-6">
           <p className="text-center text-sm text-muted-foreground mb-8 uppercase tracking-wider">
-            Trusted by leading retailers
+            Trusted by leading retailers, brands, and distributors
           </p>
           <div className="flex flex-wrap items-center justify-center gap-12 opacity-40">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -104,7 +104,7 @@ const Landing = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Footer */}
       <footer className="border-t bg-card mt-20">
