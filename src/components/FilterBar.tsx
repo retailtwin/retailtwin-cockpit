@@ -7,10 +7,11 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "lucide-react";
+import { Location, Product } from "@/lib/supabase-helpers";
 
 interface FilterBarProps {
-  locations: string[];
-  products: string[];
+  locations: Location[];
+  products: Product[];
   selectedLocation: string;
   selectedProduct: string;
   onLocationChange: (value: string) => void;
@@ -37,8 +38,8 @@ export const FilterBar = ({
           </SelectTrigger>
           <SelectContent className="bg-popover z-50">
             {locations.map((location) => (
-              <SelectItem key={location} value={location}>
-                {location}
+              <SelectItem key={location.code} value={location.code}>
+                {location.name || location.code}
               </SelectItem>
             ))}
           </SelectContent>
@@ -55,8 +56,8 @@ export const FilterBar = ({
           </SelectTrigger>
           <SelectContent className="bg-popover z-50">
             {products.map((product) => (
-              <SelectItem key={product} value={product}>
-                {product}
+              <SelectItem key={product.sku} value={product.sku}>
+                {product.name || product.sku}
               </SelectItem>
             ))}
           </SelectContent>

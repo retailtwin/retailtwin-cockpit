@@ -3,7 +3,7 @@ import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Ca
 
 interface InventoryGraphProps {
   data: Array<{
-    day: number;
+    day: string | number;
     sales: number;
     inventory: number;
     inventorySimulated: number;
