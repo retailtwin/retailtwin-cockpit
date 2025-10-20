@@ -34,30 +34,30 @@ export interface FactDaily {
 }
 
 export async function fetchLocations(): Promise<Location[]> {
-  const { data, error } = await supabase.rpc('get_locations');
+  const { data, error } = await supabase.rpc('get_locations' as any);
   
   if (error) {
     console.error("Error fetching locations:", error);
     return [];
   }
-  return data || [];
+  return (data as any) || [];
 }
 
 export async function fetchProducts(): Promise<Product[]> {
-  const { data, error } = await supabase.rpc('get_products');
+  const { data, error } = await supabase.rpc('get_products' as any);
   
   if (error) {
     console.error("Error fetching products:", error);
     return [];
   }
-  return data || [];
+  return (data as any) || [];
 }
 
 export async function fetchKPIData(
   locationCode: string,
   sku: string
 ): Promise<KPIData | null> {
-  const { data, error } = await supabase.rpc('get_kpi_data', {
+  const { data, error } = await supabase.rpc('get_kpi_data' as any, {
     p_location_code: locationCode,
     p_sku: sku
   });
@@ -66,14 +66,15 @@ export async function fetchKPIData(
     console.error("Error fetching KPI data:", error);
     return null;
   }
-  return data && data.length > 0 ? data[0] : null;
+  const result = data as any;
+  return result && Array.isArray(result) && result.length > 0 ? result[0] : null;
 }
 
 export async function fetchFactDaily(
   locationCode: string,
   sku: string
 ): Promise<FactDaily[]> {
-  const { data, error } = await supabase.rpc('get_fact_daily', {
+  const { data, error } = await supabase.rpc('get_fact_daily' as any, {
     p_location_code: locationCode,
     p_sku: sku
   });
@@ -82,7 +83,7 @@ export async function fetchFactDaily(
     console.error("Error fetching fact daily:", error);
     return [];
   }
-  return data || [];
+  return (data as any) || [];
 }
 
 export function formatCurrency(value: number | null): string {
