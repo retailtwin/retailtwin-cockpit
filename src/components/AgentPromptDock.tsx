@@ -2,10 +2,14 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronRight, ChevronLeft, Send } from "lucide-react";
+import { ChevronRight, ChevronLeft, Send, X } from "lucide-react";
 
-export const AgentPromptDock = () => {
-  const [isOpen, setIsOpen] = useState(false);
+interface AgentPromptDockProps {
+  onClose?: () => void;
+}
+
+export const AgentPromptDock = ({ onClose }: AgentPromptDockProps) => {
+  const [isOpen, setIsOpen] = useState(true);
   const [prompt, setPrompt] = useState("");
 
   const handleSubmit = () => {
@@ -14,29 +18,30 @@ export const AgentPromptDock = () => {
     setPrompt("");
   };
 
-  return (
-    <div
-      className={`fixed right-0 top-0 h-full transition-all duration-300 z-40 ${
-        isOpen ? "w-96" : "w-12"
-      }`}
-    >
-      <Button
-        onClick={() => setIsOpen(!isOpen)}
-        variant="secondary"
-        size="icon"
-        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full rounded-r-none shadow-lg"
-      >
-        {isOpen ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-      </Button>
+  const handleClose = () => {
+    setIsOpen(false);
+    onClose?.();
+  };
 
-      {isOpen && (
-        <Card className="h-full rounded-none border-l shadow-2xl">
-          <CardHeader className="border-b">
-            <CardTitle className="text-lg">Talk to Retail Twin</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Ask questions about your supply chain
-            </p>
-          </CardHeader>
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed right-0 top-0 h-full w-96 transition-all duration-300 z-40">
+      <Card className="h-full rounded-none border-l shadow-2xl">
+        <CardHeader className="border-b relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleClose}
+            className="absolute top-4 right-4"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+          <CardTitle className="text-lg">Talk to Retail Twin</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Ask questions about your supply chain
+          </p>
+        </CardHeader>
           <CardContent className="flex flex-col h-[calc(100%-8rem)] p-4">
             <div className="flex-1 overflow-y-auto mb-4 space-y-3">
               <div className="text-sm text-muted-foreground italic">
@@ -93,7 +98,6 @@ export const AgentPromptDock = () => {
             </div>
           </CardContent>
         </Card>
-      )}
     </div>
   );
 };

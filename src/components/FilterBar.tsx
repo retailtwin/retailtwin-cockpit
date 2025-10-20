@@ -5,6 +5,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "lucide-react";
 
 interface FilterBarProps {
   locations: string[];
@@ -59,6 +61,20 @@ export const FilterBar = ({
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="flex-1 min-w-[200px]">
+        <label className="text-sm font-medium text-muted-foreground mb-2 block">
+          Date Range
+        </label>
+        <Button
+          variant="outline"
+          disabled
+          className="w-full justify-start text-left font-normal opacity-50 cursor-not-allowed"
+        >
+          <Calendar className="mr-2 h-4 w-4" />
+          <span>Select date range</span>
+        </Button>
       </div>
     </div>
   );
