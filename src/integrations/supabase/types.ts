@@ -20,7 +20,47 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_fact_daily: {
+        Args: { p_location_code: string; p_sku: string }
+        Returns: {
+          d: string
+          location_code: string
+          on_hand_units: number
+          on_hand_units_sim: number
+          sku: string
+          units_sold: number
+        }[]
+      }
+      get_kpi_data: {
+        Args: { p_location_code: string; p_sku: string }
+        Returns: {
+          days_total: number
+          location_code: string
+          missed_units: number
+          mtv: number
+          service_level: number
+          sku: string
+          stockout_days: number
+          stockout_days_sim: number
+          tcm: number
+          turns_current: number
+          turns_sim: number
+        }[]
+      }
+      get_locations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          code: string
+          name: string
+        }[]
+      }
+      get_products: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          name: string
+          sku: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
