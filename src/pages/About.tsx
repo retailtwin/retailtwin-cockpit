@@ -25,12 +25,12 @@ const About = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground">
-                  We apply <strong>Theory of Constraints (TOC)</strong> to help
-                  retailers identify and eliminate bottlenecks that limit cash
+                  We help retailers identify and eliminate bottlenecks that limit cash
                   flow and throughput.
                 </p>
                 <p className="text-muted-foreground">
-                  Our methodology focuses on maximizing{" "}
+                  Our methodology uses <strong>Theory of Constraints (TOC)</strong> learnings, 
+                  and many years of experience in Footwear, Apparel and SaaS to focus on maximizing{" "}
                   <strong>Throughput</strong> (revenue minus truly variable
                   costs) while minimizing inventory and operating expenses.
                 </p>
@@ -46,12 +46,12 @@ const About = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground">
-                  <strong>DBM</strong> is a pull-based replenishment system that
-                  adjusts buffer levels based on actual consumption patterns, not
-                  forecasts.
+                  <strong>DBM (TOC)</strong> is a pull-based replenishment system that
+                  flourishes with short lead-times, and frequent movements of small, if any batches. 
+                  Buffers adjust dynamically on consumption and other input; reducing the dependency on a forecasts.
                 </p>
                 <p className="text-muted-foreground">
-                  This ensures high service levels with minimal inventory,
+                  This ensures high service levels with high Turns,
                   reducing both stockouts and overstock simultaneously.
                 </p>
               </CardContent>

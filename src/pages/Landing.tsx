@@ -23,8 +23,7 @@ const Landing = () => {
               <span className="text-primary">AI-guided inventory flow</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Theory of Constraints and Dynamic Buffer Management tuned for retail: 
-              identify bottlenecks, adapt buffers daily, and maximize cash velocity.
+              Tune your supply to retail: identify bottlenecks, adapt buffers daily, and maximize cash velocity.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/dashboard">
@@ -51,10 +50,10 @@ const Landing = () => {
               <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                 <Target className="h-7 w-7 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Set rules once, enforce everywhere</CardTitle>
+              <CardTitle className="text-2xl">Set rules and apply them</CardTitle>
               <CardDescription className="text-base pt-2">
-                Define lead times, pack sizes, MOQs, and constraints. 
-                The system automatically applies them across all reorder calculations.
+                Monitor compliance.
+                Flag exceptions.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -64,7 +63,7 @@ const Landing = () => {
               <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-6">
                 <Zap className="h-7 w-7 text-accent" />
               </div>
-              <CardTitle className="text-2xl">Free up cash in minutes</CardTitle>
+              <CardTitle className="text-2xl">Free Cash</CardTitle>
               <CardDescription className="text-base pt-2">
                 Run scenarios to identify excess inventory and missed sales. 
                 Get automated insights that release capital and improve flow.
@@ -79,8 +78,8 @@ const Landing = () => {
               </div>
               <CardTitle className="text-2xl">Scale across your network</CardTitle>
               <CardDescription className="text-base pt-2">
-                From single warehouse to multi-echelon distribution. 
-                Works wherever you have sales and inventory data.
+                From single warehouse to retail networks. 
+                Works where there is data.
               </CardDescription>
             </CardHeader>
           </Card>
