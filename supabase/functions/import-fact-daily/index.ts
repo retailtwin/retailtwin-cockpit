@@ -36,17 +36,26 @@ serve(async (req) => {
     for (let i = 0; i < dataLines.length; i += batchSize) {
       const batch = dataLines.slice(i, i + batchSize);
       const records = batch.map((line: string) => {
-        const [d, location_code, sku, units_sold, on_hand_units, on_order_units, in_transit_units, on_hand_units_sim] = line.split(',');
+        const parts = line.split(',');
+        // Data_SkuLocDate.csv format:
+        // ExecutionDate, StoreCode, ProductCode, UnitSales, UnitOnHand, UnitOnOrder, UnitInTransit,
+        // UnitOnHandSimulated, Green (target), UnitsEco (economic), UnitsEcoOverstock
+        
+        // Extract date from timestamp format "2023-01-01 00:00:00" -> "2023-01-01"
+        const dateStr = parts[0].trim().split(' ')[0];
         
         return {
-          d,
-          location_code: location_code.replace('.0', ''),
-          sku: sku.replace('.0', ''),
-          units_sold: units_sold || '0',
-          on_hand_units: on_hand_units || '',
-          on_order_units: on_order_units || '0',
-          in_transit_units: in_transit_units || '0',
-          on_hand_units_sim: on_hand_units_sim || '',
+          d: dateStr,
+          location_code: parts[1].trim().replace('.0', ''),
+          sku: parts[2].trim().replace('.0', ''),
+          units_sold: parts[3].trim() || '0',
+          on_hand_units: parts[4].trim() || '',
+          on_order_units: parts[5].trim() || '0',
+          in_transit_units: parts[6].trim() || '0',
+          on_hand_units_sim: parts[7].trim() || '',
+          target_units: parts[8].trim() || '',  // Green
+          economic_units: parts[9].trim() || '',  // UnitsEco
+          economic_overstock_units: parts[10].trim() || ''  // UnitsEcoOverstock
         };
       });
 

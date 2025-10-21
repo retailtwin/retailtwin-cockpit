@@ -22,6 +22,7 @@ export interface KPIData {
   service_level: number;
   service_level_sim: number;
   missed_units: number | null;
+  riv: number | null;
 }
 
 export interface FactDaily {

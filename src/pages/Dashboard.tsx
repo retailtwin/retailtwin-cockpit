@@ -130,22 +130,28 @@ const Dashboard = () => {
     });
   };
 
-  // Prepare table data
+  // Prepare table data with new structure: Current, Simulated, Var% columns
   const tableData = kpiData ? {
     metrics: [
       {
         metric: "Throughput (Cash Margin)",
-        singleValue: formatCurrency(kpiData.tcm),
-        current: null,
-        simulated: null,
-        variance: null,
+        singleValue: null,
+        current: formatCurrency(kpiData.tcm),
+        simulated: kpiData.service_level > 0 
+          ? formatCurrency((kpiData.tcm || 0) / kpiData.service_level)
+          : "—",
+        variance: kpiData.service_level > 0 
+          ? ((((kpiData.tcm || 0) / kpiData.service_level) / (kpiData.tcm || 1) - 1) * 100).toFixed(1) + "%" 
+          : "—",
       },
       {
         metric: "Service Level",
         singleValue: null,
         current: (kpiData.service_level * 100).toFixed(1) + "%",
         simulated: (kpiData.service_level_sim * 100).toFixed(1) + "%",
-        variance: ((kpiData.service_level_sim / kpiData.service_level - 1) * 100).toFixed(1) + "%",
+        variance: kpiData.service_level > 0
+          ? ((kpiData.service_level_sim / kpiData.service_level - 1) * 100).toFixed(1) + "%"
+          : "—",
       },
       {
         metric: "Inventory Turns",
@@ -164,10 +170,10 @@ const Dashboard = () => {
       },
       {
         metric: "Redundant Inventory Value (RIV)",
-        value: "—",
+        value: formatCurrency(kpiData.riv),
       },
     ],
-    cashGap: formatCurrency(kpiData.mtv), // Just MTV for now until RIV is available
+    cashGap: formatCurrency((kpiData.mtv || 0) + (kpiData.riv || 0)),
   } : null;
 
   const summaryMetrics = kpiData ? {

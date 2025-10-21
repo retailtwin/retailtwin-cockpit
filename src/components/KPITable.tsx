@@ -71,7 +71,6 @@ export const KPITable = ({ data, summaryMetrics }: KPITableProps) => {
             <TableHeader>
               <TableRow>
                 <TableHead className="font-semibold">Metric</TableHead>
-                <TableHead className="font-semibold"></TableHead>
                 <TableHead className="text-right font-semibold">Current</TableHead>
                 <TableHead className="text-right font-semibold">Simulated</TableHead>
                 <TableHead className="text-right font-semibold">Var%</TableHead>
@@ -81,14 +80,13 @@ export const KPITable = ({ data, summaryMetrics }: KPITableProps) => {
               {data.metrics.map((row, idx) => (
                 <TableRow key={idx}>
                   <TableCell className="font-medium">{row.metric}</TableCell>
-                  <TableCell className="text-right">{row.singleValue ?? ""}</TableCell>
                   <TableCell className="text-right">{row.current ?? ""}</TableCell>
                   <TableCell className="text-right">{row.simulated ?? ""}</TableCell>
                   <TableCell className="text-right">{row.variance ?? ""}</TableCell>
                 </TableRow>
               ))}
               <TableRow>
-                <TableCell colSpan={5} className="h-2"></TableCell>
+                <TableCell colSpan={4} className="h-2"></TableCell>
               </TableRow>
               {data.bottomMetrics.map((row, idx) => (
                 <TableRow key={`bottom-${idx}`}>
@@ -96,13 +94,11 @@ export const KPITable = ({ data, summaryMetrics }: KPITableProps) => {
                   <TableCell className="text-right">{row.value}</TableCell>
                   <TableCell></TableCell>
                   <TableCell></TableCell>
-                  <TableCell></TableCell>
                 </TableRow>
               ))}
               <TableRow className="border-t-2">
                 <TableCell className="font-bold">Cash Gap</TableCell>
                 <TableCell className="text-right font-bold">{data.cashGap}</TableCell>
-                <TableCell></TableCell>
                 <TableCell></TableCell>
                 <TableCell></TableCell>
               </TableRow>

@@ -20,6 +20,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_riv: {
+        Args: { p_location_code: string; p_sku: string }
+        Returns: number
+      }
       get_fact_daily: {
         Args: { p_location_code: string; p_sku: string }
         Returns: {
@@ -49,6 +53,7 @@ export type Database = {
           location_code: string
           missed_units: number
           mtv: number
+          riv: number
           service_level: number
           service_level_sim: number
           sku: string
@@ -65,6 +70,7 @@ export type Database = {
           location_code: string
           missed_units: number
           mtv: number
+          riv: number
           service_level: number
           service_level_sim: number
           sku: string
