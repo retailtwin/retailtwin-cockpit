@@ -20,6 +20,8 @@ import {
   FactDaily
 } from "@/lib/supabase-helpers";
 import { useToast } from "@/hooks/use-toast";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -27,6 +29,7 @@ const Dashboard = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [factDaily, setFactDaily] = useState<FactDaily[]>([]);
   const [agentDockOpen, setAgentDockOpen] = useState(false);
@@ -70,13 +73,17 @@ const Dashboard = () => {
     
     const loadData = async () => {
       try {
+        const startDate = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined;
+        const endDate = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined;
+        
         const [kpi, facts] = await Promise.all([
-          fetchKPIData(selectedLocation, selectedProduct),
-          fetchFactDaily(selectedLocation, selectedProduct)
+          fetchKPIData(selectedLocation, selectedProduct, startDate, endDate),
+          fetchFactDaily(selectedLocation, selectedProduct, startDate, endDate)
         ]);
         
         console.log('📊 KPI Data:', kpi);
         console.log('💰 MTV:', kpi?.mtv, 'RIV:', kpi?.riv);
+        console.log('📅 Date Range:', startDate, 'to', endDate);
         
         setKpiData(kpi);
         setFactDaily(facts);
@@ -91,7 +98,7 @@ const Dashboard = () => {
     };
     
     loadData();
-  }, [selectedLocation, selectedProduct, toast]);
+  }, [selectedLocation, selectedProduct, dateRange, toast]);
 
   const handleExportCSV = () => {
     if (factDaily.length === 0) {
@@ -250,8 +257,10 @@ const Dashboard = () => {
             products={products}
             selectedLocation={selectedLocation}
             selectedProduct={selectedProduct}
+            dateRange={dateRange}
             onLocationChange={setSelectedLocation}
             onProductChange={setSelectedProduct}
+            onDateRangeChange={setDateRange}
           />
 
           {/* Export Button */}

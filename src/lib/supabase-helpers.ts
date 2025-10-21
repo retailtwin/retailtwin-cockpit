@@ -58,7 +58,9 @@ export async function fetchProducts(): Promise<Product[]> {
 
 export async function fetchKPIData(
   locationCode: string,
-  sku: string
+  sku: string,
+  startDate?: string,
+  endDate?: string
 ): Promise<KPIData | null> {
   // Use aggregated function if either parameter is 'ALL'
   const rpcName = (locationCode === 'ALL' || sku === 'ALL') 
@@ -67,7 +69,9 @@ export async function fetchKPIData(
     
   const { data, error } = await supabase.rpc(rpcName as any, {
     p_location_code: locationCode,
-    p_sku: sku
+    p_sku: sku,
+    p_start_date: startDate || null,
+    p_end_date: endDate || null
   });
   
   if (error) {
@@ -83,7 +87,9 @@ export async function fetchKPIData(
 
 export async function fetchFactDaily(
   locationCode: string,
-  sku: string
+  sku: string,
+  startDate?: string,
+  endDate?: string
 ): Promise<FactDaily[]> {
   // Use aggregated function if either parameter is 'ALL'
   const rpcName = (locationCode === 'ALL' || sku === 'ALL') 
@@ -92,7 +98,9 @@ export async function fetchFactDaily(
     
   const { data, error } = await supabase.rpc(rpcName as any, {
     p_location_code: locationCode,
-    p_sku: sku
+    p_sku: sku,
+    p_start_date: startDate || null,
+    p_end_date: endDate || null
   });
   
   if (error) {

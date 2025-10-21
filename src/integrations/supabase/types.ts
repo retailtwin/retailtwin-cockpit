@@ -21,7 +21,14 @@ export type Database = {
     }
     Functions: {
       calculate_riv: {
-        Args: { p_location_code: string; p_sku: string }
+        Args:
+          | {
+              p_end_date?: string
+              p_location_code: string
+              p_sku: string
+              p_start_date?: string
+            }
+          | { p_location_code: string; p_sku: string }
         Returns: number
       }
       get_fact_daily: {
@@ -36,7 +43,14 @@ export type Database = {
         }[]
       }
       get_fact_daily_aggregated: {
-        Args: { p_location_code: string; p_sku: string }
+        Args:
+          | {
+              p_end_date?: string
+              p_location_code: string
+              p_sku: string
+              p_start_date?: string
+            }
+          | { p_location_code: string; p_sku: string }
         Returns: {
           d: string
           location_code: string
@@ -64,7 +78,14 @@ export type Database = {
         }[]
       }
       get_kpi_data_aggregated: {
-        Args: { p_location_code: string; p_sku: string }
+        Args:
+          | {
+              p_end_date?: string
+              p_location_code: string
+              p_sku: string
+              p_start_date?: string
+            }
+          | { p_location_code: string; p_sku: string }
         Returns: {
           days_total: number
           location_code: string

@@ -6,16 +6,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "lucide-react";
 import { Location, Product } from "@/lib/supabase-helpers";
+import { format } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
 
 interface FilterBarProps {
   locations: Location[];
   products: Product[];
   selectedLocation: string;
   selectedProduct: string;
+  dateRange?: DateRange;
   onLocationChange: (value: string) => void;
   onProductChange: (value: string) => void;
+  onDateRangeChange: (range: DateRange | undefined) => void;
 }
 
 export const FilterBar = ({
@@ -23,8 +30,10 @@ export const FilterBar = ({
   products,
   selectedLocation,
   selectedProduct,
+  dateRange,
   onLocationChange,
   onProductChange,
+  onDateRangeChange,
 }: FilterBarProps) => {
   return (
     <div className="flex flex-wrap gap-4 p-4 bg-card rounded-2xl shadow-md border">
@@ -70,14 +79,39 @@ export const FilterBar = ({
         <label className="text-sm font-medium text-muted-foreground mb-2 block">
           Date Range
         </label>
-        <Button
-          variant="outline"
-          disabled
-          className="w-full justify-start text-left font-normal opacity-50 cursor-not-allowed"
-        >
-          <Calendar className="mr-2 h-4 w-4" />
-          <span>Select date range</span>
-        </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !dateRange && "text-muted-foreground"
+              )}
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              {dateRange?.from ? (
+                dateRange.to ? (
+                  <>
+                    {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                  </>
+                ) : (
+                  format(dateRange.from, "MMM d, yyyy")
+                )
+              ) : (
+                <span>Select date range</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <CalendarComponent
+              mode="range"
+              selected={dateRange}
+              onSelect={onDateRangeChange}
+              numberOfMonths={2}
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

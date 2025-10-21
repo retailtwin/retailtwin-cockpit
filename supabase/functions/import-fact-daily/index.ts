@@ -37,9 +37,13 @@ serve(async (req) => {
       const batch = dataLines.slice(i, i + batchSize);
       const records = batch.map((line: string) => {
         const parts = line.split(',');
-        // Data_SkuLocDate.csv format:
-        // ExecutionDate, StoreCode, ProductCode, UnitSales, UnitOnHand, UnitOnOrder, UnitInTransit,
-        // UnitOnHandSimulated, Green (target), UnitsEco (economic), UnitsEcoOverstock
+        // Data_SkuLocDate.csv format (actual column indices):
+        // 0: ExecutionDate, 1: StoreCode, 2: StoreName, 3: ProductCode, 4: ProductName, 
+        // 5: ProductSubType, 6: Green (target), 7: StockPosition, 8: StockPositionSimulated,
+        // 9: UnitSales, 10: UnitSalesValue, 11: UnitSalesValueSimulated, 12: UnitOnHand,
+        // 13: UnitOnHandValue, 14: UnitOnHandSimulated, 15: UnitOnHandValueSimulated,
+        // 16: UnitOnOrder, 17: UnitOnOrderValue, 18: UnitInTransit, 19: UnitInTransitValue,
+        // 20: UnitsEco (economic), 21: UnitsEcoValue, 22: UnitsEcoOverstock, 23: UnitsEcoOverstockValue
         
         // Extract date from timestamp format "2023-01-01 00:00:00" -> "2023-01-01"
         const dateStr = parts[0].trim().split(' ')[0];
@@ -47,15 +51,15 @@ serve(async (req) => {
         return {
           d: dateStr,
           location_code: parts[1].trim().replace('.0', ''),
-          sku: parts[2].trim().replace('.0', ''),
-          units_sold: parts[3].trim() || '0',
-          on_hand_units: parts[4].trim() || '',
-          on_order_units: parts[5].trim() || '0',
-          in_transit_units: parts[6].trim() || '0',
-          on_hand_units_sim: parts[7].trim() || '',
-          target_units: parts[8].trim() || '',  // Green
-          economic_units: parts[9].trim() || '',  // UnitsEco
-          economic_overstock_units: parts[10].trim() || ''  // UnitsEcoOverstock
+          sku: parts[3].trim().replace('.0', ''),
+          units_sold: parts[9].trim() || '0',
+          on_hand_units: parts[12].trim() || '',
+          on_order_units: parts[16].trim() || '0',
+          in_transit_units: parts[18].trim() || '0',
+          on_hand_units_sim: parts[14].trim() || '',
+          target_units: parts[6].trim() || '',  // Green
+          economic_units: parts[20].trim() || '',  // UnitsEco
+          economic_overstock_units: parts[22].trim() || ''  // UnitsEcoOverstock
         };
       });
 
