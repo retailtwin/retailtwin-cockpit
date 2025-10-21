@@ -38,6 +38,7 @@ export async function fetchLocations(): Promise<Location[]> {
   
   if (error) {
     console.error("Error fetching locations:", error);
+    console.error("Full error object:", JSON.stringify(error, null, 2));
     return [];
   }
   return (data as any) || [];
@@ -48,6 +49,7 @@ export async function fetchProducts(): Promise<Product[]> {
   
   if (error) {
     console.error("Error fetching products:", error);
+    console.error("Full error object:", JSON.stringify(error, null, 2));
     return [];
   }
   return (data as any) || [];
@@ -69,6 +71,9 @@ export async function fetchKPIData(
   
   if (error) {
     console.error("Error fetching KPI data:", error);
+    console.error("Full error object:", JSON.stringify(error, null, 2));
+    console.error("RPC name used:", rpcName);
+    console.error("Parameters:", { p_location_code: locationCode, p_sku: sku });
     return null;
   }
   const result = data as any;
@@ -91,6 +96,9 @@ export async function fetchFactDaily(
   
   if (error) {
     console.error("Error fetching fact daily:", error);
+    console.error("Full error object:", JSON.stringify(error, null, 2));
+    console.error("RPC name used:", rpcName);
+    console.error("Parameters:", { p_location_code: locationCode, p_sku: sku });
     return [];
   }
   return (data as any) || [];
