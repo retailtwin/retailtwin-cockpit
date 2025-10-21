@@ -50,8 +50,8 @@ serve(async (req) => {
         };
       });
 
-      const { error } = await supabaseClient
-        .from('fact_daily')
+    const { error } = await supabaseClient
+        .from('aifo.fact_daily')
         .insert(records);
 
       if (error) {
