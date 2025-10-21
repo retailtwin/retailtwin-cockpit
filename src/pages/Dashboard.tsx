@@ -168,7 +168,7 @@ const Dashboard = () => {
     locations: selectedLocation === 'ALL' ? locations.length : 1,
     skus: selectedProduct === 'ALL' ? products.length : 1,
     days: kpiData.days_total,
-    skuLocDays: kpiData.days_total * (selectedLocation === 'ALL' ? locations.length : 1) * (selectedProduct === 'ALL' ? products.length : 1),
+    skuLocDays: kpiData.sku_loc_days,
     serviceLevel: (kpiData.service_level * 100).toFixed(1),
     serviceLevelSimulated: (kpiData.service_level_sim * 100).toFixed(1),
   } : {

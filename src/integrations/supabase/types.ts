@@ -67,6 +67,7 @@ export type Database = {
           service_level: number
           service_level_sim: number
           sku: string
+          sku_loc_days: number
           tcm: number
           turns_current: number
           turns_sim: number

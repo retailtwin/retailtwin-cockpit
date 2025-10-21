@@ -14,6 +14,7 @@ export interface KPIData {
   location_code: string;
   sku: string;
   days_total: number;
+  sku_loc_days: number;
   tcm: number | null;
   turns_current: number | null;
   turns_sim: number | null;
