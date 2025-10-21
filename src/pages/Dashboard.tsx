@@ -75,6 +75,9 @@ const Dashboard = () => {
           fetchFactDaily(selectedLocation, selectedProduct)
         ]);
         
+        console.log('📊 KPI Data:', kpi);
+        console.log('💰 MTV:', kpi?.mtv, 'RIV:', kpi?.riv);
+        
         setKpiData(kpi);
         setFactDaily(facts);
       } catch (error) {
