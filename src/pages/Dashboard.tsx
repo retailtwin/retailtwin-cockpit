@@ -285,7 +285,9 @@ const Dashboard = () => {
               turnsImprovement={kpiData.turns_sim && kpiData.turns_current 
                 ? ((kpiData.turns_sim - kpiData.turns_current) / kpiData.turns_current) * 100 
                 : 0}
-              stockoutReduction={0}
+              stockoutReduction={kpiData.service_level < 1 
+                ? (((1 - kpiData.service_level) - (1 - kpiData.service_level_sim)) / (1 - kpiData.service_level)) * 100 
+                : 0}
             />
           )}
         </div>
