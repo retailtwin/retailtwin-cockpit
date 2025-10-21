@@ -131,38 +131,44 @@ const Dashboard = () => {
   };
 
   // Prepare table data
-  const tableData = kpiData ? [
-    {
-      metric: "Throughput Cash Margin",
-      current: formatCurrency(kpiData.tcm),
-      simulated: "—",
-    },
-    {
-      metric: "Inventory Turns (Current)",
-      current: formatNumber(kpiData.turns_current, 1),
-      simulated: "—",
-    },
-    {
-      metric: "Inventory Turns (Simulated)",
-      current: "—",
-      simulated: formatNumber(kpiData.turns_sim, 1),
-    },
-    {
-      metric: "Service Level (Current)",
-      current: (kpiData.service_level * 100).toFixed(1) + "%",
-      simulated: "—",
-    },
-    {
-      metric: "Service Level (Simulated)",
-      current: "—",
-      simulated: (kpiData.service_level_sim * 100).toFixed(1) + "%",
-    },
-    {
-      metric: "Missed Throughput Value",
-      current: formatCurrency(kpiData.mtv),
-      simulated: "—",
-    },
-  ] : [];
+  const tableData = kpiData ? {
+    metrics: [
+      {
+        metric: "Throughput (Cash Margin)",
+        singleValue: formatCurrency(kpiData.tcm),
+        current: null,
+        simulated: null,
+        variance: null,
+      },
+      {
+        metric: "Service Level",
+        singleValue: null,
+        current: (kpiData.service_level * 100).toFixed(1) + "%",
+        simulated: (kpiData.service_level_sim * 100).toFixed(1) + "%",
+        variance: ((kpiData.service_level_sim / kpiData.service_level - 1) * 100).toFixed(1) + "%",
+      },
+      {
+        metric: "Inventory Turns",
+        singleValue: null,
+        current: formatNumber(kpiData.turns_current, 1),
+        simulated: formatNumber(kpiData.turns_sim, 1),
+        variance: kpiData.turns_current && kpiData.turns_sim 
+          ? ((kpiData.turns_sim / kpiData.turns_current - 1) * 100).toFixed(1) + "%" 
+          : "—",
+      },
+    ],
+    bottomMetrics: [
+      {
+        metric: "Missed Throughput Value (MTV)",
+        value: formatCurrency(kpiData.mtv),
+      },
+      {
+        metric: "Redundant Inventory Value (RIV)",
+        value: "—",
+      },
+    ],
+    cashGap: formatCurrency(kpiData.mtv), // Just MTV for now until RIV is available
+  } : null;
 
   const summaryMetrics = kpiData ? {
     locations: selectedLocation === 'ALL' ? locations.length : 1,

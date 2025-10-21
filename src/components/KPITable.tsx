@@ -10,10 +10,19 @@ import {
 
 interface KPITableProps {
   data: {
-    metric: string;
-    current?: string | number;
-    simulated?: string | number;
-  }[];
+    metrics: {
+      metric: string;
+      singleValue: string | null;
+      current: string | number | null;
+      simulated: string | number | null;
+      variance: string | null;
+    }[];
+    bottomMetrics: {
+      metric: string;
+      value: string;
+    }[];
+    cashGap: string;
+  } | null;
   summaryMetrics: {
     locations: number;
     skus: number;
@@ -57,24 +66,53 @@ export const KPITable = ({ data, summaryMetrics }: KPITableProps) => {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="font-semibold">Metric</TableHead>
-              <TableHead className="text-right font-semibold">Current</TableHead>
-              <TableHead className="text-right font-semibold">Simulated</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.map((row, idx) => (
-              <TableRow key={idx}>
-                <TableCell className="font-medium">{row.metric}</TableCell>
-                <TableCell className="text-right">{row.current ?? "—"}</TableCell>
-                <TableCell className="text-right">{row.simulated ?? "—"}</TableCell>
+        {data ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="font-semibold">Metric</TableHead>
+                <TableHead className="font-semibold"></TableHead>
+                <TableHead className="text-right font-semibold">Current</TableHead>
+                <TableHead className="text-right font-semibold">Simulated</TableHead>
+                <TableHead className="text-right font-semibold">Var%</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {data.metrics.map((row, idx) => (
+                <TableRow key={idx}>
+                  <TableCell className="font-medium">{row.metric}</TableCell>
+                  <TableCell className="text-right">{row.singleValue ?? ""}</TableCell>
+                  <TableCell className="text-right">{row.current ?? ""}</TableCell>
+                  <TableCell className="text-right">{row.simulated ?? ""}</TableCell>
+                  <TableCell className="text-right">{row.variance ?? ""}</TableCell>
+                </TableRow>
+              ))}
+              <TableRow>
+                <TableCell colSpan={5} className="h-2"></TableCell>
+              </TableRow>
+              {data.bottomMetrics.map((row, idx) => (
+                <TableRow key={`bottom-${idx}`}>
+                  <TableCell className="font-medium">{row.metric}</TableCell>
+                  <TableCell className="text-right">{row.value}</TableCell>
+                  <TableCell></TableCell>
+                  <TableCell></TableCell>
+                  <TableCell></TableCell>
+                </TableRow>
+              ))}
+              <TableRow className="border-t-2">
+                <TableCell className="font-bold">Cash Gap</TableCell>
+                <TableCell className="text-right font-bold">{data.cashGap}</TableCell>
+                <TableCell></TableCell>
+                <TableCell></TableCell>
+                <TableCell></TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            No data available
+          </div>
+        )}
       </CardContent>
     </Card>
   );
