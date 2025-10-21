@@ -280,7 +280,7 @@ const Dashboard = () => {
           {/* Consultative Insights */}
           {kpiData && (
             <ConsultativeInsights 
-              cashGap={formatCurrency(kpiData.mtv)}
+              cashGap={formatCurrency((kpiData.mtv || 0) + (kpiData.riv || 0))}
               serviceLevelGain={(kpiData.service_level_sim - kpiData.service_level) * 100}
               turnsImprovement={kpiData.turns_sim && kpiData.turns_current 
                 ? ((kpiData.turns_sim - kpiData.turns_current) / kpiData.turns_current) * 100 

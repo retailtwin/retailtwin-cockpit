@@ -115,6 +115,13 @@ export async function fetchFactDaily(
 
 export function formatCurrency(value: number | null): string {
   if (value === null || value === undefined) return "—";
+  
+  // For values under €10K, show full amount without K suffix
+  if (Math.abs(value) < 10000) {
+    return `€${value.toFixed(0)}`;
+  }
+  
+  // For larger values, use K format
   return `€${(value / 1000).toFixed(0)}K`;
 }
 
