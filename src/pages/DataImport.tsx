@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Layout } from "@/components/Layout";
 
 export default function DataImport() {
   const [csvText, setCsvText] = useState("");
@@ -48,40 +49,42 @@ export default function DataImport() {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Import Fact Daily Data</CardTitle>
-          <CardDescription>
-            Paste the contents of your fact_daily_1.csv file below to import the data
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Textarea
-            placeholder="Paste CSV data here (including header row)..."
-            value={csvText}
-            onChange={(e) => setCsvText(e.target.value)}
-            className="min-h-[400px] font-mono text-sm"
-          />
-          <Button 
-            onClick={handleImport} 
-            disabled={isImporting || !csvText.trim()}
-            className="w-full"
-          >
-            {isImporting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Importing...
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                Import Data
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+    <Layout>
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Import Fact Daily Data</CardTitle>
+            <CardDescription>
+              Paste the contents of your Data_SkuLocDate-2.csv file below to import the data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Textarea
+              placeholder="Paste CSV data here (including header row)..."
+              value={csvText}
+              onChange={(e) => setCsvText(e.target.value)}
+              className="min-h-[400px] font-mono text-sm"
+            />
+            <Button 
+              onClick={handleImport} 
+              disabled={isImporting || !csvText.trim()}
+              className="w-full"
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Import Data
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </Layout>
   );
 }

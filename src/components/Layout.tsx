@@ -44,6 +44,16 @@ export const Layout = ({ children }: LayoutProps) => {
                 Reports
               </Link>
               <Link
+                to="/import"
+                className={`font-semibold transition-colors ${
+                  isActive("/import")
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Data Import
+              </Link>
+              <Link
                 to="/about"
                 className={`font-semibold transition-colors ${
                   isActive("/about")
