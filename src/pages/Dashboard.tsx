@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { FilterBar } from "@/components/FilterBar";
-import { NotificationBanner } from "@/components/NotificationBanner";
 import { InventoryGraph } from "@/components/InventoryGraph";
 import { KPITable } from "@/components/KPITable";
 import { ConsultativeInsights } from "@/components/ConsultativeInsights";
@@ -149,14 +148,14 @@ const Dashboard = () => {
       simulated: formatNumber(kpiData.turns_sim, 1),
     },
     {
-      metric: "Stockout Days (Current)",
-      current: formatNumber(kpiData.stockout_days),
+      metric: "Service Level (Current)",
+      current: (kpiData.service_level * 100).toFixed(1) + "%",
       simulated: "—",
     },
     {
-      metric: "Stockout Days (Simulated)",
+      metric: "Service Level (Simulated)",
       current: "—",
-      simulated: formatNumber(kpiData.stockout_days_sim),
+      simulated: (kpiData.service_level_sim * 100).toFixed(1) + "%",
     },
     {
       metric: "Missed Throughput Value",
@@ -171,7 +170,7 @@ const Dashboard = () => {
     days: kpiData.days_total,
     skuLocDays: kpiData.days_total * (selectedLocation === 'ALL' ? locations.length : 1) * (selectedProduct === 'ALL' ? products.length : 1),
     serviceLevel: (kpiData.service_level * 100).toFixed(1),
-    serviceLevelSimulated: (kpiData.service_level * 100).toFixed(1),
+    serviceLevelSimulated: (kpiData.service_level_sim * 100).toFixed(1),
   } : {
     locations: 0,
     skus: 0,
@@ -240,12 +239,6 @@ const Dashboard = () => {
             onProductChange={setSelectedProduct}
           />
 
-          {/* Notification Banner */}
-          <NotificationBanner
-            message="6 Orders may need to be checked as Closed"
-            type="info"
-          />
-
           {/* Export Button */}
           <div className="flex justify-end">
             <Button onClick={handleExportCSV} variant="outline" className="gap-2">
@@ -264,13 +257,11 @@ const Dashboard = () => {
           {kpiData && (
             <ConsultativeInsights 
               cashGap={formatCurrency(kpiData.mtv)}
-              serviceLevelGain={0}
+              serviceLevelGain={(kpiData.service_level_sim - kpiData.service_level) * 100}
               turnsImprovement={kpiData.turns_sim && kpiData.turns_current 
                 ? ((kpiData.turns_sim - kpiData.turns_current) / kpiData.turns_current) * 100 
                 : 0}
-              stockoutReduction={kpiData.stockout_days > 0 
-                ? Math.abs((kpiData.stockout_days_sim - kpiData.stockout_days) / kpiData.stockout_days) * 100 
-                : 0}
+              stockoutReduction={0}
             />
           )}
         </div>

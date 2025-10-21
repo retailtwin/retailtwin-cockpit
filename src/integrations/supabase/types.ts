@@ -50,9 +50,8 @@ export type Database = {
           missed_units: number
           mtv: number
           service_level: number
+          service_level_sim: number
           sku: string
-          stockout_days: number
-          stockout_days_sim: number
           tcm: number
           turns_current: number
           turns_sim: number
@@ -66,9 +65,8 @@ export type Database = {
           missed_units: number
           mtv: number
           service_level: number
+          service_level_sim: number
           sku: string
-          stockout_days: number
-          stockout_days_sim: number
           tcm: number
           turns_current: number
           turns_sim: number

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
+import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid, TooltipProps } from "recharts";
+import { AlertCircle } from "lucide-react";
 
 interface InventoryGraphProps {
   data: Array<{
@@ -9,6 +10,58 @@ interface InventoryGraphProps {
     inventorySimulated: number;
   }>;
 }
+
+interface CustomTooltipProps extends TooltipProps<number, string> {
+  active?: boolean;
+  payload?: Array<{
+    name: string;
+    value: number;
+    color: string;
+    dataKey: string;
+  }>;
+  label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+  if (!active || !payload || !payload.length) return null;
+
+  const sales = payload.find(p => p.dataKey === "sales")?.value ?? 0;
+  const inventory = payload.find(p => p.dataKey === "inventory")?.value ?? 0;
+  const inventorySimulated = payload.find(p => p.dataKey === "inventorySimulated")?.value ?? 0;
+  
+  const isStockoutCurrent = inventory <= 0;
+  const isStockoutSimulated = inventorySimulated <= 0;
+
+  return (
+    <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
+      <p className="font-semibold mb-2 text-popover-foreground">{label}</p>
+      <div className="space-y-1 text-sm">
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted-foreground">Sales:</span>
+          <span className="font-medium" style={{ color: 'hsl(var(--accent))' }}>{sales.toFixed(0)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted-foreground">Inventory (Current):</span>
+          <div className="flex items-center gap-1">
+            <span className="font-medium" style={{ color: 'hsl(var(--destructive))' }}>{inventory.toFixed(0)}</span>
+            {isStockoutCurrent && (
+              <AlertCircle className="h-3 w-3 text-destructive" />
+            )}
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted-foreground">Inventory (Simulated):</span>
+          <div className="flex items-center gap-1">
+            <span className="font-medium" style={{ color: 'hsl(var(--success))' }}>{inventorySimulated.toFixed(0)}</span>
+            {isStockoutSimulated && (
+              <AlertCircle className="h-3 w-3 text-destructive" />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export const InventoryGraph = ({ data }: InventoryGraphProps) => {
   return (
@@ -29,13 +82,7 @@ export const InventoryGraph = ({ data }: InventoryGraphProps) => {
               label={{ value: 'Units', angle: -90, position: 'insideLeft' }}
               className="text-xs"
             />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'hsl(var(--popover))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '0.5rem'
-              }}
-            />
+            <Tooltip content={<CustomTooltip />} />
             <Legend />
             <Line 
               type="monotone" 

@@ -17,10 +17,9 @@ export interface KPIData {
   tcm: number | null;
   turns_current: number | null;
   turns_sim: number | null;
-  stockout_days: number;
-  stockout_days_sim: number;
   mtv: number | null;
   service_level: number;
+  service_level_sim: number;
   missed_units: number | null;
 }
 
