@@ -37,6 +37,7 @@ export const FilterBar = ({
             <SelectValue placeholder="Select location" />
           </SelectTrigger>
           <SelectContent className="bg-popover z-50">
+            <SelectItem value="ALL">All Locations</SelectItem>
             {locations.map((location) => (
               <SelectItem key={location.code} value={location.code}>
                 {location.name || location.code}
@@ -55,6 +56,7 @@ export const FilterBar = ({
             <SelectValue placeholder="Select product" />
           </SelectTrigger>
           <SelectContent className="bg-popover z-50">
+            <SelectItem value="ALL">All Products</SelectItem>
             {products.map((product) => (
               <SelectItem key={product.sku} value={product.sku}>
                 {product.name || product.sku}

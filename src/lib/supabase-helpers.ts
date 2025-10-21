@@ -57,7 +57,12 @@ export async function fetchKPIData(
   locationCode: string,
   sku: string
 ): Promise<KPIData | null> {
-  const { data, error } = await supabase.rpc('get_kpi_data' as any, {
+  // Use aggregated function if either parameter is 'ALL'
+  const rpcName = (locationCode === 'ALL' || sku === 'ALL') 
+    ? 'get_kpi_data_aggregated' 
+    : 'get_kpi_data';
+    
+  const { data, error } = await supabase.rpc(rpcName as any, {
     p_location_code: locationCode,
     p_sku: sku
   });
@@ -74,7 +79,12 @@ export async function fetchFactDaily(
   locationCode: string,
   sku: string
 ): Promise<FactDaily[]> {
-  const { data, error } = await supabase.rpc('get_fact_daily' as any, {
+  // Use aggregated function if either parameter is 'ALL'
+  const rpcName = (locationCode === 'ALL' || sku === 'ALL') 
+    ? 'get_fact_daily_aggregated' 
+    : 'get_fact_daily';
+    
+  const { data, error } = await supabase.rpc(rpcName as any, {
     p_location_code: locationCode,
     p_sku: sku
   });

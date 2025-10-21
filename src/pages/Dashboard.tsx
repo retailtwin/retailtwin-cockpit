@@ -45,9 +45,10 @@ const Dashboard = () => {
         setLocations(locsData);
         setProducts(prodsData);
         
+        // Default to "ALL" for both location and product
         if (locsData.length > 0 && prodsData.length > 0) {
-          setSelectedLocation(locsData[0].code);
-          setSelectedProduct(prodsData[0].sku);
+          setSelectedLocation("ALL");
+          setSelectedProduct("ALL");
         }
       } catch (error) {
         console.error("Error loading initial data:", error);
@@ -171,10 +172,10 @@ const Dashboard = () => {
   ] : [];
 
   const summaryMetrics = kpiData ? {
-    locations: locations.length,
-    skus: products.length,
+    locations: selectedLocation === 'ALL' ? locations.length : 1,
+    skus: selectedProduct === 'ALL' ? products.length : 1,
     days: kpiData.days_total,
-    skuLocDays: kpiData.days_total,
+    skuLocDays: kpiData.days_total * (selectedLocation === 'ALL' ? locations.length : 1) * (selectedProduct === 'ALL' ? products.length : 1),
     serviceLevel: kpiData.service_level,
     serviceLevelSimulated: kpiData.service_level,
   } : {
@@ -213,10 +214,16 @@ const Dashboard = () => {
         <div className="space-y-6">
           {/* Top Bar with Title and Agent Toggle */}
           <div className="flex items-center justify-between">
-            <div>
+          <div>
               <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Real-time KPIs based on 21-day rolling averages
+                {selectedLocation === 'ALL' && selectedProduct === 'ALL' 
+                  ? 'Aggregated view: All Locations & All Products'
+                  : selectedLocation === 'ALL'
+                  ? `Aggregated view: All Locations for ${products.find(p => p.sku === selectedProduct)?.name || selectedProduct}`
+                  : selectedProduct === 'ALL'
+                  ? `Aggregated view: All Products at ${locations.find(l => l.code === selectedLocation)?.name || selectedLocation}`
+                  : 'Real-time KPIs based on 21-day rolling averages'}
               </p>
             </div>
             <Button
