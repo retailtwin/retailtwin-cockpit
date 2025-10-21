@@ -7,48 +7,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowUp, ArrowDown } from "lucide-react";
 
 interface KPITableProps {
   data: {
     metric: string;
     current?: string | number;
     simulated?: string | number;
-    delta?: number;
   }[];
   summaryMetrics: {
     locations: number;
     skus: number;
     days: number;
     skuLocDays: number;
-    serviceLevel: number;
-    serviceLevelSimulated: number;
+    serviceLevel: string | number;
+    serviceLevelSimulated: string | number;
   };
 }
 
 export const KPITable = ({ data, summaryMetrics }: KPITableProps) => {
-  const formatDelta = (delta?: number) => {
-    if (delta === undefined) return null;
-    const isPositive = delta > 0;
-    const isNegative = delta < 0;
-    
-    return (
-      <div
-        className={`flex items-center gap-1 text-sm font-medium ${
-          isPositive
-            ? "text-success"
-            : isNegative
-            ? "text-destructive"
-            : "text-muted-foreground"
-        }`}
-      >
-        {isPositive && <ArrowUp className="h-3 w-3" />}
-        {isNegative && <ArrowDown className="h-3 w-3" />}
-        {Math.abs(delta).toFixed(1)}%
-      </div>
-    );
-  };
-
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -76,7 +52,7 @@ export const KPITable = ({ data, summaryMetrics }: KPITableProps) => {
           </div>
           <div>
             <span className="text-muted-foreground">Service Level (Sim):</span>{" "}
-            <span className="font-semibold text-success">{summaryMetrics.serviceLevelSimulated}%</span>
+            <span className="font-semibold">{summaryMetrics.serviceLevelSimulated}%</span>
           </div>
         </div>
       </CardHeader>
@@ -87,7 +63,6 @@ export const KPITable = ({ data, summaryMetrics }: KPITableProps) => {
               <TableHead className="font-semibold">Metric</TableHead>
               <TableHead className="text-right font-semibold">Current</TableHead>
               <TableHead className="text-right font-semibold">Simulated</TableHead>
-              <TableHead className="text-right font-semibold">Δ 7d</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -96,7 +71,6 @@ export const KPITable = ({ data, summaryMetrics }: KPITableProps) => {
                 <TableCell className="font-medium">{row.metric}</TableCell>
                 <TableCell className="text-right">{row.current ?? "—"}</TableCell>
                 <TableCell className="text-right">{row.simulated ?? "—"}</TableCell>
-                <TableCell className="text-right">{formatDelta(row.delta)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

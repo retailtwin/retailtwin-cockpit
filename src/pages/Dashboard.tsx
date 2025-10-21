@@ -137,37 +137,31 @@ const Dashboard = () => {
       metric: "Throughput Cash Margin",
       current: formatCurrency(kpiData.tcm),
       simulated: "—",
-      delta: undefined,
     },
     {
       metric: "Inventory Turns (Current)",
       current: formatNumber(kpiData.turns_current, 1),
       simulated: "—",
-      delta: undefined,
     },
     {
       metric: "Inventory Turns (Simulated)",
-      current: formatNumber(kpiData.turns_sim, 1),
-      simulated: "—",
-      delta: undefined,
+      current: "—",
+      simulated: formatNumber(kpiData.turns_sim, 1),
     },
     {
       metric: "Stockout Days (Current)",
       current: formatNumber(kpiData.stockout_days),
       simulated: "—",
-      delta: undefined,
     },
     {
       metric: "Stockout Days (Simulated)",
-      current: formatNumber(kpiData.stockout_days_sim),
-      simulated: "—",
-      delta: undefined,
+      current: "—",
+      simulated: formatNumber(kpiData.stockout_days_sim),
     },
     {
       metric: "Missed Throughput Value",
       current: formatCurrency(kpiData.mtv),
       simulated: "—",
-      delta: undefined,
     },
   ] : [];
 
@@ -176,15 +170,15 @@ const Dashboard = () => {
     skus: selectedProduct === 'ALL' ? products.length : 1,
     days: kpiData.days_total,
     skuLocDays: kpiData.days_total * (selectedLocation === 'ALL' ? locations.length : 1) * (selectedProduct === 'ALL' ? products.length : 1),
-    serviceLevel: kpiData.service_level,
-    serviceLevelSimulated: kpiData.service_level,
+    serviceLevel: (kpiData.service_level * 100).toFixed(1),
+    serviceLevelSimulated: (kpiData.service_level * 100).toFixed(1),
   } : {
     locations: 0,
     skus: 0,
     days: 0,
     skuLocDays: 0,
-    serviceLevel: 0,
-    serviceLevelSimulated: 0,
+    serviceLevel: "0.0",
+    serviceLevelSimulated: "0.0",
   };
 
   // Prepare graph data
