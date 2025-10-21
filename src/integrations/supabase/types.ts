@@ -21,36 +21,21 @@ export type Database = {
     }
     Functions: {
       calculate_riv: {
-        Args:
-          | {
-              p_end_date?: string
-              p_location_code: string
-              p_sku: string
-              p_start_date?: string
-            }
-          | { p_location_code: string; p_sku: string }
+        Args: {
+          p_end_date?: string
+          p_location_code: string
+          p_sku: string
+          p_start_date?: string
+        }
         Returns: number
       }
-      get_fact_daily: {
-        Args: { p_location_code: string; p_sku: string }
-        Returns: {
-          d: string
-          location_code: string
-          on_hand_units: number
-          on_hand_units_sim: number
-          sku: string
-          units_sold: number
-        }[]
-      }
       get_fact_daily_aggregated: {
-        Args:
-          | {
-              p_end_date?: string
-              p_location_code: string
-              p_sku: string
-              p_start_date?: string
-            }
-          | { p_location_code: string; p_sku: string }
+        Args: {
+          p_end_date?: string
+          p_location_code: string
+          p_sku: string
+          p_start_date?: string
+        }
         Returns: {
           d: string
           location_code: string
@@ -58,34 +43,15 @@ export type Database = {
           on_hand_units_sim: number
           sku: string
           units_sold: number
-        }[]
-      }
-      get_kpi_data: {
-        Args: { p_location_code: string; p_sku: string }
-        Returns: {
-          days_total: number
-          location_code: string
-          missed_units: number
-          mtv: number
-          riv: number
-          service_level: number
-          service_level_sim: number
-          sku: string
-          sku_loc_days: number
-          tcm: number
-          turns_current: number
-          turns_sim: number
         }[]
       }
       get_kpi_data_aggregated: {
-        Args:
-          | {
-              p_end_date?: string
-              p_location_code: string
-              p_sku: string
-              p_start_date?: string
-            }
-          | { p_location_code: string; p_sku: string }
+        Args: {
+          p_end_date?: string
+          p_location_code: string
+          p_sku: string
+          p_start_date?: string
+        }
         Returns: {
           days_total: number
           location_code: string
