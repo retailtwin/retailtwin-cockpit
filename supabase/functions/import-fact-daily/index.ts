@@ -42,17 +42,17 @@ serve(async (req) => {
           d,
           location_code: location_code.replace('.0', ''),
           sku: sku.replace('.0', ''),
-          units_sold: parseFloat(units_sold),
-          on_hand_units: on_hand_units ? parseFloat(on_hand_units) : null,
-          on_order_units: on_order_units ? parseInt(on_order_units) : 0,
-          in_transit_units: in_transit_units ? parseInt(in_transit_units) : 0,
-          on_hand_units_sim: on_hand_units_sim ? parseFloat(on_hand_units_sim) : null,
+          units_sold: units_sold || '0',
+          on_hand_units: on_hand_units || '',
+          on_order_units: on_order_units || '0',
+          in_transit_units: in_transit_units || '0',
+          on_hand_units_sim: on_hand_units_sim || '',
         };
       });
 
-    const { error } = await supabaseClient
-        .from('aifo.fact_daily')
-        .insert(records);
+      const { error } = await supabaseClient.rpc('insert_fact_daily_batch', {
+        records
+      });
 
       if (error) {
         console.error('Batch insert error:', error);

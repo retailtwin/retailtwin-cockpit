@@ -61,6 +61,10 @@ export type Database = {
           sku: string
         }[]
       }
+      insert_fact_daily_batch: {
+        Args: { records: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
