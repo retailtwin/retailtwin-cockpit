@@ -1,86 +1,67 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 export default function DataImport() {
-  const [csvText, setCsvText] = useState("");
-  const [isImporting, setIsImporting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const { toast } = useToast();
 
   const handleImport = async () => {
-    if (!csvText.trim()) {
-      toast({
-        title: "Error",
-        description: "Please paste CSV data first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsImporting(true);
+    setImporting(true);
+    
     try {
+      // Fetch the CSV file
+      const response = await fetch('/fact_daily_import.csv');
+      const csvData = await response.text();
+      
+      // Call the edge function to import
       const { data, error } = await supabase.functions.invoke('import-fact-daily', {
-        body: { csvText }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: data.message || "Data imported successfully",
+        body: { csvData }
       });
       
-      setCsvText("");
+      if (error) throw error;
+      
+      toast({
+        title: "Import Complete!",
+        description: `Successfully imported ${data.imported} records.`
+      });
     } catch (error: any) {
-      console.error('Import error:', error);
       toast({
         title: "Import Failed",
-        description: error.message || "Failed to import data",
-        variant: "destructive",
+        description: error.message,
+        variant: "destructive"
       });
     } finally {
-      setIsImporting(false);
+      setImporting(false);
     }
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <Card>
-        <CardHeader>
-          <CardTitle>Import Fact Daily Data</CardTitle>
-          <CardDescription>
-            Paste the contents of your fact_daily_1.csv file below to import the data
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Textarea
-            placeholder="Paste CSV data here (including header row)..."
-            value={csvText}
-            onChange={(e) => setCsvText(e.target.value)}
-            className="min-h-[400px] font-mono text-sm"
-          />
-          <Button 
-            onClick={handleImport} 
-            disabled={isImporting || !csvText.trim()}
-            className="w-full"
-          >
-            {isImporting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Importing...
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                Import Data
-              </>
-            )}
-          </Button>
-        </CardContent>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <Card className="p-8 max-w-md w-full">
+        <h1 className="text-2xl font-bold mb-4">Import Fact Daily Data</h1>
+        <p className="text-muted-foreground mb-6">
+          This will import 49,854 daily fact records into your database. 
+          This operation may take a few minutes.
+        </p>
+        
+        <Button 
+          onClick={handleImport} 
+          disabled={importing}
+          className="w-full"
+        >
+          {importing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Importing... This may take several minutes
+            </>
+          ) : (
+            "Start Import"
+          )}
+        </Button>
       </Card>
     </div>
   );
