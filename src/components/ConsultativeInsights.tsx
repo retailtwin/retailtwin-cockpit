@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, TrendingUp, AlertTriangle, FileText } from "lucide-react";
+import { Lightbulb, TrendingUp, AlertTriangle, FileText, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface ConsultativeInsightsProps {
@@ -9,14 +9,36 @@ interface ConsultativeInsightsProps {
   serviceLevelGain: number;
   turnsImprovement: number;
   stockoutReduction: number;
+  onAskArchie?: (prompt: string) => void;
 }
 
 export const ConsultativeInsights = ({ 
   cashGap, 
   serviceLevelGain,
   turnsImprovement,
-  stockoutReduction
+  stockoutReduction,
+  onAskArchie
 }: ConsultativeInsightsProps) => {
+  // Parse cash gap value (remove € and K, convert to number)
+  const cashGapValue = parseFloat(cashGap.replace(/[€K,]/g, '')) * (cashGap.includes('K') ? 1000 : 1);
+  
+  // Determine if we should show "Ask Archie" button
+  const showAskArchie = cashGapValue > 1000 || stockoutReduction > 20 || turnsImprovement > 10;
+  
+  // Generate contextual prompt based on what's triggering the button
+  const generateArchiePrompt = () => {
+    if (cashGapValue > 1000) {
+      return `Archie, I see a cash gap of ${cashGap}. What's driving this and what should I do?`;
+    }
+    if (stockoutReduction > 20) {
+      return `Why am I missing ${stockoutReduction.toFixed(0)}% of potential sales from stockouts?`;
+    }
+    if (turnsImprovement > 10) {
+      return `How can I improve inventory turns by ${turnsImprovement.toFixed(1)}%?`;
+    }
+    return "What's the biggest opportunity to improve my inventory performance?";
+  };
+
   return (
     <Card className="shadow-lg bg-gradient-to-br from-card to-card/50">
       <CardHeader>
@@ -55,7 +77,18 @@ export const ConsultativeInsights = ({
             extended beyond configured parameters for multiple locations, resulting in buffer inflation. Recommend reviewing 
             supplier performance data and adjusting lead-time rules or initiating corrective action with vendors.
           </p>
-          <div className="pt-2">
+          <div className="pt-2 flex gap-2">
+            {showAskArchie && onAskArchie && (
+              <Button 
+                onClick={() => onAskArchie(generateArchiePrompt())}
+                variant="default"
+                size="sm"
+                className="gap-2"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Ask Archie About This
+              </Button>
+            )}
             <Link to="/report">
               <Button variant="outline" size="sm" className="gap-2">
                 <FileText className="h-4 w-4" />

@@ -4,7 +4,8 @@ import { FilterBar } from "@/components/FilterBar";
 import { InventoryGraph } from "@/components/InventoryGraph";
 import { KPITable } from "@/components/KPITable";
 import { ConsultativeInsights } from "@/components/ConsultativeInsights";
-import { AgentPromptDock } from "@/components/AgentPromptDock";
+import { ArchieChatDock } from "@/components/ArchieChatDock";
+import { ArchieFloatingButton } from "@/components/ArchieFloatingButton";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { 
@@ -34,6 +35,7 @@ const Dashboard = () => {
   const [factDaily, setFactDaily] = useState<FactDaily[]>([]);
   const [agentDockOpen, setAgentDockOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [preloadedPrompt, setPreloadedPrompt] = useState<string>("");
 
   // Load locations and products on mount
   useEffect(() => {
@@ -99,6 +101,11 @@ const Dashboard = () => {
     
     loadData();
   }, [selectedLocation, selectedProduct, dateRange, toast]);
+
+  const handleAskArchie = (prompt: string) => {
+    setPreloadedPrompt(prompt);
+    setAgentDockOpen(true);
+  };
 
   const handleExportCSV = () => {
     if (factDaily.length === 0) {
@@ -288,13 +295,45 @@ const Dashboard = () => {
               stockoutReduction={kpiData.service_level < 1 
                 ? (((1 - kpiData.service_level) - (1 - kpiData.service_level_sim)) / (1 - kpiData.service_level)) * 100 
                 : 0}
+              onAskArchie={handleAskArchie}
             />
           )}
         </div>
       </div>
 
-      {/* Agent Prompt Dock */}
-      {agentDockOpen && <AgentPromptDock onClose={() => setAgentDockOpen(false)} />}
+      {/* Archie Chat Dock */}
+      {agentDockOpen && (
+        <ArchieChatDock 
+          onClose={() => {
+            setAgentDockOpen(false);
+            setPreloadedPrompt("");
+          }}
+          kpiContext={kpiData ? {
+            location: selectedLocation,
+            product: selectedProduct,
+            dateRange: dateRange?.from && dateRange?.to 
+              ? `${format(dateRange.from, "MMM d, yyyy")} - ${format(dateRange.to, "MMM d, yyyy")}`
+              : "All time",
+            metrics: {
+              tcm: kpiData.tcm,
+              mtv: kpiData.mtv,
+              riv: kpiData.riv,
+              service_level: kpiData.service_level,
+              service_level_sim: kpiData.service_level_sim,
+              turns_current: kpiData.turns_current,
+              turns_sim: kpiData.turns_sim,
+            }
+          } : undefined}
+          preloadedPrompt={preloadedPrompt}
+        />
+      )}
+
+      {/* Archie Floating Button */}
+      <ArchieFloatingButton
+        onClick={() => setAgentDockOpen(true)}
+        isOpen={agentDockOpen}
+        notificationCount={kpiData && ((kpiData.mtv || 0) > 500 || (kpiData.riv || 0) > 1000 || kpiData.service_level < 0.95) ? 1 : 0}
+      />
     </Layout>
   );
 };

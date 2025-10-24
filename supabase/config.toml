@@ -1,1 +1,7 @@
 project_id = "zgsrbhfazvgtqbpkhabg"
+
+[functions.import-fact-daily]
+verify_jwt = false
+
+[functions.archie-chat]
+verify_jwt = false
