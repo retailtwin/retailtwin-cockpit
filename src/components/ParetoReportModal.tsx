@@ -20,6 +20,15 @@ interface ParetoReportModalProps {
   sku: string;
   endDate: string; // YYYY-MM-DD format
   onAskArchie: (prompt: string) => void;
+  kpiData?: {
+    tcm?: number;
+    mtv?: number;
+    riv?: number;
+    service_level?: number;
+    service_level_sim?: number;
+    turns_current?: number;
+    turns_sim?: number;
+  };
 }
 
 export const ParetoReportModal = ({
@@ -29,6 +38,7 @@ export const ParetoReportModal = ({
   sku,
   endDate,
   onAskArchie,
+  kpiData,
 }: ParetoReportModalProps) => {
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,6 +78,14 @@ export const ParetoReportModal = ({
     try {
       const prompt = `Analyze the Pareto distribution for this selection. What insights stand out? What should I focus on?`;
       
+      // Calculate Pareto summary from current data
+      const paretoSummary = data.length > 0 ? {
+        totalSkus: data.length,
+        top20Count: Math.ceil(data.length * 0.2),
+        top20Contribution: data.slice(0, Math.ceil(data.length * 0.2))
+          .reduce((sum: number, item: any) => sum + (item.cumulative_percent || 0), 0),
+      } : undefined;
+      
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/archie-chat`,
         {
@@ -82,6 +100,16 @@ export const ParetoReportModal = ({
               location: location,
               product: sku,
               dateRange: `Analysis ending ${endDate}`,
+              metrics: kpiData ? {
+                tcm: kpiData.tcm,
+                mtv: kpiData.mtv,
+                riv: kpiData.riv,
+                service_level: kpiData.service_level,
+                service_level_sim: kpiData.service_level_sim,
+                turns_current: kpiData.turns_current,
+                turns_sim: kpiData.turns_sim,
+              } : undefined,
+              paretoSummary,
             },
           }),
         }

@@ -350,6 +350,15 @@ const Dashboard = () => {
         sku={selectedProduct}
         endDate={dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')}
         onAskArchie={handleAskArchie}
+        kpiData={kpiData ? {
+          tcm: kpiData.tcm,
+          mtv: kpiData.mtv,
+          riv: kpiData.riv,
+          service_level: kpiData.service_level,
+          service_level_sim: kpiData.service_level_sim,
+          turns_current: kpiData.turns_current,
+          turns_sim: kpiData.turns_sim,
+        } : undefined}
       />
     </Layout>
   );
