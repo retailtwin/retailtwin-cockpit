@@ -48,6 +48,7 @@ You have access to analytical tools:
 3. get_top_skus_by_metric - for identifying top/bottom performers by various metrics
 
 Use these tools proactively when users ask analytical questions. Always cite specific numbers from the data.
+PRIORITY: When data is already provided in "Current Context Available" section (like Pareto Distribution Analysis), reference that data directly first. Only call tools for additional analysis or different filters.
 
 Key Terminology (use these terms naturally):
 - MTV (Missed Throughput Value) = Lost revenue from stockouts. This is opportunity cost.
@@ -71,6 +72,23 @@ Key Metrics:
 - Simulated Service Level: ${context.metrics?.service_level_sim ? (context.metrics.service_level_sim * 100).toFixed(1) + '%' : 'N/A'}
 - Current Inventory Turns: ${context.metrics?.turns_current?.toFixed(2) || 'N/A'}
 - Simulated Turns: ${context.metrics?.turns_sim?.toFixed(2) || 'N/A'}
+
+${context.paretoSummary ? `
+Pareto Distribution Analysis (ALREADY FETCHED - Reference this data directly):
+- Total SKUs analyzed: ${context.paretoSummary.totalSkus}
+- Top 20% threshold: ${context.paretoSummary.top20Count} SKUs
+- Top 20% sales contribution: ${context.paretoSummary.top20Contribution?.toFixed(1)}% of total sales
+${context.paretoSummary.topSkus && context.paretoSummary.topSkus.length > 0 ? `
+- Top performing SKUs (sorted by sales):
+${context.paretoSummary.topSkus.map((sku: any, i: number) => 
+  `  ${i+1}. ${sku.name} (${sku.sku}): ${sku.sales?.toFixed(0) || 'N/A'} units sold, ${sku.cumulativePercent?.toFixed(1) || 'N/A'}% cumulative, ${sku.availability?.toFixed(1) || 'N/A'}% availability`
+).join('\n')}
+
+IMPORTANT: When Pareto data is shown above, reference it directly in your analysis.
+Only use the get_pareto_analysis tool if you need different filters or more recent data.
+User phrases like "show me", "analyze", or "what insights" refer to interpreting the existing data above.
+` : ''}
+` : ''}
 ` : 'No specific context provided'}
 
 Your goal: Help retailers improve cash flow and service levels through better inventory decisions.
