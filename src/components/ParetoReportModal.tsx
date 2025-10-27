@@ -48,9 +48,15 @@ export const ParetoReportModal = ({
   useEffect(() => {
     if (isOpen) {
       fetchParetoData();
-      generateArchieAnalysis();
     }
   }, [isOpen, location, sku, endDate]);
+
+  // Trigger analysis only when data is ready
+  useEffect(() => {
+    if (isOpen && data.length > 0 && !isAnalyzing) {
+      generateArchieAnalysis(data);
+    }
+  }, [data, isOpen]);
 
   const fetchParetoData = async () => {
     setIsLoading(true);
@@ -71,20 +77,31 @@ export const ParetoReportModal = ({
     }
   };
 
-  const generateArchieAnalysis = async () => {
+  const generateArchieAnalysis = async (paretoData: any[]) => {
     setIsAnalyzing(true);
     setArchieAnalysis("");
     
     try {
       const prompt = `Analyze the Pareto distribution for this selection. What insights stand out? What should I focus on?`;
       
-      // Calculate Pareto summary from current data
-      const paretoSummary = data.length > 0 ? {
-        totalSkus: data.length,
-        top20Count: Math.ceil(data.length * 0.2),
-        top20Contribution: data.slice(0, Math.ceil(data.length * 0.2))
-          .reduce((sum: number, item: any) => sum + (item.cumulative_percent || 0), 0),
-      } : undefined;
+      // Calculate comprehensive Pareto summary from the passed data
+      const top20Count = Math.ceil(paretoData.length * 0.2);
+      const top20Data = paretoData.slice(0, top20Count);
+      
+      const paretoSummary = {
+        totalSkus: paretoData.length,
+        top20Count,
+        top20Contribution: top20Data.length > 0 
+          ? top20Data[top20Data.length - 1]?.cumulative_percent || 0
+          : 0,
+        topSkus: top20Data.slice(0, Math.min(10, top20Data.length)).map((item: any) => ({
+          sku: item.sku,
+          name: item.sku_name,
+          sales: item.total_units_sold,
+          cumulativePercent: item.cumulative_percent,
+          availability: item.availability_percent,
+        })),
+      };
       
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/archie-chat`,
