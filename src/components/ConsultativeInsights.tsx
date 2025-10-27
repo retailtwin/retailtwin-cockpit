@@ -10,14 +10,16 @@ interface ConsultativeInsightsProps {
   turnsImprovement: number;
   stockoutReduction: number;
   onAskArchie?: (prompt: string) => void;
+  onViewParetoReport?: () => void;
 }
 
 export const ConsultativeInsights = ({ 
   cashGap, 
-  serviceLevelGain,
-  turnsImprovement,
+  serviceLevelGain, 
+  turnsImprovement, 
   stockoutReduction,
-  onAskArchie
+  onAskArchie,
+  onViewParetoReport = () => {}
 }: ConsultativeInsightsProps) => {
   // Parse cash gap value (remove € and K, convert to number)
   const cashGapValue = parseFloat(cashGap.replace(/[€K,]/g, '')) * (cashGap.includes('K') ? 1000 : 1);
@@ -77,7 +79,7 @@ export const ConsultativeInsights = ({
             extended beyond configured parameters for multiple locations, resulting in buffer inflation. Recommend reviewing 
             supplier performance data and adjusting lead-time rules or initiating corrective action with vendors.
           </p>
-          <div className="pt-2 flex gap-2">
+          <div className="pt-2 flex gap-2 flex-wrap">
             {showAskArchie && onAskArchie && (
               <Button 
                 onClick={() => onAskArchie(generateArchiePrompt())}
@@ -89,10 +91,18 @@ export const ConsultativeInsights = ({
                 Ask Archie About This
               </Button>
             )}
+            <Button 
+              onClick={onViewParetoReport}
+              variant="outline"
+              size="sm"
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              View Pareto Report
+            </Button>
             <Link to="/report">
-              <Button variant="outline" size="sm" className="gap-2">
-                <FileText className="h-4 w-4" />
-                View Detailed Reports
+              <Button variant="ghost" size="sm" className="gap-2">
+                View Detailed Reports →
               </Button>
             </Link>
           </div>

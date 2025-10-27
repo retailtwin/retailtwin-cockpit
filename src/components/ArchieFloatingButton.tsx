@@ -42,7 +42,7 @@ export const ArchieFloatingButton = ({
           </Button>
         </TooltipTrigger>
         <TooltipContent side="left">
-          <p>Chat with Archie</p>
+          <p>Ask Archie</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

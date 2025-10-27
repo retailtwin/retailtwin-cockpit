@@ -191,8 +191,10 @@ export const ArchieChatDock = ({ onClose, kpiContext, preloadedPrompt }: ArchieC
   const suggestedPrompts = [
     "What's killing my cash flow?",
     "Which SKUs need immediate action?",
-    "What if I cut buffer days by 20%?",
-    "Show me the top 5 problem areas",
+    "Show me the top 10 SKUs by sales",
+    "Which items have the most stockouts?",
+    "Show me the Pareto distribution",
+    "What should I focus on first?",
   ];
 
   if (!isOpen) return null;
@@ -214,9 +216,9 @@ export const ArchieChatDock = ({ onClose, kpiContext, preloadedPrompt }: ArchieC
               <Bot className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-lg">Chat with Archie</CardTitle>
+              <CardTitle className="text-lg">Archie, your AI assistant</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Your inventory optimization assistant
+                Calm, precise inventory optimization guidance
               </p>
             </div>
           </div>

@@ -68,23 +68,69 @@ export type Database = {
         }[]
       }
       get_locations: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           code: string
           name: string
         }[]
       }
+      get_pareto_analysis: {
+        Args: { p_date?: string; p_location_code: string; p_sku?: string }
+        Returns: {
+          availability_percent: number
+          cumulative_percent: number
+          cumulative_units: number
+          is_selected_sku: boolean
+          rank: number
+          sku: string
+          sku_name: string
+          total_skus: number
+          total_units_sold: number
+        }[]
+      }
       get_products: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           name: string
           sku: string
         }[]
       }
-      insert_fact_daily_batch: {
-        Args: { records: Json }
-        Returns: undefined
+      get_sku_details: {
+        Args: {
+          p_end_date: string
+          p_location_code: string
+          p_sku: string
+          p_start_date: string
+        }
+        Returns: {
+          avg_daily_sales: number
+          avg_on_hand: number
+          days_with_data: number
+          max_on_hand: number
+          min_on_hand: number
+          sku: string
+          sku_name: string
+          stockout_days: number
+          total_units_sold: number
+        }[]
       }
+      get_top_skus_by_metric: {
+        Args: {
+          p_end_date?: string
+          p_limit?: number
+          p_location_code: string
+          p_metric: string
+          p_start_date?: string
+        }
+        Returns: {
+          avg_inventory: number
+          metric_value: number
+          sku: string
+          sku_name: string
+          units_sold: number
+        }[]
+      }
+      insert_fact_daily_batch: { Args: { records: Json }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

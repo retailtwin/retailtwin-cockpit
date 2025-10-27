@@ -6,6 +6,7 @@ import { KPITable } from "@/components/KPITable";
 import { ConsultativeInsights } from "@/components/ConsultativeInsights";
 import { ArchieChatDock } from "@/components/ArchieChatDock";
 import { ArchieFloatingButton } from "@/components/ArchieFloatingButton";
+import { ParetoReportModal } from "@/components/ParetoReportModal";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { 
@@ -36,6 +37,7 @@ const Dashboard = () => {
   const [agentDockOpen, setAgentDockOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [preloadedPrompt, setPreloadedPrompt] = useState<string>("");
+  const [paretoModalOpen, setParetoModalOpen] = useState(false);
 
   // Load locations and products on mount
   useEffect(() => {
@@ -105,6 +107,10 @@ const Dashboard = () => {
   const handleAskArchie = (prompt: string) => {
     setPreloadedPrompt(prompt);
     setAgentDockOpen(true);
+  };
+
+  const handleViewParetoReport = () => {
+    setParetoModalOpen(true);
   };
 
   const handleExportCSV = () => {
@@ -296,6 +302,7 @@ const Dashboard = () => {
                 ? (((1 - kpiData.service_level) - (1 - kpiData.service_level_sim)) / (1 - kpiData.service_level)) * 100 
                 : 0}
               onAskArchie={handleAskArchie}
+              onViewParetoReport={handleViewParetoReport}
             />
           )}
         </div>
@@ -333,6 +340,16 @@ const Dashboard = () => {
         onClick={() => setAgentDockOpen(true)}
         isOpen={agentDockOpen}
         notificationCount={kpiData && ((kpiData.mtv || 0) > 500 || (kpiData.riv || 0) > 1000 || kpiData.service_level < 0.95) ? 1 : 0}
+      />
+
+      {/* Pareto Report Modal */}
+      <ParetoReportModal
+        isOpen={paretoModalOpen}
+        onClose={() => setParetoModalOpen(false)}
+        location={selectedLocation}
+        sku={selectedProduct}
+        endDate={dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')}
+        onAskArchie={handleAskArchie}
       />
     </Layout>
   );

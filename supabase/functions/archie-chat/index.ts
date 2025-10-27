@@ -1,4 +1,6 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -6,117 +8,170 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { messages, context } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
-
-    // Build context string for system prompt
-    const contextStr = context ? `
-Current Dashboard Context:
-- Location: ${context.location || 'Not specified'}
-- Product: ${context.product || 'Not specified'}
-- Date Range: ${context.dateRange || 'All time'}
-${context.metrics ? `
-Key Metrics:
-- Total Contribution Margin (TCM): €${context.metrics.tcm?.toFixed(0) || 0}
-- Missed Throughput Value (MTV): €${context.metrics.mtv?.toFixed(0) || 0}
-- Redundant Inventory Value (RIV): €${context.metrics.riv?.toFixed(0) || 0}
-- Service Level (Current): ${(context.metrics.service_level * 100).toFixed(1)}%
-- Service Level (Simulated): ${(context.metrics.service_level_sim * 100).toFixed(1)}%
-- Inventory Turns (Current): ${context.metrics.turns_current?.toFixed(1) || 0}
-- Inventory Turns (Simulated): ${context.metrics.turns_sim?.toFixed(1) || 0}
-- Cash Gap: €${((context.metrics.mtv || 0) + (context.metrics.riv || 0)).toFixed(0)}
-` : ''}` : '';
+    
+    // Initialize Supabase client for function calling
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     const systemPrompt = `You are Archie, a calm and precise inventory optimization assistant for retail supply chains.
 
-**Identity:**
-- Name: Archie
-- Contact: archie@retailtwin.com
-- Mission: More flow, less friction
+Core Traits:
+- Direct and action-oriented - no fluff or jargon
+- Data-driven - always reference specific numbers from the context provided or your analytical tools
+- Calm under pressure - clear explanations even for complex issues
+- Never guess - if you need more data, use your analytical tools or ask
+- Dry humour - subtle, never distracting
+- Translate spreadsheet speak to human language
+- Keep responses concise and actionable
 
-**Core Traits:**
-- Calm, clear, and precise – especially under pressure
-- Curious about stock, cash, and anything that flows
-- Helps retailers make better decisions without delay or complexity
-- Speaks fluent spreadsheet, but translates it back to human
-- Respects constraints, challenges old rules, and always keeps it simple
-- Never guesses – asks, checks, or simulates
-- Takes confidentiality seriously – no sharing unless you say so
-- Has no ego, no fluff, and no time for jargon
-- Loyal to the mission: more flow, less friction
-- Friendly with a dry sense of humour – just enough to keep things moving
+When answering:
+1. Start with the key insight (one sentence)
+2. Provide specific numbers from the context or your tools
+3. Give actionable recommendations (numbered list, max 3-4 items)
+4. Ask clarifying questions when needed
 
-**Communication Style:**
-1. Start with the key insight (one clear sentence)
-2. Provide specific numbers from the context when available
-3. Give actionable recommendations (numbered list, max 3-5 items)
-4. Ask clarifying questions when you need more information
-5. Keep it direct – no corporate speak, no fluff
-6. Use dry humour sparingly – only when it helps clarity
+You have access to analytical tools:
+1. get_pareto_analysis - for sales distribution and SKU ranking analysis
+2. get_sku_details - for deep-dive on specific SKUs
+3. get_top_skus_by_metric - for identifying top/bottom performers by various metrics
 
-**Key Terminology (translate these to human language):**
-- MTV (Missed Throughput Value) = Lost revenue from stockouts – cash you could have made
-- RIV (Redundant Inventory Value) = Cash tied up in slow-moving stock – money doing nothing
-- Cash Gap = MTV + RIV – total cash flow problem
-- Service Level = % of demand met without stockouts – how often you have what customers want
-- Inventory Turns = How many times inventory sells through per year – speed of cash conversion
-- TCM (Total Contribution Margin) = Revenue minus cost of goods sold – actual profit
-- Buffer Days = Safety stock to protect against uncertainty – your insurance policy
-- Lead Time = Days between ordering and receiving stock – supplier speed
+Use these tools proactively when users ask analytical questions. Always cite specific numbers from the data.
 
-**When Responding:**
-- If metrics show problems, be direct: "You have €X sitting in redundant inventory. That's cash doing nothing."
-- Give specific actions: "Here's what I'd do: 1) [action], 2) [action], 3) [action]"
-- Reference actual numbers from the context when making recommendations
-- If you don't have data you need, ask for it directly: "I need to see your top 10 SKUs by MTV to answer that properly."
-- No guessing – if you're uncertain, say so and suggest how to get clarity
-- Keep tone professional but approachable – think experienced advisor, not robot
+Key Terminology (use these terms naturally):
+- MTV (Missed Throughput Value) = Lost revenue from stockouts. This is opportunity cost.
+- RIV (Redundant Inventory Value) = Cash tied up in slow-moving stock. This is working capital waste.
+- Cash Gap = MTV + RIV = Total opportunity to improve cash flow
+- Service Level = % of demand met without stockouts (target: 95%+)
+- Turns = How many times inventory sells through per year (higher is better)
+- TCM (Total Contribution Margin) = Gross profit from sales
 
-**Example Response Style:**
-User: "What's killing my cash flow?"
-Archie: "Two things: €294 in lost sales from stockouts on high-movers, and €1,532 sitting in slow inventory. Total cash gap: €1,826.
+Current Context Available:
+${context ? `
+Location: ${context.location || 'Not specified'}
+Product/SKU: ${context.product || 'Not specified'}
+Date Range: ${context.dateRange || 'Not specified'}
 
-Here's what I'd do:
-1. Increase reorder points on your fastest 5 SKUs – you're leaving money on the table
-2. Reduce buffer days on the 8 slowest items – they're tying up capital
-3. Review lead-time assumptions – suppliers might be running late
+Key Metrics:
+- Total Contribution Margin (TCM): €${context.metrics?.tcm?.toFixed(2) || 'N/A'}
+- Missed Throughput Value (MTV): €${context.metrics?.mtv?.toFixed(2) || 'N/A'}
+- Redundant Inventory Value (RIV): €${context.metrics?.riv?.toFixed(2) || 'N/A'}
+- Service Level: ${context.metrics?.service_level ? (context.metrics.service_level * 100).toFixed(1) + '%' : 'N/A'}
+- Simulated Service Level: ${context.metrics?.service_level_sim ? (context.metrics.service_level_sim * 100).toFixed(1) + '%' : 'N/A'}
+- Current Inventory Turns: ${context.metrics?.turns_current?.toFixed(2) || 'N/A'}
+- Simulated Turns: ${context.metrics?.turns_sim?.toFixed(2) || 'N/A'}
+` : 'No specific context provided'}
 
-Want me to walk through which specific SKUs to adjust?"
-${contextStr}
+Your goal: Help retailers improve cash flow and service levels through better inventory decisions.
 
-Remember: You're here to help retailers make better inventory decisions. Be helpful, be direct, be Archie.`;
+Remember: Be direct, use specific numbers, use your analytical tools when needed, keep it actionable.`;
 
-    console.log('🤖 Archie processing request with context:', context);
+    // Define tools for function calling
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "get_pareto_analysis",
+          description: "Get Pareto curve data showing SKU contribution to sales. Use when user asks about top performers, sales distribution, SKU ranking, or wants to see which items drive the most revenue.",
+          parameters: {
+            type: "object",
+            properties: {
+              location_code: { 
+                type: "string",
+                description: "Location code (e.g., '98274' or 'ALL' for all locations)"
+              },
+              sku: { 
+                type: "string",
+                description: "SKU code or 'ALL' for all SKUs"
+              },
+              date: { 
+                type: "string",
+                description: "End date for analysis in YYYY-MM-DD format"
+              }
+            },
+            required: ["location_code", "date"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "get_sku_details",
+          description: "Get detailed analytics for a specific SKU including sales trends, stockout history, and inventory levels. Use when user wants deep-dive information on a particular item.",
+          parameters: {
+            type: "object",
+            properties: {
+              location_code: { type: "string" },
+              sku: { type: "string" },
+              start_date: { type: "string" },
+              end_date: { type: "string" }
+            },
+            required: ["location_code", "sku", "start_date", "end_date"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "get_top_skus_by_metric",
+          description: "Get top N SKUs ranked by a specific metric. Use when user asks 'show me top 5', 'which SKUs need attention', or wants to identify problem areas.",
+          parameters: {
+            type: "object",
+            properties: {
+              location_code: { type: "string" },
+              metric: { 
+                type: "string",
+                enum: ["sales", "stockout_days", "turns"],
+                description: "Metric to rank by: 'sales' for top sellers, 'stockout_days' for items with most stockouts, 'turns' for inventory turnover"
+              },
+              limit: { 
+                type: "number",
+                default: 10,
+                description: "Number of SKUs to return (default 10)"
+              },
+              start_date: { type: "string" },
+              end_date: { type: "string" }
+            },
+            required: ["location_code", "metric"]
+          }
+        }
+      }
+    ];
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    console.info(`🤖 Archie processing request with context:`, JSON.stringify(context, null, 2));
+
+    // Initial API call with function calling enabled
+    let response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          ...messages,
+          ...messages
         ],
-        stream: true,
+        tools: tools,
+        stream: false,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ AI gateway error:', response.status, errorText);
+      console.error(`❌ AI gateway error: ${response.status}`, errorText);
       
       if (response.status === 429) {
         return new Response(JSON.stringify({ 
@@ -126,22 +181,105 @@ Remember: You're here to help retailers make better inventory decisions. Be help
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      
       if (response.status === 402) {
         return new Response(JSON.stringify({ 
-          error: "AI credits depleted. Please add credits to your workspace." 
+          error: "AI usage limit reached. Please contact support to add more credits." 
         }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      
-      return new Response(JSON.stringify({ error: "AI service error" }), {
+
+      return new Response(JSON.stringify({ error: "AI processing error" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log('✅ Archie streaming response');
+    const firstResponse = await response.json();
+    const firstChoice = firstResponse.choices?.[0];
+
+    // Check if AI wants to call a function
+    if (firstChoice?.message?.tool_calls && firstChoice.message.tool_calls.length > 0) {
+      console.info(`🔧 Archie calling tools:`, firstChoice.message.tool_calls.map((tc: any) => tc.function.name));
+      
+      // Execute all tool calls
+      const toolResults = await Promise.all(
+        firstChoice.message.tool_calls.map(async (toolCall: any) => {
+          const functionName = toolCall.function.name;
+          const functionArgs = JSON.parse(toolCall.function.arguments);
+          
+          console.info(`📊 Executing ${functionName} with args:`, functionArgs);
+          
+          try {
+            const { data, error } = await supabase.rpc(functionName, {
+              p_location_code: functionArgs.location_code,
+              p_sku: functionArgs.sku,
+              p_metric: functionArgs.metric,
+              p_limit: functionArgs.limit,
+              p_date: functionArgs.date,
+              p_start_date: functionArgs.start_date,
+              p_end_date: functionArgs.end_date,
+            });
+            
+            if (error) {
+              console.error(`❌ Error calling ${functionName}:`, error);
+              return {
+                tool_call_id: toolCall.id,
+                role: "tool",
+                content: JSON.stringify({ error: error.message })
+              };
+            }
+            
+            console.info(`✅ ${functionName} returned ${Array.isArray(data) ? data.length : 1} results`);
+            
+            return {
+              tool_call_id: toolCall.id,
+              role: "tool",
+              content: JSON.stringify(data)
+            };
+          } catch (err) {
+            console.error(`❌ Exception in ${functionName}:`, err);
+            return {
+              tool_call_id: toolCall.id,
+              role: "tool",
+              content: JSON.stringify({ error: String(err) })
+            };
+          }
+        })
+      );
+
+      // Make second API call with tool results, now with streaming
+      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...messages,
+            firstChoice.message,
+            ...toolResults
+          ],
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ AI gateway error on second call: ${response.status}`, errorText);
+        return new Response(JSON.stringify({ error: "AI processing error" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    console.info('✅ Archie streaming response');
     
     return new Response(response.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
