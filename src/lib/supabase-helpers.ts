@@ -35,8 +35,8 @@ export interface FactDaily {
 }
 
 export async function fetchLocations(): Promise<Location[]> {
-  const { data, error } = await supabase.rpc('get_locations' as any);
-  
+  const { data, error } = await supabase.rpc("get_locations" as any);
+
   if (error) {
     console.error("Error fetching locations:", error);
     console.error("Full error object:", JSON.stringify(error, null, 2));
@@ -46,8 +46,8 @@ export async function fetchLocations(): Promise<Location[]> {
 }
 
 export async function fetchProducts(): Promise<Product[]> {
-  const { data, error } = await supabase.rpc('get_products' as any);
-  
+  const { data, error } = await supabase.rpc("get_products" as any);
+
   if (error) {
     console.error("Error fetching products:", error);
     console.error("Full error object:", JSON.stringify(error, null, 2));
@@ -63,22 +63,28 @@ export async function fetchKPIData(
   endDate?: string
 ): Promise<KPIData | null> {
   // Use aggregated function if either parameter is 'ALL'
-  const rpcName = (locationCode === 'ALL' || sku === 'ALL') 
-    ? 'get_kpi_data_aggregated' 
-    : 'get_kpi_data';
-    
+  const rpcName =
+    locationCode === "ALL" || sku === "ALL"
+      ? "get_kpi_data_aggregated"
+      : "get_kpi_data";
+
   const { data, error } = await supabase.rpc(rpcName as any, {
     p_location_code: locationCode,
     p_sku: sku,
     p_start_date: startDate || null,
-    p_end_date: endDate || null
+    p_end_date: endDate || null,
   });
-  
+
   if (error) {
     console.error("Error fetching KPI data:", error);
     console.error("Full error object:", JSON.stringify(error, null, 2));
     console.error("RPC name used:", rpcName);
-    console.error("Parameters:", { p_location_code: locationCode, p_sku: sku });
+    console.error("Parameters:", {
+      p_location_code: locationCode,
+      p_sku: sku,
+      p_start_date: startDate || null,
+      p_end_date: endDate || null,
+    });
     return null;
   }
   const result = data as any;
@@ -92,45 +98,55 @@ export async function fetchFactDaily(
   endDate?: string
 ): Promise<FactDaily[]> {
   // Use aggregated function if either parameter is 'ALL'
-  const rpcName = (locationCode === 'ALL' || sku === 'ALL') 
-    ? 'get_fact_daily_aggregated' 
-    : 'get_fact_daily';
-    
+  const rpcName =
+    locationCode === "ALL" || sku === "ALL"
+      ? "get_fact_daily_aggregated"
+      : "get_fact_daily";
+
   const { data, error } = await supabase.rpc(rpcName as any, {
     p_location_code: locationCode,
     p_sku: sku,
     p_start_date: startDate || null,
-    p_end_date: endDate || null
+    p_end_date: endDate || null,
   });
-  
+
   if (error) {
     console.error("Error fetching fact daily:", error);
     console.error("Full error object:", JSON.stringify(error, null, 2));
     console.error("RPC name used:", rpcName);
-    console.error("Parameters:", { p_location_code: locationCode, p_sku: sku });
+    console.error("Parameters:", {
+      p_location_code: locationCode,
+      p_sku: sku,
+      p_start_date: startDate || null,
+      p_end_date: endDate || null,
+    });
     return [];
   }
   return (data as any) || [];
 }
 
+/**
+ * Currency formatter:
+ * - amounts under €10,000 show full euros (no "K")
+ * - amounts ≥ €10,000 show thousands with a K suffix
+ */
 export function formatCurrency(value: number | null): string {
   if (value === null || value === undefined) return "—";
-  
-  // For values under €10K, show full amount without K suffix
-  if (Math.abs(value) < 10000) {
-    return `€${value.toFixed(0)}`;
-  }
-  
-  // For larger values, use K format
-  return `€${(value / 1000).toFixed(0)}K`;
+  const v = Number(value);
+  if (Number.isNaN(v)) return "—";
+  if (Math.abs(v) < 10000) return `€${v.toFixed(0)}`;
+  return `€${(v / 1000).toFixed(0)}K`;
 }
 
-export function formatNumber(value: number | null, decimals: number = 0): string | number {
+export function formatNumber(
+  value: number | null,
+  decimals: number = 0
+): string | number {
   if (value === null || value === undefined) return "—";
-  return decimals > 0 ? value.toFixed(decimals) : Math.round(value);
+  return decimals > 0 ? Number(value).toFixed(decimals) : Math.round(Number(value));
 }
 
 export function formatPercentage(value: number | null): string {
   if (value === null || value === undefined) return "—";
-  return `${(value * 100).toFixed(1)}%`;
+  return `${(Number(value) * 100).toFixed(1)}%`;
 }
