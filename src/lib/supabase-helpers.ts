@@ -34,6 +34,17 @@ export interface FactDaily {
   on_hand_units_sim: number | null;
 }
 
+export interface DBMCalculation {
+  location_code: string;
+  sku: string;
+  calculation_date: string;
+  target_units: number | null;
+  economic_units: number | null;
+  economic_overstock_units: number | null;
+  on_hand_units: number | null;
+  created_at?: string;
+}
+
 export async function fetchLocations(): Promise<Location[]> {
   const { data, error } = await supabase.rpc("get_locations" as any);
 
@@ -123,6 +134,44 @@ export async function fetchFactDaily(
     return [];
   }
   return (data as any) || [];
+}
+
+export async function fetchDBMCalculations(
+  locationCode?: string,
+  sku?: string,
+  startDate?: string,
+  endDate?: string
+): Promise<DBMCalculation[]> {
+  let query = supabase
+    .from("dbm_calculations")
+    .select("*")
+    .order("calculation_date", { ascending: false });
+
+  if (locationCode && locationCode !== "ALL") {
+    query = query.eq("location_code", locationCode);
+  }
+
+  if (sku && sku !== "ALL") {
+    query = query.eq("sku", sku);
+  }
+
+  if (startDate) {
+    query = query.gte("calculation_date", startDate);
+  }
+
+  if (endDate) {
+    query = query.lte("calculation_date", endDate);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching DBM calculations:", error);
+    console.error("Full error object:", JSON.stringify(error, null, 2));
+    return [];
+  }
+
+  return (data as DBMCalculation[]) || [];
 }
 
 /**
