@@ -37,7 +37,8 @@ const Dashboard = () => {
   const [factDaily, setFactDaily] = useState<FactDaily[]>([]);
   const [agentDockOpen, setAgentDockOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [preloadedPrompt, setPreloadedPrompt] = useState<string>("");
+  const [preloadedPrompt, setPreloadedPrompt] = useState<string>("");const [dbmCalculations, setDbmCalculations] = useState([]);
+  const [dbmCalculations, setDbmCalculations] = useState([]);
   const [paretoModalOpen, setParetoModalOpen] = useState(false);
   const [isRunningDBM, setIsRunningDBM] = useState(false);
 
@@ -98,6 +99,7 @@ const Dashboard = () => {
 
         setKpiData(kpi);
         setFactDaily(facts);
+        await fetchDBMCalculations();
       } catch (error) {
         console.error("Error loading KPI data:", error);
         toast({
@@ -118,6 +120,38 @@ const Dashboard = () => {
 
   const handleViewParetoReport = () => {
     setParetoModalOpen(true);
+  };
+
+  const fetchDBMCalculations = async () => {
+    try {
+      const selectedSKU = selectedProduct !== "ALL" ? selectedProduct : null;
+      const selectedLoc = selectedLocation !== "ALL" ? selectedLocation : null;
+      
+      let query = supabase
+        .from('dbm_calculations')
+        .select('*')
+        .order('calculation_date', { ascending: true });
+
+      if (selectedSKU) {
+        query = query.eq('sku', selectedSKU);
+      }
+      if (selectedLoc) {
+        query = query.eq('location_code', selectedLoc);
+      }
+      if (dateRange?.from) {
+        query = query.gte('calculation_date', format(dateRange.from, "yyyy-MM-dd"));
+      }
+      if (dateRange?.to) {
+        query = query.lte('calculation_date', format(dateRange.to, "yyyy-MM-dd"));
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      setDbmCalculations(data || []);
+    } catch (error) {
+      console.error('Error fetching DBM calculations:', error);
+    }
   };
 
   const runDBMAnalysis = async () => {
