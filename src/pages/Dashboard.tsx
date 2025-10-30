@@ -37,7 +37,7 @@ const Dashboard = () => {
   const [factDaily, setFactDaily] = useState<FactDaily[]>([]);
   const [agentDockOpen, setAgentDockOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [preloadedPrompt, setPreloadedPrompt] = useState<string>("");const [dbmCalculations, setDbmCalculations] = useState([]);
+  const [preloadedPrompt, setPreloadedPrompt] = useState<string>("");
   const [dbmCalculations, setDbmCalculations] = useState([]);
   const [paretoModalOpen, setParetoModalOpen] = useState(false);
   const [isRunningDBM, setIsRunningDBM] = useState(false);
