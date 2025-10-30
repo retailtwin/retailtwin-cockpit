@@ -80,6 +80,25 @@ export type Database = {
           units_sold: number
         }[]
       }
+      get_inventory_zones_report: {
+        Args: {
+          p_end_date?: string
+          p_location_code?: string
+          p_start_date?: string
+        }
+        Returns: {
+          avg_economic: number
+          avg_economic_overstock: number
+          avg_on_hand: number
+          avg_target: number
+          avg_weekly_sales: number
+          sku: string
+          sku_name: string
+          stockout_days: number
+          total_days: number
+          total_throughput: number
+        }[]
+      }
       get_kpi_data_aggregated: {
         Args: {
           p_end_date?: string
