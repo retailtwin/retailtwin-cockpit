@@ -269,7 +269,7 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
       );
 
       // Make second API call with tool results, now with streaming
-      response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${LOVABLE_API_KEY}`,
@@ -287,19 +287,39 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
         }),
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ AI gateway error on second call: ${response.status}`, errorText);
+      if (!streamResponse.ok) {
+        const errorText = await streamResponse.text();
+        console.error(`❌ AI gateway error on second call: ${streamResponse.status}`, errorText);
         return new Response(JSON.stringify({ error: "AI processing error" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      console.info('✅ Archie streaming response with tool results');
+      return new Response(streamResponse.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
     }
 
-    console.info('✅ Archie streaming response');
+    // No tool calls - convert response to stream format
+    console.info('✅ Archie response without tools');
+    const encoder = new TextEncoder();
+    const content = firstChoice?.message?.content || "I'm not sure how to help with that.";
     
-    return new Response(response.body, {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+          choices: [{
+            delta: { content }
+          }]
+        })}\n\n`));
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      }
+    });
+
+    return new Response(stream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
     
