@@ -46,6 +46,7 @@ You have access to analytical tools:
 1. get_pareto_analysis - for sales distribution and SKU ranking analysis
 2. get_sku_details - for deep-dive on specific SKUs
 3. get_top_skus_by_metric - for identifying top/bottom performers by various metrics
+4. get_mtv_by_sku_style - for aggregating MTV by SKU style (first N digits of SKU)
 
 Use these tools proactively when users ask analytical questions. Always cite specific numbers from the data.
 PRIORITY: When data is already provided in "Current Context Available" section (like Pareto Distribution Analysis), reference that data directly first. Only call tools for additional analysis or different filters.
@@ -164,6 +165,36 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
             required: ["location_code", "metric"]
           }
         }
+      },
+      {
+        type: "function",
+        function: {
+          name: "get_mtv_by_sku_style",
+          description: "Get MTV (Missed Throughput Value) aggregated by SKU 'style' - the first N digits of SKU codes. Use when user asks about MTV by style, wants to group SKUs by prefix, or mentions 'first 5 digits'. Style groups related products together.",
+          parameters: {
+            type: "object",
+            properties: {
+              location_code: { 
+                type: "string",
+                description: "Location code (e.g., '98274' or 'ALL' for all locations)"
+              },
+              style_length: { 
+                type: "number",
+                default: 5,
+                description: "Number of leading digits to use for style grouping (default: 5)"
+              },
+              start_date: { 
+                type: "string",
+                description: "Start date in YYYY-MM-DD format"
+              },
+              end_date: { 
+                type: "string",
+                description: "End date in YYYY-MM-DD format"
+              }
+            },
+            required: ["location_code"]
+          }
+        }
       }
     ];
 
@@ -239,6 +270,7 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
               p_date: functionArgs.date,
               p_start_date: functionArgs.start_date,
               p_end_date: functionArgs.end_date,
+              p_style_length: functionArgs.style_length,
             });
             
             if (error) {

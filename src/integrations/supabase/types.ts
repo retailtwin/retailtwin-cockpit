@@ -109,6 +109,20 @@ export type Database = {
           name: string
         }[]
       }
+      get_mtv_by_sku_style: {
+        Args: {
+          p_end_date?: string
+          p_location_code?: string
+          p_start_date?: string
+          p_style_length?: number
+        }
+        Returns: {
+          sample_skus: string[]
+          sku_count: number
+          sku_style: string
+          total_mtv: number
+        }[]
+      }
       get_pareto_analysis: {
         Args: { p_date?: string; p_location_code: string; p_sku?: string }
         Returns: {
