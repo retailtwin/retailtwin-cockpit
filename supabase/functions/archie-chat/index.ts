@@ -229,7 +229,7 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "openai/gpt-5-mini",
         messages: [
           { role: "system", content: systemPrompt },
           ...messages
@@ -304,6 +304,7 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
             }
             
             console.info(`✅ ${functionName} returned ${Array.isArray(data) ? data.length : 1} results`);
+            console.info(`📋 ${functionName} data preview:`, JSON.stringify(data).substring(0, 500));
             
             return {
               tool_call_id: toolCall.id,
@@ -329,7 +330,7 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "openai/gpt-5-mini",
           messages: [
             { role: "system", content: systemPrompt },
             ...messages,
