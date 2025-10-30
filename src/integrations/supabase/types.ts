@@ -14,7 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      dbm_calculations: {
+        Row: {
+          calculation_date: string
+          created_at: string
+          economic_overstock_units: number | null
+          economic_units: number | null
+          id: string
+          location_code: string
+          on_hand_units: number | null
+          sku: string
+          target_units: number | null
+        }
+        Insert: {
+          calculation_date: string
+          created_at?: string
+          economic_overstock_units?: number | null
+          economic_units?: number | null
+          id?: string
+          location_code: string
+          on_hand_units?: number | null
+          sku: string
+          target_units?: number | null
+        }
+        Update: {
+          calculation_date?: string
+          created_at?: string
+          economic_overstock_units?: number | null
+          economic_units?: number | null
+          id?: string
+          location_code?: string
+          on_hand_units?: number | null
+          sku?: string
+          target_units?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
