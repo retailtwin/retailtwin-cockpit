@@ -527,7 +527,9 @@ const Dashboard = () => {
         endDate={
           dateRange?.to
             ? format(dateRange.to, "yyyy-MM-dd")
-            : format(new Date(), "yyyy-MM-dd")
+            : factDaily.length > 0
+            ? factDaily[factDaily.length - 1].d
+            : "2023-12-31"
         }
         onAskArchie={handleAskArchie}
         kpiData={
