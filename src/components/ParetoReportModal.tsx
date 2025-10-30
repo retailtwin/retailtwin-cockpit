@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { ParetoReport } from "./ParetoReport";
 import { supabase } from "@/integrations/supabase/client";
@@ -187,9 +188,9 @@ export const ParetoReportModal = ({
       <DialogContent className="max-w-6xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="text-2xl">Pareto Analysis Report</DialogTitle>
-          <p className="text-sm text-muted-foreground">
+          <DialogDescription>
             {location === 'ALL' ? 'All Locations' : `Location ${location}`} • {sku === 'ALL' ? 'All Products' : sku}
-          </p>
+          </DialogDescription>
         </DialogHeader>
         
         <ScrollArea className="h-[calc(90vh-120px)] pr-4">
