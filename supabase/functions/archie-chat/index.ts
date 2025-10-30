@@ -14,10 +14,12 @@ serve(async (req) => {
 
   try {
     const { messages, context } = await req.json();
+    console.log('📨 Received request:', { messageCount: messages?.length, hasContext: !!context });
     
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) {
+      console.error('❌ ANTHROPIC_API_KEY not found');
+      throw new Error("ANTHROPIC_API_KEY is not configured");
     }
     
     // Initialize Supabase client for function calling
@@ -220,22 +222,28 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
     ];
 
     console.info(`🤖 Archie processing request with context:`, JSON.stringify(context, null, 2));
+    
+    // Convert tools to Anthropic format
+    const anthropicTools = tools.map(tool => ({
+      name: tool.function.name,
+      description: tool.function.description,
+      input_schema: tool.function.parameters
+    }));
 
     // Initial API call with function calling enabled
-    let response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    let response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-5-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages
-        ],
-        tools: tools,
-        stream: false,
+        model: "claude-sonnet-4-5",
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: messages,
+        tools: anthropicTools,
       }),
     });
 
@@ -268,17 +276,19 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
     }
 
     const firstResponse = await response.json();
-    const firstChoice = firstResponse.choices?.[0];
+    console.log('✅ Received AI response');
+    
+    const toolUses = firstResponse.content?.filter((block: any) => block.type === 'tool_use') || [];
 
     // Check if AI wants to call a function
-    if (firstChoice?.message?.tool_calls && firstChoice.message.tool_calls.length > 0) {
-      console.info(`🔧 Archie calling tools:`, firstChoice.message.tool_calls.map((tc: any) => tc.function.name));
+    if (toolUses.length > 0) {
+      console.info(`🔧 Archie calling tools:`, toolUses.map((tu: any) => tu.name));
       
       // Execute all tool calls
       const toolResults = await Promise.all(
-        firstChoice.message.tool_calls.map(async (toolCall: any) => {
-          const functionName = toolCall.function.name;
-          const functionArgs = JSON.parse(toolCall.function.arguments);
+        toolUses.map(async (toolUse: any) => {
+          const functionName = toolUse.name;
+          const functionArgs = toolUse.input;
           
           console.info(`📊 Executing ${functionName} with args:`, functionArgs);
           
@@ -297,8 +307,8 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
             if (error) {
               console.error(`❌ Error calling ${functionName}:`, error);
               return {
-                tool_call_id: toolCall.id,
-                role: "tool",
+                type: "tool_result",
+                tool_use_id: toolUse.id,
                 content: JSON.stringify({ error: error.message })
               };
             }
@@ -307,15 +317,15 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
             console.info(`📋 ${functionName} data preview:`, JSON.stringify(data).substring(0, 500));
             
             return {
-              tool_call_id: toolCall.id,
-              role: "tool",
+              type: "tool_result",
+              tool_use_id: toolUse.id,
               content: JSON.stringify(data)
             };
           } catch (err) {
             console.error(`❌ Exception in ${functionName}:`, err);
             return {
-              tool_call_id: toolCall.id,
-              role: "tool",
+              type: "tool_result",
+              tool_use_id: toolUse.id,
               content: JSON.stringify({ error: String(err) })
             };
           }
@@ -323,19 +333,28 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
       );
 
       // Make second API call with tool results, now with streaming
-      const streamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      console.log('🚀 Making second AI call with tool results...');
+      const streamResponse = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "openai/gpt-5-mini",
+          model: "claude-sonnet-4-5",
+          max_tokens: 4096,
+          system: systemPrompt,
           messages: [
-            { role: "system", content: systemPrompt },
             ...messages,
-            firstChoice.message,
-            ...toolResults
+            {
+              role: "assistant",
+              content: firstResponse.content
+            },
+            {
+              role: "user",
+              content: toolResults
+            }
           ],
           stream: true,
         }),
@@ -343,7 +362,7 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
 
       if (!streamResponse.ok) {
         const errorText = await streamResponse.text();
-        console.error(`❌ AI gateway error on second call: ${streamResponse.status}`, errorText);
+        console.error(`❌ Anthropic API error on second call: ${streamResponse.status}`, errorText);
         return new Response(JSON.stringify({ error: "AI processing error" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -351,29 +370,91 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
       }
 
       console.info('✅ Archie streaming response with tool results');
-      return new Response(streamResponse.body, {
+      
+      // Convert Anthropic stream to OpenAI-compatible format
+      const transformedStream = streamResponse.body!.pipeThrough(new TransformStream({
+        transform(chunk, controller) {
+          const text = new TextDecoder().decode(chunk);
+          const lines = text.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.type === 'content_block_delta' && data.delta?.text) {
+                  controller.enqueue(new TextEncoder().encode(
+                    `data: ${JSON.stringify({ choices: [{ delta: { content: data.delta.text } }] })}\n\n`
+                  ));
+                }
+              } catch (e) {
+                // Skip invalid JSON
+              }
+            } else if (line.includes('message_stop')) {
+              controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
+            }
+          }
+        }
+      }));
+      
+      return new Response(transformedStream, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
     }
 
-    // No tool calls - convert response to stream format
-    console.info('✅ Archie response without tools');
-    const encoder = new TextEncoder();
-    const content = firstChoice?.message?.content || "I'm not sure how to help with that.";
+    // No tool calls - stream direct response
+    console.info('✅ Archie response without tools, streaming...');
     
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-          choices: [{
-            delta: { content }
-          }]
-        })}\n\n`));
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        controller.close();
-      }
+    const directStreamResponse = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5",
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: messages,
+        stream: true,
+      }),
     });
+    
+    if (!directStreamResponse.ok) {
+      const errorText = await directStreamResponse.text();
+      console.error(`❌ Anthropic API error: ${directStreamResponse.status}`, errorText);
+      return new Response(JSON.stringify({ error: "AI processing error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
+    // Convert Anthropic stream to OpenAI-compatible format
+    const transformedStream = directStreamResponse.body!.pipeThrough(new TransformStream({
+      transform(chunk, controller) {
+        const text = new TextDecoder().decode(chunk);
+        const lines = text.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === 'content_block_delta' && data.delta?.text) {
+                controller.enqueue(new TextEncoder().encode(
+                  `data: ${JSON.stringify({ choices: [{ delta: { content: data.delta.text } }] })}\n\n`
+                ));
+              }
+            } catch (e) {
+              // Skip invalid JSON
+            }
+          } else if (line.includes('message_stop')) {
+            controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
+          }
+        }
+      }
+    }));
 
-    return new Response(stream, {
+    return new Response(transformedStream, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
     
