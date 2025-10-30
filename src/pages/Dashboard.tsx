@@ -8,7 +8,8 @@ import { ArchieChatDock } from "@/components/ArchieChatDock";
 import { ArchieFloatingButton } from "@/components/ArchieFloatingButton";
 import { ParetoReportModal } from "@/components/ParetoReportModal";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2 } from "lucide-react";
+import { Download, Loader2, Play } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   fetchLocations,
   fetchProducts,
@@ -38,6 +39,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [preloadedPrompt, setPreloadedPrompt] = useState<string>("");
   const [paretoModalOpen, setParetoModalOpen] = useState(false);
+  const [isRunningDBM, setIsRunningDBM] = useState(false);
 
   // Load locations and products on mount
   useEffect(() => {
@@ -116,6 +118,56 @@ const Dashboard = () => {
 
   const handleViewParetoReport = () => {
     setParetoModalOpen(true);
+  };
+
+  const runDBMAnalysis = async () => {
+    setIsRunningDBM(true);
+    
+    try {
+      const startDate = dateRange?.from
+        ? format(dateRange.from, "yyyy-MM-dd")
+        : "2023-01-01";
+      const endDate = dateRange?.to
+        ? format(dateRange.to, "yyyy-MM-dd")
+        : "2023-12-31";
+      const locationCodes = selectedLocation !== "ALL" ? [selectedLocation] : undefined;
+      const skus = selectedProduct !== "ALL" ? [selectedProduct] : undefined;
+
+      const { data, error } = await supabase.functions.invoke('run-dbm-analysis', {
+        body: {
+          start_date: startDate,
+          end_date: endDate,
+          location_codes: locationCodes,
+          skus: skus
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "DBM Analysis Complete!",
+        description: `Processed ${data.processed_count} SKU/Location combinations.`,
+        duration: 5000,
+      });
+
+      // Reload data
+      const [kpi, facts] = await Promise.all([
+        fetchKPIData(selectedLocation, selectedProduct, startDate, endDate),
+        fetchFactDaily(selectedLocation, selectedProduct, startDate, endDate),
+      ]);
+      setKpiData(kpi);
+      setFactDaily(facts);
+
+    } catch (error: any) {
+      console.error("DBM Analysis Error:", error);
+      toast({
+        title: "Analysis Failed",
+        description: error.message || "Failed to run DBM analysis",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRunningDBM(false);
+    }
   };
 
   const handleExportCSV = () => {
@@ -319,8 +371,27 @@ const Dashboard = () => {
             onDateRangeChange={setDateRange}
           />
 
-          {/* Export Button */}
-          <div className="flex justify-end">
+          {/* DBM Simulation Button */}
+          <div className="flex justify-between items-center">
+            <Button
+              onClick={runDBMAnalysis}
+              disabled={isRunningDBM}
+              variant="default"
+              className="gap-2"
+            >
+              {isRunningDBM ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Running Analysis...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Run DBM Simulation
+                </>
+              )}
+            </Button>
+
             <Button onClick={handleExportCSV} variant="outline" className="gap-2">
               <Download className="h-4 w-4" />
               Export CSV
