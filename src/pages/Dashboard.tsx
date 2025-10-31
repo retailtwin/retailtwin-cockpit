@@ -420,8 +420,8 @@ const Dashboard = () => {
                 </>
               ) : (
                 <>
-                  <Download className="h-4 w-4" />
-                  Run DBM Simulation
+                  <Play className="h-4 w-4" />
+                  Run Simulation
                 </>
               )}
             </Button>

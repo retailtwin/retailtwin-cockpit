@@ -23,7 +23,7 @@ const Landing = () => {
               <span className="text-primary">AI-guided inventory flow</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Tune your supply to retail: identify bottlenecks, automate good rules, and maximize cash velocity.
+              Tune your supply to Flow: find bottlenecks, automate good rules, and maximize cash velocity.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/dashboard">
@@ -65,7 +65,7 @@ const Landing = () => {
               </div>
               <CardTitle className="text-2xl">Free Cash</CardTitle>
               <CardDescription className="text-base pt-2">
-                Run scenarios to identify excess inventory and missed sales. 
+                Run scenarios to find excess inventory and missed sales. 
                 Get automated insights that release capital and improve flow.
               </CardDescription>
             </CardHeader>

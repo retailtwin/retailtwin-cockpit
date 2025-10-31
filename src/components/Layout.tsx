@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import retailTwinLabsLogo from "@/assets/retail-twin-labs-logo.png";
 
 interface LayoutProps {
@@ -7,8 +9,31 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
   
   const isActive = (path: string) => location.pathname === path;
+
+  useEffect(() => {
+    checkAdminStatus();
+  }, []);
+
+  const checkAdminStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .single();
+
+      setIsAdmin(!!roles);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -63,6 +88,18 @@ export const Layout = ({ children }: LayoutProps) => {
               >
                 About
               </Link>
+              {isAdmin && (
+                <Link
+                  to="/settings"
+                  className={`font-semibold transition-colors ${
+                    isActive("/settings")
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Settings
+                </Link>
+              )}
               <Link
                 to="/login"
                 className={`font-semibold transition-colors ${
