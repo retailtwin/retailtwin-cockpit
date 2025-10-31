@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import retailTwinLabsLogo from "@/assets/retail-twin-labs-logo.png";
 
 interface LayoutProps {
@@ -9,18 +11,32 @@ interface LayoutProps {
 
 export const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
-    checkAdminStatus();
+    checkAuthStatus();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      checkAuthStatus();
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const checkAdminStatus = async () => {
+  const checkAuthStatus = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      setIsLoggedIn(!!user);
+      
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
 
       const { data: roles } = await supabase
         .from('user_roles')
@@ -31,7 +47,26 @@ export const Layout = ({ children }: LayoutProps) => {
 
       setIsAdmin(!!roles);
     } catch (error) {
-      console.error('Error checking admin status:', error);
+      console.error('Error checking auth status:', error);
+      setIsLoggedIn(false);
+      setIsAdmin(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+      navigate("/login");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -100,16 +135,26 @@ export const Layout = ({ children }: LayoutProps) => {
                   Settings
                 </Link>
               )}
-              <Link
-                to="/login"
-                className={`font-semibold transition-colors ${
-                  isActive("/login")
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Login
-              </Link>
+              {isLoggedIn ? (
+                <Button
+                  onClick={handleLogout}
+                  variant="ghost"
+                  className="font-semibold"
+                >
+                  Logout
+                </Button>
+              ) : (
+                <Link
+                  to="/login"
+                  className={`font-semibold transition-colors ${
+                    isActive("/login")
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Login
+                </Link>
+              )}
             </div>
           </div>
         </div>
