@@ -88,6 +88,11 @@ const Login = () => {
 
         if (error) throw error;
 
+        // Check and assign admin role after login
+        setTimeout(() => {
+          assignAdminToFirstUser();
+        }, 500);
+
         toast({
           title: "Login successful",
           description: "Welcome back!",
@@ -105,7 +110,7 @@ const Login = () => {
 
         if (error) throw error;
 
-        // Try to assign admin role to first user
+        // Check and assign admin role after signup
         setTimeout(() => {
           assignAdminToFirstUser();
         }, 1000);

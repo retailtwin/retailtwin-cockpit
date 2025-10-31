@@ -18,24 +18,34 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if any admin exists (using service role key to bypass RLS)
+    // Check if this is jasper@retailtwin.com
+    if (user.email !== 'jasper@retailtwin.com') {
+      return new Response(
+        JSON.stringify({ success: true, message: 'Not the admin account', is_admin: false }),
+        { headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Use service role key to bypass RLS
     const supabaseAdmin = createClient(
       Deno.env.get('VITE_SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { data: existingAdmins, error: checkError } = await supabaseAdmin
+    // Check if admin role already exists for this user
+    const { data: existingRole, error: checkError } = await supabaseAdmin
       .from('user_roles')
       .select('id')
+      .eq('user_id', user.id)
       .eq('role', 'admin')
-      .limit(1)
+      .single()
 
-    if (checkError) {
+    if (checkError && checkError.code !== 'PGRST116') {
       throw checkError
     }
 
-    // If no admin exists, make this user an admin
-    if (!existingAdmins || existingAdmins.length === 0) {
+    // If admin role doesn't exist, create it
+    if (!existingRole) {
       const { error: insertError } = await supabaseAdmin
         .from('user_roles')
         .insert({ user_id: user.id, role: 'admin' })
@@ -51,7 +61,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Admin already exists', is_admin: false }),
+      JSON.stringify({ success: true, message: 'Already admin', is_admin: true }),
       { headers: { 'Content-Type': 'application/json' } }
     )
 
