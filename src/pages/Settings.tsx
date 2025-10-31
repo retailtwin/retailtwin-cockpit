@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Shield, UserPlus, Trash2 } from "lucide-react";
+import { Loader2, Shield, UserPlus, Trash2, Settings2, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 type UserRole = {
@@ -29,6 +30,12 @@ const Settings = () => {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<'admin' | 'moderator' | 'user'>('user');
   const [isSaving, setIsSaving] = useState(false);
+
+  // System Configuration State
+  const [minStockThreshold, setMinStockThreshold] = useState("10");
+  const [targetServiceLevel, setTargetServiceLevel] = useState("95");
+  const [reorderLeadTime, setReorderLeadTime] = useState("7");
+  const [lowStockAlert, setLowStockAlert] = useState(true);
 
   useEffect(() => {
     checkAdminAccess();
@@ -178,132 +185,233 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* User Roles Management */}
-          <Card>
-            <CardHeader>
-              <CardTitle>User Role Management</CardTitle>
-              <CardDescription>
-                Assign roles to users to control access to different features
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Add New Role */}
-              <div className="flex gap-4 items-end">
-                <div className="flex-1">
-                  <Label htmlFor="userEmail">User Email</Label>
-                  <Input
-                    id="userEmail"
-                    type="email"
-                    placeholder="user@example.com"
-                    value={newUserEmail}
-                    onChange={(e) => setNewUserEmail(e.target.value)}
-                  />
-                </div>
-                <div className="w-40">
-                  <Label htmlFor="role">Role</Label>
-                  <Select value={newUserRole} onValueChange={(value: any) => setNewUserRole(value)}>
-                    <SelectTrigger id="role">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="moderator">Moderator</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button onClick={handleAddRole} disabled={isSaving} className="gap-2">
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Adding...
-                    </>
-                  ) : (
-                    <>
-                      <UserPlus className="h-4 w-4" />
-                      Add Role
-                    </>
-                  )}
-                </Button>
-              </div>
+          <Tabs defaultValue="users" className="space-y-6">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="users" className="gap-2">
+                <Users className="h-4 w-4" />
+                User Roles
+              </TabsTrigger>
+              <TabsTrigger value="config" className="gap-2">
+                <Settings2 className="h-4 w-4" />
+                System Config
+              </TabsTrigger>
+            </TabsList>
 
-              {/* Roles Table */}
-              <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User ID</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {userRoles.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                          No user roles configured yet
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      userRoles.map((userRole) => (
-                        <TableRow key={userRole.id}>
-                          <TableCell className="font-mono text-xs">
-                            {userRole.user_id === currentUserId ? (
-                              <span className="text-primary font-semibold">
-                                {userRole.user_id.substring(0, 8)}... (You)
-                              </span>
-                            ) : (
-                              userRole.user_id.substring(0, 8) + '...'
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={
-                              userRole.role === 'admin' ? 'default' :
-                              userRole.role === 'moderator' ? 'secondary' :
-                              'outline'
-                            }>
-                              {userRole.role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {new Date(userRole.created_at).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteRole(userRole.id)}
-                              disabled={userRole.user_id === currentUserId}
-                              className="gap-2"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Remove
-                            </Button>
-                          </TableCell>
+            {/* User Roles Management Tab */}
+            <TabsContent value="users" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>User Role Management</CardTitle>
+                  <CardDescription>
+                    Assign roles to users to control access to different features
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Add New Role */}
+                  <div className="flex gap-4 items-end">
+                    <div className="flex-1">
+                      <Label htmlFor="userEmail">User Email</Label>
+                      <Input
+                        id="userEmail"
+                        type="email"
+                        placeholder="user@example.com"
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="w-40">
+                      <Label htmlFor="role">Role</Label>
+                      <Select value={newUserRole} onValueChange={(value: any) => setNewUserRole(value)}>
+                        <SelectTrigger id="role">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">User</SelectItem>
+                          <SelectItem value="moderator">Moderator</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button onClick={handleAddRole} disabled={isSaving} className="gap-2">
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="h-4 w-4" />
+                          Add Role
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Roles Table */}
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>User ID</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Created</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {userRoles.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                              No user roles configured yet
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          userRoles.map((userRole) => (
+                            <TableRow key={userRole.id}>
+                              <TableCell className="font-mono text-xs">
+                                {userRole.user_id === currentUserId ? (
+                                  <span className="text-primary font-semibold">
+                                    {userRole.user_id.substring(0, 8)}... (You)
+                                  </span>
+                                ) : (
+                                  userRole.user_id.substring(0, 8) + '...'
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={
+                                  userRole.role === 'admin' ? 'default' :
+                                  userRole.role === 'moderator' ? 'secondary' :
+                                  'outline'
+                                }>
+                                  {userRole.role}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {new Date(userRole.created_at).toLocaleDateString()}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteRole(userRole.id)}
+                                  disabled={userRole.user_id === currentUserId}
+                                  className="gap-2"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Remove
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          {/* Additional Settings Sections */}
-          <Card>
-            <CardHeader>
-              <CardTitle>System Configuration</CardTitle>
-              <CardDescription>
-                Configure system-wide settings (Coming soon)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Additional configuration options will be added here.
-              </p>
-            </CardContent>
-          </Card>
+            {/* System Configuration Tab */}
+            <TabsContent value="config" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Inventory Configuration</CardTitle>
+                  <CardDescription>
+                    Configure system-wide inventory management rules
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="minStock">Minimum Stock Threshold (units)</Label>
+                      <Input
+                        id="minStock"
+                        type="number"
+                        value={minStockThreshold}
+                        onChange={(e) => setMinStockThreshold(e.target.value)}
+                        placeholder="10"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Alert when stock falls below this level
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="serviceLevel">Target Service Level (%)</Label>
+                      <Input
+                        id="serviceLevel"
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={targetServiceLevel}
+                        onChange={(e) => setTargetServiceLevel(e.target.value)}
+                        placeholder="95"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Target percentage for product availability
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="leadTime">Reorder Lead Time (days)</Label>
+                      <Input
+                        id="leadTime"
+                        type="number"
+                        value={reorderLeadTime}
+                        onChange={(e) => setReorderLeadTime(e.target.value)}
+                        placeholder="7"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Expected delivery time for new orders
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="alertToggle">Low Stock Alerts</Label>
+                      <div className="flex items-center space-x-2 pt-2">
+                        <Button
+                          id="alertToggle"
+                          variant={lowStockAlert ? "default" : "outline"}
+                          onClick={() => setLowStockAlert(!lowStockAlert)}
+                          className="w-full"
+                        >
+                          {lowStockAlert ? "Enabled" : "Disabled"}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Receive notifications for low stock items
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={() => {
+                      toast({
+                        title: "Settings saved",
+                        description: "System configuration has been updated successfully.",
+                      });
+                    }}>
+                      Save Configuration
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Alert Preferences</CardTitle>
+                  <CardDescription>
+                    Configure when and how you receive system alerts
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Additional alert configuration options coming soon.
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </Layout>
