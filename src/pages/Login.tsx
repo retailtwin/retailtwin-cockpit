@@ -22,15 +22,10 @@ const Login = () => {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         
         if (session?.user) {
-          // Auto-assign admin to first user
-          setTimeout(async () => {
-            await assignAdminToFirstUser(session.user.id);
-          }, 0);
-          
           navigate("/dashboard");
         }
       }
@@ -47,27 +42,32 @@ const Login = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  const assignAdminToFirstUser = async (userId: string) => {
+  const assignAdminToFirstUser = async () => {
     try {
-      // Check if any admin exists
-      const { data: existingAdmins } = await supabase
-        .from('user_roles')
-        .select('id')
-        .eq('role', 'admin')
-        .limit(1);
+      const { data: authData } = await supabase.auth.getSession();
+      
+      if (!authData.session) {
+        return;
+      }
 
-      // If no admin exists, make this user an admin
-      if (!existingAdmins || existingAdmins.length === 0) {
-        const { error } = await supabase
-          .from('user_roles')
-          .insert({ user_id: userId, role: 'admin' });
-
-        if (!error) {
-          toast({
-            title: "Admin Access Granted",
-            description: "You are now an administrator!",
-          });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assign-first-admin`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authData.session.access_token}`,
+            'Content-Type': 'application/json',
+          },
         }
+      );
+
+      const result = await response.json();
+      
+      if (result.is_admin) {
+        toast({
+          title: "Admin Access Granted",
+          description: "You are now an administrator!",
+        });
       }
     } catch (error) {
       console.error('Error assigning admin role:', error);
@@ -105,9 +105,14 @@ const Login = () => {
 
         if (error) throw error;
 
+        // Try to assign admin role to first user
+        setTimeout(() => {
+          assignAdminToFirstUser();
+        }, 1000);
+
         toast({
           title: "Account created",
-          description: "Please check your email to confirm your account. (Auto-confirm is enabled for testing)",
+          description: "Welcome! Redirecting to dashboard...",
         });
       }
     } catch (error: any) {
