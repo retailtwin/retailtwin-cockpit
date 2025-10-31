@@ -44,33 +44,37 @@ const Login = () => {
 
   const assignAdminToFirstUser = async () => {
     try {
-      const { data: authData } = await supabase.auth.getSession();
+      console.log('Calling assign-first-admin edge function...');
+      const { data, error } = await supabase.functions.invoke('assign-first-admin');
       
-      if (!authData.session) {
+      console.log('Edge function response:', { data, error });
+      
+      if (error) {
+        console.error('Error assigning admin role:', error);
+        toast({
+          title: "Admin check failed",
+          description: error.message || "Could not verify admin status",
+          variant: "destructive",
+        });
         return;
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assign-first-admin`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authData.session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      const result = await response.json();
-      
-      if (result.is_admin) {
+      if (data?.is_admin) {
+        console.log('User is admin');
         toast({
-          title: "Admin Access Granted",
-          description: "You are now an administrator!",
+          title: "Admin access granted",
+          description: "You now have admin privileges",
         });
+      } else {
+        console.log('User is not admin:', data?.message);
       }
     } catch (error) {
-      console.error('Error assigning admin role:', error);
+      console.error('Error calling assign-first-admin:', error);
+      toast({
+        title: "Admin check error",
+        description: "Could not check admin status",
+        variant: "destructive",
+      });
     }
   };
 
