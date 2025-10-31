@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
   try {
     console.log('assign-first-admin: Function called');
     const supabaseClient = createClient(
-      Deno.env.get('VITE_SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
 
     // Use service role key to bypass RLS
     const supabaseAdmin = createClient(
-      Deno.env.get('VITE_SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
