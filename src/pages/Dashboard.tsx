@@ -8,8 +8,9 @@ import { ArchieChatDock } from "@/components/ArchieChatDock";
 import { ArchieFloatingButton } from "@/components/ArchieFloatingButton";
 import { ParetoReportModal } from "@/components/ParetoReportModal";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, Play } from "lucide-react";
+import { Download, Loader2, Play, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import {
   fetchLocations,
   fetchProducts,
@@ -28,6 +29,7 @@ import { format } from "date-fns";
 
 const Dashboard = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [locations, setLocations] = useState<Location[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
@@ -41,6 +43,30 @@ const Dashboard = () => {
   const [dbmCalculations, setDbmCalculations] = useState([]);
   const [paretoModalOpen, setParetoModalOpen] = useState(false);
   const [isRunningDBM, setIsRunningDBM] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check admin status
+  useEffect(() => {
+    checkAdminStatus();
+  }, []);
+
+  const checkAdminStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .single();
+
+      setIsAdmin(!!roles);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+    }
+  };
 
   // Load locations and products on mount
   useEffect(() => {
@@ -426,10 +452,22 @@ const Dashboard = () => {
               )}
             </Button>
 
-            <Button onClick={handleExportCSV} variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              Export CSV
-            </Button>
+            <div className="flex gap-2">
+              {isAdmin && (
+                <Button
+                  onClick={() => navigate('/settings')}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Button>
+              )}
+              <Button onClick={handleExportCSV} variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+            </div>
           </div>
 
           {/* Graph and Table Grid */}
