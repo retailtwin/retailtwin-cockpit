@@ -67,6 +67,27 @@ serve(async (req) => {
 
     console.log(`Processing ${data?.length || 0} records`);
 
+    // Organize data by SKU-Location and calculate rolling averages
+    const salesBySkuLoc = new Map<string, any[]>();
+    (data || []).forEach((row: any) => {
+      const key = `${row.location_code}_${row.sku}`;
+      if (!salesBySkuLoc.has(key)) {
+        salesBySkuLoc.set(key, []);
+      }
+      salesBySkuLoc.get(key)!.push(row);
+    });
+
+    // Calculate 7-day rolling average for each SKU-Location
+    salesBySkuLoc.forEach((rows) => {
+      rows.sort((a: any, b: any) => new Date(a.d).getTime() - new Date(b.d).getTime());
+      rows.forEach((row: any, idx: number) => {
+        const start = Math.max(0, idx - 6);
+        const window = rows.slice(start, idx + 1);
+        const avgDailySales = window.reduce((sum: number, r: any) => sum + (r.units_sold || 0), 0) / window.length;
+        row.avg_weekly_sales = avgDailySales * 7;
+      });
+    });
+
     // Process each record
     const engine = new DBMEngine();
     const results = (data || []).map((row: any) => {
@@ -112,7 +133,7 @@ serve(async (req) => {
         responsiveness_up_percentage: settings.accelerator_up_percentage || 0.3,
         responsiveness_down_percentage: settings.accelerator_down_percentage || 0.5,
         responsiveness_idle_days: settings.acceleration_idle_days || 3,
-        average_weekly_sales_units: (row.units_sold || 0) * 7,
+        average_weekly_sales_units: row.avg_weekly_sales || 0,
         units_economic: 0,
         units_economic_overstock: 0,
         units_economic_understock: 0,
