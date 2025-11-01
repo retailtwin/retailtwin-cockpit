@@ -62,6 +62,16 @@ serve(async (req) => {
     // Process each record
     const engine = new DBMEngine();
     const results = (data || []).map(row => {
+      // Calculate economic units first (for initialization)
+      const economicUnits = Math.max(0, 
+        (row.on_hand_units || 0) + 
+        (row.on_order_units || 0) + 
+        (row.in_transit_units || 0)
+      );
+
+      // Initialize Green to Economic Units if not set
+      const initialGreen = row.target_units || economicUnits || 1;
+
       const input: SkuLocDate = {
         store_code: row.location_code,
         product_code: row.sku,
@@ -72,8 +82,8 @@ serve(async (req) => {
         unit_sales: row.units_sold || 0,
         lead_time: settings.production_lead_time_global + settings.transport_lead_time_global || 10,
         excluded_level: 0,
-        safety_level: Math.ceil((row.target_units || 0) * 0.5),
-        green: row.target_units || 0,
+        safety_level: Math.ceil(initialGreen * 0.5),
+        green: initialGreen,
         yellow: 0,
         red: 0,
         dbm_zone: '',

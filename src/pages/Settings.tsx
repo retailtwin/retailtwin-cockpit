@@ -8,10 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Shield, UserPlus, Trash2, Settings2, Users } from "lucide-react";
+import { Loader2, Shield, UserPlus, Trash2, Settings2, Users, Calculator, CalendarIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 type UserRole = {
   id: string;
@@ -36,6 +40,11 @@ const Settings = () => {
   const [targetServiceLevel, setTargetServiceLevel] = useState("95");
   const [reorderLeadTime, setReorderLeadTime] = useState("7");
   const [lowStockAlert, setLowStockAlert] = useState(true);
+
+  // DBM Calculation State
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
+  const [isCalculating, setIsCalculating] = useState(false);
 
   useEffect(() => {
     checkAdminAccess();
@@ -154,6 +163,54 @@ const Settings = () => {
     }
   };
 
+  const handleRunCalculation = async () => {
+    if (!startDate || !endDate) {
+      toast({
+        title: "Date range required",
+        description: "Please select both start and end dates.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (startDate > endDate) {
+      toast({
+        title: "Invalid date range",
+        description: "Start date must be before end date.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCalculating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('dbm-calculator', {
+        body: {
+          location_code: 'ALL',
+          sku: 'ALL',
+          start_date: format(startDate, 'yyyy-MM-dd'),
+          end_date: format(endDate, 'yyyy-MM-dd'),
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Calculation complete",
+        description: `Processed ${data.summary.processed} records. ${data.summary.increases} increases, ${data.summary.decreases} decreases.`,
+      });
+    } catch (error: any) {
+      console.error('Calculation error:', error);
+      toast({
+        title: "Calculation failed",
+        description: error.message || "Could not run inventory calculation.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -186,7 +243,7 @@ const Settings = () => {
           </div>
 
           <Tabs defaultValue="users" className="space-y-6">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-2xl grid-cols-3">
               <TabsTrigger value="users" className="gap-2">
                 <Users className="h-4 w-4" />
                 User Roles
@@ -194,6 +251,10 @@ const Settings = () => {
               <TabsTrigger value="config" className="gap-2">
                 <Settings2 className="h-4 w-4" />
                 System Config
+              </TabsTrigger>
+              <TabsTrigger value="calculate" className="gap-2">
+                <Calculator className="h-4 w-4" />
+                Run Calculation
               </TabsTrigger>
             </TabsList>
 
@@ -407,6 +468,128 @@ const Settings = () => {
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
                     Additional alert configuration options coming soon.
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* DBM Calculation Tab */}
+            <TabsContent value="calculate" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Inventory Target Calculation</CardTitle>
+                  <CardDescription>
+                    Run calculations to update target inventory levels based on sales patterns and current stock
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Start Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !startDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={startDate}
+                            onSelect={setStartDate}
+                            initialFocus
+                            className="pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <p className="text-xs text-muted-foreground">
+                        Start date for calculation period
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>End Date</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !endDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={endDate}
+                            onSelect={setEndDate}
+                            initialFocus
+                            className="pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <p className="text-xs text-muted-foreground">
+                        End date for calculation period
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                    <h4 className="font-medium text-sm">What this does:</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Updates target inventory levels for all products</li>
+                      <li>Calculates economic units (on-hand + on-order + in-transit)</li>
+                      <li>Identifies overstock and understock situations</li>
+                      <li>Adjusts targets based on recent sales patterns</li>
+                    </ul>
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    <Button 
+                      onClick={handleRunCalculation} 
+                      disabled={isCalculating || !startDate || !endDate}
+                      className="gap-2"
+                    >
+                      {isCalculating ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Calculating...
+                        </>
+                      ) : (
+                        <>
+                          <Calculator className="h-4 w-4" />
+                          Run Calculation
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Calculation Tips</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-muted-foreground">
+                  <p>
+                    <strong>Start small:</strong> Test with a 1-week date range first to verify results.
+                  </p>
+                  <p>
+                    <strong>New products:</strong> Initial target is set to current economic units (on-hand + on-order + in-transit).
+                  </p>
+                  <p>
+                    <strong>Processing time:</strong> Larger date ranges may take several minutes to complete.
                   </p>
                 </CardContent>
               </Card>
