@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.archie-chat]
 verify_jwt = false
+
+[functions.dbm-calculator]
+verify_jwt = false
