@@ -1,7 +1,7 @@
 import type { SkuLocDate } from './types.ts';
 
 export class DBMEngine {
-  private slt: SkuLocDate;
+  private slt!: SkuLocDate;
   
   executeDBMAlgorithm(sl: SkuLocDate): SkuLocDate {
     this.slt = { ...sl };
@@ -122,7 +122,55 @@ export class DBMEngine {
   }
   
   private getGreen(sl: SkuLocDate): number {
-    return sl.green || 0;
+    const green = sl.green || 0;
+    
+    // Manual override
+    if (sl.decision === 'manual' && this.daysBetween(sl.execution_date, sl.last_manual) === 0) {
+      return green;
+    }
+    
+    // No change conditions
+    if ((sl.frozen && green > 0) || sl.state === 'manual' || 
+        sl.state === 'static' || sl.state === 'new') {
+      return green;
+    }
+    
+    // Manual wait period
+    if (this.daysBetween(sl.execution_date, sl.last_manual) <= 3) {
+      return green;
+    }
+    
+    // Initialize to 1 if zero
+    if (green === 0) return 1;
+    
+    // Decrease conditions
+    const canDecrease = 
+      sl.counter_green > sl.lead_time &&
+      (sl.dbm_zone === 'green' || sl.dbm_zone === 'overstock') &&
+      this.daysBetween(sl.execution_date, sl.last_non_overstock) < sl.lead_time &&
+      this.daysBetween(sl.execution_date, sl.last_decrease) > sl.lead_time &&
+      green > 1;
+    
+    if (canDecrease) {
+      const newTarget = green - Math.ceil((green - sl.excluded_level) / 3);
+      
+      if (newTarget < sl.safety_level) return sl.safety_level;
+      if (newTarget < sl.excluded_level) return sl.excluded_level;
+      if (newTarget !== green) return Math.floor(newTarget);
+    }
+    
+    // Increase from red
+    if (sl.counter_red > sl.lead_time &&
+        sl.dbm_zone === 'red' &&
+        this.daysBetween(sl.execution_date, sl.last_out_of_red) < sl.lead_time) {
+      return Math.floor(green + Math.ceil((green - sl.excluded_level) / 3));
+    }
+    
+    // Adjust to safety/excluded levels
+    if (green < sl.safety_level) return sl.safety_level;
+    if (green < sl.excluded_level) return sl.excluded_level;
+    
+    return green;
   }
   
   private getDecision(sl: SkuLocDate): string {
@@ -134,7 +182,37 @@ export class DBMEngine {
   }
   
   private getAcceleratedTarget(sl: SkuLocDate): number {
-    return sl.green || 0;
+    const green = sl.green || 0;
+    
+    if (this.daysBetween(sl.execution_date, sl.last_accelerated) <= sl.responsiveness_idle_days) {
+      return green;
+    }
+    
+    // Accelerator UP
+    if (sl.responsiveness_up_percentage !== 0 && sl.average_weekly_sales_units !== 0) {
+      const thresholdUp = sl.responsiveness_up_percentage * green;
+      if (sl.average_weekly_sales_units >= thresholdUp) {
+        sl.state = 'responsiveness';
+        sl.decision = 'increase';
+        sl.accelerator_condition = 'above threshold';
+        sl.last_accelerated = sl.execution_date;
+        return green + Math.ceil(sl.average_weekly_sales_units);
+      }
+    }
+    
+    // Accelerator DOWN
+    if (sl.responsiveness_down_percentage !== 0 && sl.average_weekly_sales_units !== 0) {
+      const thresholdDown = sl.responsiveness_down_percentage * green;
+      if (sl.average_weekly_sales_units < thresholdDown) {
+        sl.state = 'responsiveness';
+        sl.decision = 'decrease';
+        sl.accelerator_condition = 'below threshold';
+        sl.last_accelerated = sl.execution_date;
+        return green - Math.ceil(green * (2 / 3));
+      }
+    }
+    
+    return green;
   }
   
   private getLastDecrease(sl: SkuLocDate): string {
@@ -143,5 +221,11 @@ export class DBMEngine {
   
   private getLastIncrease(sl: SkuLocDate): string {
     return sl.last_increase;
+  }
+  
+  private daysBetween(date1: string, date2: string): number {
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    return Math.floor(Math.abs(d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
   }
 }
