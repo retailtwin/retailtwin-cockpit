@@ -10,9 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Shield, UserPlus, Trash2, Settings2, Users, Calculator, CalendarIcon } from "lucide-react";
+import { Loader2, Shield, UserPlus, Trash2, Settings2, Users, Calculator, CalendarIcon, Clock, Zap, Sliders, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -35,19 +36,35 @@ const Settings = () => {
   const [newUserRole, setNewUserRole] = useState<'admin' | 'moderator' | 'user'>('user');
   const [isSaving, setIsSaving] = useState(false);
 
-  // System Configuration State
-  const [minStockThreshold, setMinStockThreshold] = useState("10");
-  const [targetServiceLevel, setTargetServiceLevel] = useState("95");
-  const [reorderLeadTime, setReorderLeadTime] = useState("7");
-  const [lowStockAlert, setLowStockAlert] = useState(true);
-
-  // DBM Calculation State
+  // Lead Time Configuration
+  const [productionLeadTime, setProductionLeadTime] = useState("");
+  const [shippingLeadTime, setShippingLeadTime] = useState("");
+  const [orderDays, setOrderDays] = useState("");
+  
+  // Responsiveness Thresholds
+  const [acceleratorUpPercentage, setAcceleratorUpPercentage] = useState("");
+  const [acceleratorDownPercentage, setAcceleratorDownPercentage] = useState("");
+  const [idleDays, setIdleDays] = useState("");
+  
+  // Behavior Properties
+  const [dynamicPeriod, setDynamicPeriod] = useState(true);
+  const [startOfDayStock, setStartOfDayStock] = useState(true);
+  const [dynamicInitialTarget, setDynamicInitialTarget] = useState(true);
+  const [unhideFeatures, setUnhideFeatures] = useState(false);
+  const [showSkuLocdateData, setShowSkuLocdateData] = useState(false);
+  
+  // Alerts
+  const [alertsEnabled, setAlertsEnabled] = useState(false);
+  const [minimumStockThreshold, setMinimumStockThreshold] = useState("");
+  
+  // Calculation
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [isCalculating, setIsCalculating] = useState(false);
 
   useEffect(() => {
     checkAdminAccess();
+    loadSettings();
   }, []);
 
   const checkAdminAccess = async () => {
@@ -61,7 +78,6 @@ const Settings = () => {
 
       setCurrentUserId(user.id);
 
-      // Check if user has admin role
       const { data: roles, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -108,6 +124,68 @@ const Settings = () => {
     }
   };
 
+  const loadSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("system_settings")
+        .select("*")
+        .eq("scope", "global");
+
+      if (error) throw error;
+
+      // Map settings to state
+      data?.forEach((setting) => {
+        const value = String(setting.setting_value);
+        switch (setting.setting_key) {
+          case "production_lead_time_global":
+            setProductionLeadTime(value);
+            break;
+          case "shipping_lead_time":
+            setShippingLeadTime(value);
+            break;
+          case "order_days":
+            setOrderDays(value);
+            break;
+          case "accelerator_up_percentage":
+            setAcceleratorUpPercentage((parseFloat(value) * 100).toString());
+            break;
+          case "accelerator_down_percentage":
+            setAcceleratorDownPercentage((parseFloat(value) * 100).toString());
+            break;
+          case "acceleration_idle_days":
+            setIdleDays(value);
+            break;
+          case "dynamic_period":
+            setDynamicPeriod(value === "true");
+            break;
+          case "start_of_day_stock":
+            setStartOfDayStock(value === "true");
+            break;
+          case "dynamic_initial_target":
+            setDynamicInitialTarget(value === "true");
+            break;
+          case "unhide_features":
+            setUnhideFeatures(value === "true");
+            break;
+          case "show_skulocdate_data":
+            setShowSkuLocdateData(value === "true");
+            break;
+          case "minimum_stock_threshold":
+            setMinimumStockThreshold(value);
+            setAlertsEnabled(parseInt(value) > 0);
+            break;
+        }
+      });
+    } catch (error: any) {
+      console.error("Error loading settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load settings",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAddRole = async () => {
     if (!newUserEmail) {
       toast({
@@ -120,8 +198,6 @@ const Settings = () => {
 
     setIsSaving(true);
     try {
-      // Note: In production, you'd need to look up user by email first
-      // For now, this assumes the user_id is known
       toast({
         title: "Feature Note",
         description: "User lookup by email requires additional setup. Please use user_id directly for now.",
@@ -158,6 +234,47 @@ const Settings = () => {
       toast({
         title: "Error removing role",
         description: "Could not remove user role.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      const updates = [
+        { key: "production_lead_time_global", value: productionLeadTime },
+        { key: "shipping_lead_time", value: shippingLeadTime },
+        { key: "order_days", value: orderDays },
+        { key: "accelerator_up_percentage", value: (parseFloat(acceleratorUpPercentage || "0") / 100).toString() },
+        { key: "accelerator_down_percentage", value: (parseFloat(acceleratorDownPercentage || "0") / 100).toString() },
+        { key: "acceleration_idle_days", value: idleDays },
+        { key: "dynamic_period", value: dynamicPeriod.toString() },
+        { key: "start_of_day_stock", value: startOfDayStock.toString() },
+        { key: "dynamic_initial_target", value: dynamicInitialTarget.toString() },
+        { key: "unhide_features", value: unhideFeatures.toString() },
+        { key: "show_skulocdate_data", value: showSkuLocdateData.toString() },
+        { key: "minimum_stock_threshold", value: minimumStockThreshold },
+      ];
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from("system_settings")
+          .update({ setting_value: update.value })
+          .eq("setting_key", update.key)
+          .eq("scope", "global");
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Settings Saved",
+        description: "System configuration has been updated successfully.",
+      });
+    } catch (error: any) {
+      console.error("Error saving settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save settings",
         variant: "destructive",
       });
     }
@@ -250,7 +367,7 @@ const Settings = () => {
               </TabsTrigger>
               <TabsTrigger value="config" className="gap-2">
                 <Settings2 className="h-4 w-4" />
-                System Config
+                Configuration
               </TabsTrigger>
               <TabsTrigger value="calculate" className="gap-2">
                 <Calculator className="h-4 w-4" />
@@ -268,7 +385,6 @@ const Settings = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Add New Role */}
                   <div className="flex gap-4 items-end">
                     <div className="flex-1">
                       <Label htmlFor="userEmail">User Email</Label>
@@ -308,7 +424,6 @@ const Settings = () => {
                     </Button>
                   </div>
 
-                  {/* Roles Table */}
                   <div className="border rounded-lg">
                     <Table>
                       <TableHeader>
@@ -373,117 +488,274 @@ const Settings = () => {
             </TabsContent>
 
             {/* System Configuration Tab */}
-            <TabsContent value="config" className="space-y-4">
+            <TabsContent value="config" className="space-y-6">
+              {/* Lead Time Configuration */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Inventory Configuration</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Lead Time Configuration
+                  </CardTitle>
                   <CardDescription>
-                    Configure system-wide inventory management rules
+                    Define production, shipping, and ordering parameters
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid gap-6 md:grid-cols-2">
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="minStock">Minimum Stock Threshold (units)</Label>
+                      <Label htmlFor="production-lead-time">Production Lead Time (days)</Label>
                       <Input
-                        id="minStock"
+                        id="production-lead-time"
                         type="number"
-                        value={minStockThreshold}
-                        onChange={(e) => setMinStockThreshold(e.target.value)}
-                        placeholder="10"
+                        min="0"
+                        value={productionLeadTime}
+                        onChange={(e) => setProductionLeadTime(e.target.value)}
+                        placeholder="e.g., 7"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Alert when stock falls below this level
-                      </p>
                     </div>
-
                     <div className="space-y-2">
-                      <Label htmlFor="serviceLevel">Target Service Level (%)</Label>
+                      <Label htmlFor="shipping-lead-time">Shipping Lead Time (days)</Label>
                       <Input
-                        id="serviceLevel"
+                        id="shipping-lead-time"
+                        type="number"
+                        min="0"
+                        value={shippingLeadTime}
+                        onChange={(e) => setShippingLeadTime(e.target.value)}
+                        placeholder="e.g., 3"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="order-days">Order Days</Label>
+                      <Input
+                        id="order-days"
+                        type="number"
+                        min="1"
+                        value={orderDays}
+                        onChange={(e) => setOrderDays(e.target.value)}
+                        placeholder="e.g., 5"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 bg-muted rounded-md">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Total Lead Time:</span>
+                      <span className="text-lg font-bold text-primary">
+                        {(parseInt(productionLeadTime || "0") + parseInt(shippingLeadTime || "0"))} days
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Responsiveness Thresholds */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5" />
+                    Responsiveness Thresholds
+                  </CardTitle>
+                  <CardDescription>
+                    Control how quickly inventory targets adjust to demand changes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="accelerator-up">UP Percentage (%)</Label>
+                      <Input
+                        id="accelerator-up"
                         type="number"
                         min="0"
                         max="100"
-                        value={targetServiceLevel}
-                        onChange={(e) => setTargetServiceLevel(e.target.value)}
-                        placeholder="95"
+                        value={acceleratorUpPercentage}
+                        onChange={(e) => setAcceleratorUpPercentage(e.target.value)}
+                        placeholder="e.g., 40"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Target percentage for product availability
+                        Increase target when sales reach this threshold
                       </p>
                     </div>
-
                     <div className="space-y-2">
-                      <Label htmlFor="leadTime">Reorder Lead Time (days)</Label>
+                      <Label htmlFor="accelerator-down">DOWN Percentage (%)</Label>
                       <Input
-                        id="leadTime"
+                        id="accelerator-down"
                         type="number"
-                        value={reorderLeadTime}
-                        onChange={(e) => setReorderLeadTime(e.target.value)}
-                        placeholder="7"
+                        min="0"
+                        max="100"
+                        value={acceleratorDownPercentage}
+                        onChange={(e) => setAcceleratorDownPercentage(e.target.value)}
+                        placeholder="e.g., 20"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Expected delivery time for new orders
+                        Decrease target when sales drop below this threshold
                       </p>
                     </div>
-
                     <div className="space-y-2">
-                      <Label htmlFor="alertToggle">Low Stock Alerts</Label>
-                      <div className="flex items-center space-x-2 pt-2">
-                        <Button
-                          id="alertToggle"
-                          variant={lowStockAlert ? "default" : "outline"}
-                          onClick={() => setLowStockAlert(!lowStockAlert)}
-                          className="w-full"
-                        >
-                          {lowStockAlert ? "Enabled" : "Disabled"}
-                        </Button>
-                      </div>
+                      <Label htmlFor="idle-days">Idle Days</Label>
+                      <Input
+                        id="idle-days"
+                        type="number"
+                        min="0"
+                        value={idleDays}
+                        onChange={(e) => setIdleDays(e.target.value)}
+                        placeholder="e.g., 3"
+                      />
                       <p className="text-xs text-muted-foreground">
-                        Receive notifications for low stock items
+                        Days target isn't altered after update
                       </p>
                     </div>
-                  </div>
-
-                  <div className="flex justify-end pt-4">
-                    <Button onClick={() => {
-                      toast({
-                        title: "Settings saved",
-                        description: "System configuration has been updated successfully.",
-                      });
-                    }}>
-                      Save Configuration
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
 
+              {/* Behavior Properties */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Alert Preferences</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sliders className="h-5 w-5" />
+                    Behavior Properties
+                  </CardTitle>
                   <CardDescription>
-                    Configure when and how you receive system alerts
+                    Advanced calculation and display options
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Additional alert configuration options coming soon.
-                  </p>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="dynamic-period">Dynamic Period</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Auto-detect active stock period
+                        </p>
+                      </div>
+                      <Switch
+                        id="dynamic-period"
+                        checked={dynamicPeriod}
+                        onCheckedChange={setDynamicPeriod}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="start-of-day-stock">Start-of-Day Stock</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Use stock values from start of day
+                        </p>
+                      </div>
+                      <Switch
+                        id="start-of-day-stock"
+                        checked={startOfDayStock}
+                        onCheckedChange={setStartOfDayStock}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="dynamic-initial-target">Dynamic Initial Target</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Use calculated targets vs current on-hand
+                        </p>
+                      </div>
+                      <Switch
+                        id="dynamic-initial-target"
+                        checked={dynamicInitialTarget}
+                        onCheckedChange={setDynamicInitialTarget}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="unhide-features">Unhide Features</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Show/hide advanced features
+                        </p>
+                      </div>
+                      <Switch
+                        id="unhide-features"
+                        checked={unhideFeatures}
+                        onCheckedChange={setUnhideFeatures}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="show-skulocdate">Show SkuLocDate Data</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Display detailed calculation data
+                        </p>
+                      </div>
+                      <Switch
+                        id="show-skulocdate"
+                        checked={showSkuLocdateData}
+                        onCheckedChange={setShowSkuLocdateData}
+                      />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
+
+              {/* Alerts */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5" />
+                    Alerts
+                  </CardTitle>
+                  <CardDescription>
+                    Configure inventory alert thresholds
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="alerts-enabled">Enable Alerts</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Receive notifications for low stock
+                      </p>
+                    </div>
+                    <Switch
+                      id="alerts-enabled"
+                      checked={alertsEnabled}
+                      onCheckedChange={setAlertsEnabled}
+                    />
+                  </div>
+                  
+                  {alertsEnabled && (
+                    <div className="space-y-2">
+                      <Label htmlFor="minimum-stock">Minimum Stock Threshold (units)</Label>
+                      <Input
+                        id="minimum-stock"
+                        type="number"
+                        min="1"
+                        value={minimumStockThreshold}
+                        onChange={(e) => setMinimumStockThreshold(e.target.value)}
+                        placeholder="e.g., 1"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Alert when inventory falls below this level
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Button onClick={handleSaveSettings} className="w-full" size="lg">
+                Save All Settings
+              </Button>
             </TabsContent>
 
-            {/* DBM Calculation Tab */}
+            {/* Run Calculation Tab */}
             <TabsContent value="calculate" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Inventory Target Calculation</CardTitle>
+                  <CardTitle>Run Inventory Calculation</CardTitle>
                   <CardDescription>
-                    Run calculations to update target inventory levels based on sales patterns and current stock
+                    Execute inventory target calculations for a specific date range
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="grid gap-6 md:grid-cols-2">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Start Date</Label>
                       <Popover>
@@ -496,7 +768,7 @@ const Settings = () => {
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                            {startDate ? format(startDate, "PPP") : "Pick a date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
@@ -509,9 +781,6 @@ const Settings = () => {
                           />
                         </PopoverContent>
                       </Popover>
-                      <p className="text-xs text-muted-foreground">
-                        Start date for calculation period
-                      </p>
                     </div>
 
                     <div className="space-y-2">
@@ -526,7 +795,7 @@ const Settings = () => {
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                            {endDate ? format(endDate, "PPP") : "Pick a date"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
@@ -539,58 +808,37 @@ const Settings = () => {
                           />
                         </PopoverContent>
                       </Popover>
-                      <p className="text-xs text-muted-foreground">
-                        End date for calculation period
-                      </p>
                     </div>
                   </div>
 
-                  <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                    <h4 className="font-medium text-sm">What this does:</h4>
+                  <div className="space-y-3 p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-medium">Calculation Info:</p>
                     <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                      <li>Updates target inventory levels for all products</li>
-                      <li>Calculates economic units (on-hand + on-order + in-transit)</li>
-                      <li>Identifies overstock and understock situations</li>
-                      <li>Adjusts targets based on recent sales patterns</li>
+                      <li>Processes all SKUs and locations in the selected date range</li>
+                      <li>Updates target inventory levels based on current settings</li>
+                      <li>Calculates economic units and overstock indicators</li>
+                      <li>May take several minutes for large date ranges</li>
                     </ul>
                   </div>
 
-                  <div className="flex justify-end pt-4">
-                    <Button 
-                      onClick={handleRunCalculation} 
-                      disabled={isCalculating || !startDate || !endDate}
-                      className="gap-2"
-                    >
-                      {isCalculating ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Calculating...
-                        </>
-                      ) : (
-                        <>
-                          <Calculator className="h-4 w-4" />
-                          Run Calculation
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Calculation Tips</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm text-muted-foreground">
-                  <p>
-                    <strong>Start small:</strong> Test with a 1-week date range first to verify results.
-                  </p>
-                  <p>
-                    <strong>New products:</strong> Initial target is set to current economic units (on-hand + on-order + in-transit).
-                  </p>
-                  <p>
-                    <strong>Processing time:</strong> Larger date ranges may take several minutes to complete.
-                  </p>
+                  <Button 
+                    onClick={handleRunCalculation} 
+                    disabled={isCalculating || !startDate || !endDate}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isCalculating ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Calculating...
+                      </>
+                    ) : (
+                      <>
+                        <Calculator className="mr-2 h-5 w-5" />
+                        Run Calculation
+                      </>
+                    )}
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>

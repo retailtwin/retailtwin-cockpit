@@ -36,7 +36,18 @@ serve(async (req) => {
 
     const settings: any = {};
     settingsData?.forEach(row => { 
-      settings[row.setting_key] = parseFloat(row.setting_value as string); 
+      const key = row.setting_key;
+      const value = row.setting_value as string;
+      
+      // Parse numeric settings
+      if (key.includes('percentage') || key.includes('lead_time') || key.includes('days')) {
+        settings[key] = parseFloat(value);
+      } else if (key.includes('dynamic') || key.includes('start_of') || key.includes('unhide') || key.includes('show_')) {
+        // Parse boolean settings
+        settings[key] = value === 'true' || value === '1';
+      } else {
+        settings[key] = value;
+      }
     });
 
     console.log('Settings loaded:', settings);
@@ -80,7 +91,7 @@ serve(async (req) => {
         unit_on_order: row.on_order_units || 0,
         unit_in_transit: row.in_transit_units || 0,
         unit_sales: row.units_sold || 0,
-        lead_time: settings.production_lead_time_global + settings.transport_lead_time_global || 10,
+        lead_time: (settings.production_lead_time_global || 0) + (settings.shipping_lead_time || 0) || 10,
         excluded_level: 0,
         safety_level: Math.ceil(initialGreen * 0.5),
         green: initialGreen,
