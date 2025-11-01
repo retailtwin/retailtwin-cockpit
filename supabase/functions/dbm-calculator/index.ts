@@ -52,18 +52,14 @@ serve(async (req) => {
 
     console.log('Settings loaded:', settings);
 
-    // Fetch data from aifo schema
-    let query = supabase
-      .schema('aifo')
-      .from('fact_daily')
-      .select('*')
-      .gte('d', start_date)
-      .lte('d', end_date);
+    // Fetch data using RPC function that has access to aifo schema
+    const { data, error } = await supabase.rpc('get_fact_daily_aggregated', {
+      p_location_code: location_code,
+      p_sku: sku,
+      p_start_date: start_date,
+      p_end_date: end_date
+    });
     
-    if (location_code !== 'ALL') query = query.eq('location_code', location_code);
-    if (sku !== 'ALL') query = query.eq('sku', sku);
-
-    const { data, error } = await query;
     if (error) {
       console.error('Error fetching fact_daily:', error);
       throw error;
