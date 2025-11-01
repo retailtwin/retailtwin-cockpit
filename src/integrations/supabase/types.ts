@@ -50,6 +50,42 @@ export type Database = {
         }
         Relationships: []
       }
+      system_settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          scope: string
+          scope_ref: string | null
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          scope: string
+          scope_ref?: string | null
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          scope?: string
+          scope_ref?: string | null
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -202,6 +238,14 @@ export type Database = {
           stockout_days: number
           total_units_sold: number
         }[]
+      }
+      get_system_setting: {
+        Args: {
+          p_location_code?: string
+          p_setting_key: string
+          p_sku?: string
+        }
+        Returns: Json
       }
       get_top_skus_by_metric: {
         Args: {
