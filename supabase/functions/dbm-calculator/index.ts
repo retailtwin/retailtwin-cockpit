@@ -88,64 +88,80 @@ serve(async (req) => {
       });
     });
 
-    // Process each record
+    // Process each SKU-Location group sequentially, maintaining state
     const engine = new DBMEngine();
-    const results = (data || []).map((row: any) => {
-      // Calculate economic units first (for initialization)
-      const economicUnits = Math.max(0, 
-        (row.on_hand_units || 0) + 
-        (row.on_order_units || 0) + 
-        (row.in_transit_units || 0)
-      );
+    const results: any[] = [];
 
-      // Initialize Green to Economic Units if not set
-      const initialGreen = row.target_units || economicUnits || 1;
-
-      const input: SkuLocDate = {
-        store_code: row.location_code,
-        product_code: row.sku,
-        execution_date: row.d,
-        unit_on_hand: row.on_hand_units || 0,
-        unit_on_order: row.on_order_units || 0,
-        unit_in_transit: row.in_transit_units || 0,
-        unit_sales: row.units_sold || 0,
-        lead_time: (settings.production_lead_time_global || 0) + (settings.shipping_lead_time || 0) || 10,
-        excluded_level: 0,
-        safety_level: Math.ceil(initialGreen * 0.5),
-        green: initialGreen,
-        yellow: 0,
-        red: 0,
-        dbm_zone: '',
-        dbm_zone_previous: '',
-        counter_green: 0,
-        counter_yellow: 0,
-        counter_red: 0,
-        counter_overstock: 0,
-        decision: 'new',
-        frozen: false,
-        state: 'new',
-        last_accelerated: '2000-01-01',
-        last_decrease: '2000-01-01',
-        last_increase: '2000-01-01',
-        last_manual: '2000-01-01',
-        last_non_overstock: row.d,
-        last_out_of_red: '2000-01-01',
-        responsiveness_up_percentage: settings.accelerator_up_percentage || 0.3,
-        responsiveness_down_percentage: settings.accelerator_down_percentage || 0.5,
-        responsiveness_idle_days: settings.acceleration_idle_days || 3,
-        average_weekly_sales_units: row.avg_weekly_sales || 0,
-        units_economic: 0,
-        units_economic_overstock: 0,
-        units_economic_understock: 0,
-      };
-
-      const calculated = engine.executeDBMAlgorithm(input);
-      const economics = calculateEconomicUnits(calculated);
-      calculated.units_economic = economics.economic;
-      calculated.units_economic_overstock = economics.overstock;
-      calculated.units_economic_understock = economics.understock;
+    salesBySkuLoc.forEach((rows, key) => {
+      let previousCalculated: SkuLocDate | null = null;
       
-      return calculated;
+      rows.forEach((row: any, idx: number) => {
+        // Calculate economic units
+        const economicUnits = Math.max(0, 
+          (row.on_hand_units || 0) + 
+          (row.on_order_units || 0) + 
+          (row.in_transit_units || 0)
+        );
+
+        // CRITICAL: Only bootstrap on first date, then use previous day's green
+        let initialGreen: number;
+        if (idx === 0) {
+          // First date: use economic units or calculate from weekly sales
+          initialGreen = economicUnits || 
+            Math.max(1, Math.ceil((row.avg_weekly_sales || 0) * 
+              ((settings.production_lead_time_global || 7) + (settings.shipping_lead_time || 3)) / 7));
+        } else {
+          // Subsequent dates: use previous day's calculated green
+          initialGreen = previousCalculated!.green || 1;
+        }
+
+        const input: SkuLocDate = {
+          store_code: row.location_code,
+          product_code: row.sku,
+          execution_date: row.d,
+          unit_on_hand: row.on_hand_units || 0,
+          unit_on_order: row.on_order_units || 0,
+          unit_in_transit: row.in_transit_units || 0,
+          unit_sales: row.units_sold || 0,
+          lead_time: (settings.production_lead_time_global || 0) + (settings.shipping_lead_time || 0) || 10,
+          excluded_level: 0,
+          safety_level: previousCalculated?.safety_level || Math.ceil(initialGreen * 0.5),
+          green: initialGreen,
+          yellow: previousCalculated?.yellow || 0,
+          red: previousCalculated?.red || 0,
+          dbm_zone: '',
+          dbm_zone_previous: previousCalculated?.dbm_zone || '',
+          counter_green: previousCalculated?.counter_green || 0,
+          counter_yellow: previousCalculated?.counter_yellow || 0,
+          counter_red: previousCalculated?.counter_red || 0,
+          counter_overstock: previousCalculated?.counter_overstock || 0,
+          decision: idx === 0 ? 'new' : (previousCalculated?.decision || 'new'),
+          frozen: false,
+          state: previousCalculated?.state || 'new',
+          last_accelerated: previousCalculated?.last_accelerated || '2000-01-01',
+          last_decrease: previousCalculated?.last_decrease || '2000-01-01',
+          last_increase: previousCalculated?.last_increase || '2000-01-01',
+          last_manual: previousCalculated?.last_manual || '2000-01-01',
+          last_non_overstock: previousCalculated?.last_non_overstock || row.d,
+          last_out_of_red: previousCalculated?.last_out_of_red || '2000-01-01',
+          responsiveness_up_percentage: settings.accelerator_up_percentage || 0.3,
+          responsiveness_down_percentage: settings.accelerator_down_percentage || 0.5,
+          responsiveness_idle_days: settings.acceleration_idle_days || 3,
+          average_weekly_sales_units: row.avg_weekly_sales || 0,
+          units_economic: 0,
+          units_economic_overstock: 0,
+          units_economic_understock: 0,
+        };
+
+        const calculated = engine.executeDBMAlgorithm(input);
+        const economics = calculateEconomicUnits(calculated);
+        calculated.units_economic = economics.economic;
+        calculated.units_economic_overstock = economics.overstock;
+        calculated.units_economic_understock = economics.understock;
+        
+        previousCalculated = calculated;
+        results.push(calculated);
+      });
     });
 
     console.log(`Calculated ${results.length} records, updating database...`);
