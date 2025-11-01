@@ -92,33 +92,60 @@ export class DBMEngine {
     return Math.floor(Math.ceil(green / 3));
   }
   
-  // Placeholder methods - will be implemented in next prompt
-  private getCounterGreen(counter: number, state: string, frozen: boolean, zone: string, prevZone: string, decision: string): number {
-    return counter;
+  private getCounterGreen(counter: number, status: string, frozen: boolean, 
+                          newZone: string, zone: string, decision: string): number {
+    if (status === 'static' || frozen) return counter;
+    if (status === 'new' || status === 'manual') return 0;
+    if ((newZone === 'green' || newZone === 'overstock') && decision === 'dec_from_green') return 0;
+    if (newZone === 'green' || newZone === 'overstock') return counter + 1;
+    if ((zone === 'green' || zone === 'overstock') && newZone !== zone) return counter + 1;
+    if (newZone === 'green') return counter + 1;
+    return 0;
   }
   
-  private getCounterYellow(counter: number, state: string, frozen: boolean, zone: string): number {
-    return counter;
+  private getCounterYellow(counter: number, status: string, frozen: boolean, newZone: string): number {
+    if (status === 'static' || frozen) return counter;
+    if (status === 'new') return 0;
+    if (newZone === 'yellow') return counter + 1;
+    return 0;
   }
   
-  private getCounterRed(counter: number, state: string, frozen: boolean, zone: string, prevZone: string, decision: string): number {
-    return counter;
+  private getCounterRed(counter: number, status: string, frozen: boolean,
+                        newZone: string, zone: string, decision: string): number {
+    if (status === 'static' || frozen) return counter;
+    if (status === 'new' || status === 'manual') return 0;
+    if (newZone === 'red' && decision === 'inc_from_red') return 1;
+    if (zone === 'red' || newZone === 'red') return counter + 1;
+    return 0;
   }
   
-  private getCounterOverstock(counter: number, state: string, frozen: boolean, zone: string, decision: string): number {
-    return counter;
+  private getCounterOverstock(counter: number, status: string, frozen: boolean,
+                              newZone: string, decision: string): number {
+    if (status === 'static' || frozen) return counter;
+    if (status === 'new') return 0;
+    if (newZone === 'red' && decision === 'inc_from_red') return 1;
+    if (newZone === 'overstock') return counter + 1;
+    return 0;
   }
   
-  private getLastManual(lastManual: string, state: string, frozen: boolean, execDate: string): string {
-    return lastManual;
+  private getLastManual(date: string, status: string, frozen: boolean, executionDate: string): string {
+    if (status === 'static' || frozen) return date;
+    if (status === 'manual') return executionDate;
+    return date;
   }
   
-  private getLastOutOfRed(lastOutOfRed: string, green: number, state: string, frozen: boolean, zone: string, prevZone: string, execDate: string): string {
-    return lastOutOfRed;
+  private getLastOutOfRed(date: string, green: number, status: string, frozen: boolean,
+                          newZone: string, zone: string, executionDate: string): string {
+    if (status === 'static' || frozen) return date;
+    if (zone === 'red' && newZone !== zone && green > 1) return executionDate;
+    return date;
   }
   
-  private getLastNonOverstock(lastNonOverstock: string, green: number, state: string, frozen: boolean, zone: string, execDate: string): string {
-    return lastNonOverstock;
+  private getLastNonOverstock(date: string, green: number, status: string, frozen: boolean,
+                              newZone: string, executionDate: string): string {
+    if (status === 'static' || frozen) return date;
+    if (newZone !== 'overstock' && green > 1) return executionDate;
+    return date;
   }
   
   private getGreen(sl: SkuLocDate): number {
@@ -174,10 +201,61 @@ export class DBMEngine {
   }
   
   private getDecision(sl: SkuLocDate): string {
-    return sl.decision;
+    const green = sl.green || 0;
+    
+    if (sl.decision === 'manual' && this.daysBetween(sl.execution_date, sl.last_manual) === 0) {
+      return 'manual';
+    }
+    if (sl.state === 'manual' || sl.state === 'static' || sl.state === 'new') {
+      return sl.state;
+    }
+    if (this.daysBetween(sl.execution_date, sl.last_manual) <= 3) {
+      return 'manual_wait';
+    }
+    if (green === 0) return 'inc_to_one';
+    
+    const canDecrease = 
+      sl.counter_green > sl.lead_time &&
+      (sl.dbm_zone === 'green' || sl.dbm_zone === 'overstock') &&
+      this.daysBetween(sl.execution_date, sl.last_non_overstock) < sl.lead_time &&
+      this.daysBetween(sl.execution_date, sl.last_decrease) > sl.lead_time &&
+      green > 1;
+    
+    if (canDecrease) {
+      const newTarget = green - Math.abs((green - sl.excluded_level) / 3);
+      if (newTarget < sl.safety_level) return 'dec_to_safety';
+      if (newTarget < sl.excluded_level) return 'dec_to_excluded';
+      if (newTarget !== green) return 'dec_from_green';
+    }
+    
+    if (sl.counter_red > sl.lead_time && sl.dbm_zone === 'red' &&
+        this.daysBetween(sl.execution_date, sl.last_out_of_red) > sl.lead_time) {
+      return 'inc_from_red';
+    }
+    
+    if (green < sl.safety_level) return 'adj_to_safety';
+    if (green < sl.excluded_level) return 'adj_to_excluded';
+    
+    if (sl.dbm_zone === 'red' && sl.dbm_zone !== sl.dbm_zone_previous &&
+        this.daysBetween(sl.execution_date, sl.last_out_of_red) < sl.lead_time) {
+      return 'red_count_1';
+    }
+    if (sl.dbm_zone === 'red') return 'red_count_2';
+    if (sl.dbm_zone === 'yellow') return 'yellow_count';
+    if (sl.dbm_zone === 'green') return 'green_count';
+    if (sl.dbm_zone === 'overstock') return 'overstock';
+    
+    return 'none';
   }
   
   private getState(sl: SkuLocDate): string {
+    if (sl.frozen) return 'frozen';
+    if (sl.decision === 'manual') return 'manual_await';
+    if (sl.decision === 'inc_from_red') return 'increase';
+    if (sl.decision === 'dec_from_green') return 'decrease';
+    if (sl.decision === 'red_count_1') return 'escape_red';
+    if (sl.decision === 'red_count_2') return 'red_count';
+    if (sl.decision === 'new') return 'none';
     return sl.state;
   }
   
@@ -216,11 +294,11 @@ export class DBMEngine {
   }
   
   private getLastDecrease(sl: SkuLocDate): string {
-    return sl.last_decrease;
+    return sl.decision === 'dec_from_green' ? sl.execution_date : sl.last_decrease;
   }
   
   private getLastIncrease(sl: SkuLocDate): string {
-    return sl.last_increase;
+    return sl.decision === 'inc_from_red' ? sl.execution_date : sl.last_increase;
   }
   
   private daysBetween(date1: string, date2: string): number {
@@ -228,4 +306,12 @@ export class DBMEngine {
     const d2 = new Date(date2);
     return Math.floor(Math.abs(d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
   }
+}
+
+export function calculateEconomicUnits(sl: SkuLocDate) {
+  const green = sl.green || 0;
+  const economic = Math.max(0, sl.unit_on_hand + sl.unit_on_order + sl.unit_in_transit);
+  const overstock = Math.max(0, economic - green);
+  const understock = Math.max(0, green - economic);
+  return { economic, overstock, understock };
 }
