@@ -6,7 +6,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 interface InventoryZoneData {
   sku: string;
   sku_name: string;
-  total_throughput: number;
+  rolling_21d_sales: number;
+  rolling_21d_avg_daily: number;
   avg_on_hand: number;
   avg_target: number;
   avg_economic: number;
@@ -56,7 +57,9 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
     redZoneTop: Number(item.avg_target.toFixed(0)),
     yellowZoneTop: Number(item.avg_economic.toFixed(0)),
     greenZoneTop: Number((item.avg_economic + item.avg_economic_overstock).toFixed(0)),
-    throughput: item.total_throughput,
+    rolling21dSales: item.rolling_21d_sales,
+    dailyAvg21d: Number(item.rolling_21d_avg_daily.toFixed(2)),
+    daysOfSupply: item.rolling_21d_avg_daily > 0 ? Number((item.avg_on_hand / item.rolling_21d_avg_daily).toFixed(1)) : 0,
     stockoutDays: item.stockout_days,
     isUnderTarget: item.avg_target > item.avg_economic,
   }));
@@ -69,9 +72,11 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
           <p className="font-semibold text-sm">{data.skuName}</p>
           <p className="text-xs text-muted-foreground">SKU: {data.sku}</p>
           <p className="text-xs mt-2">Rank: #{data.rank} of {chartData.length}</p>
-          <p className="text-xs">Throughput: {data.throughput.toFixed(0)} units</p>
+          <p className="text-xs font-semibold">21-Day Sales: {data.rolling21dSales.toFixed(0)} units</p>
+          <p className="text-xs">Daily Avg (21d): {data.dailyAvg21d} units/day</p>
           <div className="border-t mt-2 pt-2">
             <p className="text-xs">On Hand: {data.onHand} units</p>
+            <p className="text-xs">Days of Supply: {data.daysOfSupply} days</p>
             <p className="text-xs">Target: {data.target} units</p>
             <p className="text-xs">Economic: {data.economic} units</p>
             <p className="text-xs">Stockout Days: {data.stockoutDays}</p>
@@ -124,16 +129,16 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
 
       {/* Inventory Zones Chart */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Inventory Zones by SKU (Ranked by Throughput)</h3>
+        <h3 className="text-lg font-semibold mb-4">Inventory Zones by SKU (Ranked by 21-Day Sales)</h3>
         <p className="text-sm text-muted-foreground mb-6">
-          SKUs ranked left to right by total throughput. Green zone = optimal stock, Yellow zone = approaching target, Red zone = critical stock levels.
+          SKUs ranked left to right by rolling 21-day sales rate (from end date). Green zone = optimal stock, Yellow zone = approaching target, Red zone = critical stock levels.
         </p>
         <ResponsiveContainer width="100%" height={500}>
           <ComposedChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis 
               dataKey="rank" 
-              label={{ value: 'SKU Rank (by Throughput)', position: 'insideBottom', offset: -5 }}
+              label={{ value: 'SKU Rank (by 21-Day Sales)', position: 'insideBottom', offset: -5 }}
               className="text-xs"
             />
             <YAxis 
@@ -230,8 +235,8 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
             <div>
               <p className="text-sm font-medium">Optimization Opportunity</p>
               <p className="text-sm text-muted-foreground">
-                Focus on top-ranked SKUs (left side) as they drive the most throughput. 
-                Ensuring these maintain green zone levels maximizes revenue protection.
+                Focus on top-ranked SKUs (left side) as they have the highest recent sales velocity (21-day rolling). 
+                Ensuring these maintain green zone levels maximizes revenue protection based on current demand.
               </p>
             </div>
           </div>

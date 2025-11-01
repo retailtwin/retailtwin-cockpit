@@ -170,11 +170,12 @@ export type Database = {
           avg_on_hand: number
           avg_target: number
           avg_weekly_sales: number
+          rolling_21d_avg_daily: number
+          rolling_21d_sales: number
           sku: string
           sku_name: string
           stockout_days: number
           total_days: number
-          total_throughput: number
         }[]
       }
       get_kpi_data_aggregated: {
