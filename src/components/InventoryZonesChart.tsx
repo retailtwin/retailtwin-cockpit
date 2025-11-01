@@ -46,23 +46,29 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
   }
 
   // Prepare chart data
-  const chartData = data.map((item, index) => ({
-    sku: item.sku,
-    skuName: item.sku_name,
-    rank: index + 1,
-    onHand: Number(item.avg_on_hand.toFixed(0)),
-    target: Number(item.avg_target.toFixed(0)),
-    economic: Number(item.avg_economic.toFixed(0)),
-    economicOverstock: Number(item.avg_economic_overstock.toFixed(0)),
-    redZoneTop: Number(item.avg_target.toFixed(0)),
-    yellowZoneTop: Number(item.avg_economic.toFixed(0)),
-    greenZoneTop: Number((item.avg_economic + item.avg_economic_overstock).toFixed(0)),
-    rolling21dSales: item.rolling_21d_sales,
-    dailyAvg21d: Number(item.rolling_21d_avg_daily.toFixed(2)),
-    daysOfSupply: item.rolling_21d_avg_daily > 0 ? Number((item.avg_on_hand / item.rolling_21d_avg_daily).toFixed(1)) : 0,
-    stockoutDays: item.stockout_days,
-    isUnderTarget: item.avg_target > item.avg_economic,
-  }));
+  const chartData = data.map((item, index) => {
+    const target = Number(item.avg_target.toFixed(0));
+    const redZone = Number((target / 3).toFixed(2));
+    const yellowZone = Number((2 * target / 3).toFixed(2));
+    
+    return {
+      sku: item.sku,
+      skuName: item.sku_name,
+      rank: index + 1,
+      onHand: Number(item.avg_on_hand.toFixed(0)),
+      target: target,
+      economic: Number(item.avg_economic.toFixed(0)),
+      economicOverstock: Number(item.avg_economic_overstock.toFixed(0)),
+      redZoneTop: redZone,
+      yellowZoneTop: yellowZone,
+      greenZoneTop: target,
+      rolling21dSales: item.rolling_21d_sales,
+      dailyAvg21d: Number(item.rolling_21d_avg_daily.toFixed(2)),
+      daysOfSupply: item.rolling_21d_avg_daily > 0 ? Number((item.avg_on_hand / item.rolling_21d_avg_daily).toFixed(1)) : 0,
+      stockoutDays: item.stockout_days,
+      isUnderTarget: item.avg_target > item.avg_economic,
+    };
+  });
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -83,9 +89,9 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
           </div>
           <div className="border-t mt-2 pt-2">
             <p className="text-xs font-semibold">Zones:</p>
-            <p className="text-xs text-destructive">Red (0-{data.target})</p>
-            <p className="text-xs text-yellow-600">Yellow ({data.target}-{data.economic})</p>
-            <p className="text-xs text-green-600">Green ({data.economic}-{data.greenZoneTop})</p>
+            <p className="text-xs text-destructive">Red (0-{data.redZoneTop})</p>
+            <p className="text-xs text-yellow-600">Yellow ({data.redZoneTop}-{data.yellowZoneTop})</p>
+            <p className="text-xs text-green-600">Green ({data.yellowZoneTop}-{data.greenZoneTop})</p>
           </div>
         </div>
       );
@@ -131,7 +137,7 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Inventory Zones by SKU (Ranked by 21-Day Sales)</h3>
         <p className="text-sm text-muted-foreground mb-6">
-          SKUs ranked left to right by rolling 21-day sales rate (from end date). Green zone = optimal stock, Yellow zone = approaching target, Red zone = critical stock levels.
+          SKUs ranked left to right by rolling 21-day sales rate. Each zone represents 1/3 of the Target: Red (0-Target/3), Yellow (Target/3-2·Target/3), Green (2·Target/3-Target).
         </p>
         <ResponsiveContainer width="100%" height={500}>
           <ComposedChart data={chartData}>
