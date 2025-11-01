@@ -53,7 +53,7 @@ serve(async (req) => {
     console.log('Settings loaded:', settings);
 
     // Fetch data using RPC function that has access to aifo schema
-    const { data, error } = await supabase.rpc('get_fact_daily_aggregated', {
+    const { data, error } = await supabase.rpc('get_fact_daily_raw', {
       p_location_code: location_code,
       p_sku: sku,
       p_start_date: start_date,
@@ -69,7 +69,7 @@ serve(async (req) => {
 
     // Process each record
     const engine = new DBMEngine();
-    const results = (data || []).map(row => {
+    const results = (data || []).map((row: any) => {
       // Calculate economic units first (for initialization)
       const economicUnits = Math.max(0, 
         (row.on_hand_units || 0) + 
@@ -129,38 +129,34 @@ serve(async (req) => {
 
     console.log(`Calculated ${results.length} records, updating database...`);
 
-    // Update database in batches
-    const batchSize = 100;
-    for (let i = 0; i < results.length; i += batchSize) {
-      const batch = results.slice(i, i + batchSize);
-      
-      for (const r of batch) {
-        const { error: updateError } = await supabase
-          .schema('aifo')
-          .from('fact_daily')
-          .update({
-            target_units: r.green,
-            economic_units: r.units_economic,
-            economic_overstock_units: r.units_economic_overstock,
-          })
-          .eq('location_code', r.store_code)
-          .eq('sku', r.product_code)
-          .eq('d', r.execution_date);
-        
-        if (updateError) {
-          console.error('Update error for record:', r.store_code, r.product_code, r.execution_date, updateError);
-        }
-      }
-      
-      console.log(`Updated batch ${i / batchSize + 1} of ${Math.ceil(results.length / batchSize)}`);
+    // Prepare updates for batch RPC call
+    const updates = results.map((r: any) => ({
+      location_code: r.store_code,
+      sku: r.product_code,
+      d: r.execution_date,
+      target_units: r.green,
+      economic_units: r.units_economic,
+      economic_overstock_units: r.units_economic_overstock,
+    }));
+
+    // Update database using RPC function
+    const { error: updateError } = await supabase.rpc('update_fact_daily_batch', {
+      updates: updates
+    });
+    
+    if (updateError) {
+      console.error('Batch update error:', updateError);
+      throw updateError;
     }
+    
+    console.log('Database updated successfully');
 
     const summary = {
       processed: results.length,
-      increases: results.filter(r => r.decision === 'inc_from_red').length,
-      decreases: results.filter(r => r.decision === 'dec_from_green').length,
-      new_items: results.filter(r => r.decision === 'new').length,
-      avg_green: Math.round(results.reduce((sum, r) => sum + (r.green || 0), 0) / results.length),
+      increases: results.filter((r: any) => r.decision === 'inc_from_red').length,
+      decreases: results.filter((r: any) => r.decision === 'dec_from_green').length,
+      new_items: results.filter((r: any) => r.decision === 'new').length,
+      avg_green: Math.round(results.reduce((sum: number, r: any) => sum + (r.green || 0), 0) / results.length),
     };
 
     console.log('DBM Calculation complete:', summary);

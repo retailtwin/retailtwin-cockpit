@@ -137,6 +137,27 @@ export type Database = {
           units_sold: number
         }[]
       }
+      get_fact_daily_raw: {
+        Args: {
+          p_end_date: string
+          p_location_code: string
+          p_sku: string
+          p_start_date: string
+        }
+        Returns: {
+          d: string
+          economic_overstock_units: number
+          economic_units: number
+          in_transit_units: number
+          location_code: string
+          on_hand_units: number
+          on_hand_units_sim: number
+          on_order_units: number
+          sku: string
+          target_units: number
+          units_sold: number
+        }[]
+      }
       get_inventory_zones_report: {
         Args: {
           p_end_date?: string
@@ -271,6 +292,7 @@ export type Database = {
         Returns: boolean
       }
       insert_fact_daily_batch: { Args: { records: Json }; Returns: undefined }
+      update_fact_daily_batch: { Args: { updates: Json }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
