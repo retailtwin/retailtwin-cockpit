@@ -58,8 +58,8 @@ const Settings = () => {
   const [minimumStockThreshold, setMinimumStockThreshold] = useState("");
   
   // Calculation
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
+  const [startDate, setStartDate] = useState<Date>(new Date(2023, 0, 1)); // January 2023
+  const [endDate, setEndDate] = useState<Date>(new Date(2023, 11, 31)); // December 2023
   const [isCalculating, setIsCalculating] = useState(false);
 
   useEffect(() => {
