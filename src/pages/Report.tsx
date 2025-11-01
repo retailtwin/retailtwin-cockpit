@@ -17,8 +17,8 @@ const Report = () => {
   const [locations, setLocations] = useState<Array<{ code: string; name: string }>>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>("ALL");
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-    from: new Date(new Date().setDate(new Date().getDate() - 90)),
-    to: new Date(),
+    from: new Date("2023-01-01"),
+    to: new Date("2023-12-31"),
   });
   const [inventoryData, setInventoryData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
