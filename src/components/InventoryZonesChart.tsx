@@ -50,6 +50,7 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
     const target = Number(item.avg_target.toFixed(0));
     const redZone = Number((target / 3).toFixed(2));
     const yellowZone = Number((2 * target / 3).toFixed(2));
+    const weeklySales = Number((item.rolling_21d_sales / 3).toFixed(2));
     
     return {
       sku: item.sku,
@@ -63,6 +64,7 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
       yellowZoneTop: yellowZone,
       greenZoneTop: target,
       rolling21dSales: item.rolling_21d_sales,
+      weeklySales: weeklySales,
       dailyAvg21d: Number(item.rolling_21d_avg_daily.toFixed(2)),
       daysOfSupply: item.rolling_21d_avg_daily > 0 ? Number((item.avg_on_hand / item.rolling_21d_avg_daily).toFixed(1)) : 0,
       stockoutDays: item.stockout_days,
@@ -78,7 +80,7 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
           <p className="font-semibold text-sm">{data.skuName}</p>
           <p className="text-xs text-muted-foreground">SKU: {data.sku}</p>
           <p className="text-xs mt-2">Rank: #{data.rank} of {chartData.length}</p>
-          <p className="text-xs font-semibold">21-Day Sales: {data.rolling21dSales.toFixed(0)} units</p>
+          <p className="text-xs font-semibold">Weekly Sales (21d Avg): {data.weeklySales} units/week</p>
           <p className="text-xs">Daily Avg (21d): {data.dailyAvg21d} units/day</p>
           <div className="border-t mt-2 pt-2">
             <p className="text-xs">On Hand: {data.onHand} units</p>
@@ -135,16 +137,16 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
 
       {/* Inventory Zones Chart */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Inventory Zones by SKU (Ranked by 21-Day Sales)</h3>
+        <h3 className="text-lg font-semibold mb-4">Inventory Zones by SKU (Ranked by Weekly Sales)</h3>
         <p className="text-sm text-muted-foreground mb-6">
-          SKUs ranked left to right by rolling 21-day sales rate. Each zone represents 1/3 of the Target: Red (0-Target/3), Yellow (Target/3-2·Target/3), Green (2·Target/3-Target).
+          SKUs ranked by average weekly sales (21-day total ÷ 3). Each zone represents 1/3 of the Target: Red (0-Target/3), Yellow (Target/3-2·Target/3), Green (2·Target/3-Target).
         </p>
         <ResponsiveContainer width="100%" height={500}>
           <ComposedChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis 
               dataKey="rank" 
-              label={{ value: 'SKU Rank (by 21-Day Sales)', position: 'insideBottom', offset: -5 }}
+              label={{ value: 'SKU Rank (by Weekly Sales)', position: 'insideBottom', offset: -5 }}
               className="text-xs"
             />
             <YAxis 
@@ -241,8 +243,8 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
             <div>
               <p className="text-sm font-medium">Optimization Opportunity</p>
               <p className="text-sm text-muted-foreground">
-                Focus on top-ranked SKUs (left side) as they have the highest recent sales velocity (21-day rolling). 
-                Ensuring these maintain green zone levels maximizes revenue protection based on current demand.
+                Focus on top-ranked SKUs (left side) as they have the highest weekly sales velocity. 
+                Ensuring these maintain green zone levels maximizes revenue protection based on recent demand.
               </p>
             </div>
           </div>
