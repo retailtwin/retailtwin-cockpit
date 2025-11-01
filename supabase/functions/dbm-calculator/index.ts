@@ -54,6 +54,7 @@ serve(async (req) => {
 
     // Fetch data from aifo schema
     let query = supabase
+      .schema('aifo')
       .from('fact_daily')
       .select('*')
       .gte('d', start_date)
@@ -139,6 +140,7 @@ serve(async (req) => {
       
       for (const r of batch) {
         const { error: updateError } = await supabase
+          .schema('aifo')
           .from('fact_daily')
           .update({
             target_units: r.green,
