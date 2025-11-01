@@ -153,11 +153,17 @@ serve(async (req) => {
           units_economic_understock: 0,
         };
 
+        // Log before DBM calculation
+        console.log(`Day ${idx + 1} ${row.location_code}/${row.sku} IN: avg_weekly=${(row.avg_weekly_sales || 0).toFixed(2)}, green_in=${initialGreen}, sales=${row.units_sold}, on_hand=${row.unit_on_hand}`);
+        
         const calculated = engine.executeDBMAlgorithm(input);
         const economics = calculateEconomicUnits(calculated);
         calculated.units_economic = economics.economic;
         calculated.units_economic_overstock = economics.overstock;
         calculated.units_economic_understock = economics.understock;
+        
+        // Log after DBM calculation
+        console.log(`Day ${idx + 1} ${row.location_code}/${row.sku} OUT: green_out=${calculated.green}, decision=${calculated.decision}, state=${calculated.state}, zone=${calculated.zone}`);
         
         previousCalculated = calculated;
         results.push(calculated);
