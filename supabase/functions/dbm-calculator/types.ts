@@ -20,6 +20,15 @@ export interface SkuLocDate {
   responsiveness_idle_days: number;
   average_weekly_sales_units: number;
   
+  // Accelerator magnitude controls
+  accelerator_up_multiplier?: number;
+  accelerator_down_multiplier?: number;
+  
+  // Safety guards
+  accelerator_requires_inventory?: boolean;
+  accelerator_minimum_target?: number;
+  accelerator_enable_zero_sales?: boolean;
+  
   // Calculated
   green?: number; // target_units
   yellow: number;

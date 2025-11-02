@@ -150,6 +150,7 @@ export class DBMEngine {
   
   private getGreen(sl: SkuLocDate): number {
     const green = sl.green || 0;
+    const minimumTarget = sl.accelerator_minimum_target ?? 1;
     
     // Manual override
     if (sl.decision === 'manual' && this.daysBetween(sl.execution_date, sl.last_manual) === 0) {
@@ -167,8 +168,8 @@ export class DBMEngine {
       return green;
     }
     
-    // Initialize to 1 if zero
-    if (green === 0) return 1;
+    // Phase 1: Initialize to minimum target if zero
+    if (green === 0) return minimumTarget;
     
     // Decrease conditions
     const canDecrease = 
@@ -176,14 +177,14 @@ export class DBMEngine {
       (sl.dbm_zone === 'green' || sl.dbm_zone === 'overstock') &&
       this.daysBetween(sl.execution_date, sl.last_non_overstock) < sl.lead_time &&
       this.daysBetween(sl.execution_date, sl.last_decrease) > sl.lead_time &&
-      green > 1;
+      green > minimumTarget;
     
     if (canDecrease) {
       const newTarget = green - Math.ceil((green - sl.excluded_level) / 3);
       
-      if (newTarget < sl.safety_level) return sl.safety_level;
-      if (newTarget < sl.excluded_level) return sl.excluded_level;
-      if (newTarget !== green) return Math.floor(newTarget);
+      if (newTarget < sl.safety_level) return Math.max(sl.safety_level, minimumTarget);
+      if (newTarget < sl.excluded_level) return Math.max(sl.excluded_level, minimumTarget);
+      if (newTarget !== green) return Math.max(Math.floor(newTarget), minimumTarget);
     }
     
     // Increase from red
@@ -193,9 +194,12 @@ export class DBMEngine {
       return Math.floor(green + Math.ceil((green - sl.excluded_level) / 3));
     }
     
-    // Adjust to safety/excluded levels
-    if (green < sl.safety_level) return sl.safety_level;
-    if (green < sl.excluded_level) return sl.excluded_level;
+    // Adjust to safety/excluded levels (but enforce minimum)
+    if (green < sl.safety_level) return Math.max(sl.safety_level, minimumTarget);
+    if (green < sl.excluded_level) return Math.max(sl.excluded_level, minimumTarget);
+    
+    // Phase 1: Enforce minimum target
+    if (green < minimumTarget) return minimumTarget;
     
     return green;
   }
@@ -261,12 +265,13 @@ export class DBMEngine {
   
   private getAcceleratedTarget(sl: SkuLocDate): number {
     const green = sl.green || 0;
+    const minimumTarget = sl.accelerator_minimum_target ?? 1;
     
     if (this.daysBetween(sl.execution_date, sl.last_accelerated) <= sl.responsiveness_idle_days) {
       return green;
     }
     
-    // Accelerator UP
+    // Phase 3: Accelerator UP with configurable multiplier
     if (sl.responsiveness_up_percentage !== 0 && sl.average_weekly_sales_units !== 0) {
       const thresholdUp = sl.responsiveness_up_percentage * green;
       if (sl.average_weekly_sales_units >= thresholdUp) {
@@ -274,19 +279,35 @@ export class DBMEngine {
         sl.decision = 'increase';
         sl.accelerator_condition = 'above threshold';
         sl.last_accelerated = sl.execution_date;
-        return green + Math.ceil(sl.average_weekly_sales_units);
+        
+        // Use configurable UP multiplier (default 1.0 = add full avg_weekly_sales)
+        const upMultiplier = sl.accelerator_up_multiplier ?? 1.0;
+        const increase = Math.ceil(sl.average_weekly_sales_units * upMultiplier);
+        return green + increase;
       }
     }
     
-    // Accelerator DOWN
-    if (sl.responsiveness_down_percentage !== 0 && sl.average_weekly_sales_units !== 0) {
+    // Phase 2 & 3: Accelerator DOWN with inventory check and configurable multiplier
+    const requiresInv = sl.accelerator_requires_inventory ?? true;
+    const enableZero = sl.accelerator_enable_zero_sales ?? true;
+    
+    // Phase 2: Check inventory instead of sales for DOWN trigger
+    const hasInventory = !requiresInv || sl.unit_on_hand > 0;
+    const hasValidSales = enableZero || sl.average_weekly_sales_units !== 0;
+    
+    if (sl.responsiveness_down_percentage !== 0 && hasInventory && hasValidSales) {
       const thresholdDown = sl.responsiveness_down_percentage * green;
       if (sl.average_weekly_sales_units < thresholdDown) {
         sl.state = 'responsiveness';
         sl.decision = 'decrease';
         sl.accelerator_condition = 'below threshold';
         sl.last_accelerated = sl.execution_date;
-        return green - Math.ceil(green * (2 / 3));
+        
+        // Phase 3: Use configurable DOWN multiplier (default 0.67 = remove 2/3 of target)
+        const downMultiplier = sl.accelerator_down_multiplier ?? 0.67;
+        const decrease = Math.ceil(green * downMultiplier);
+        const newGreen = Math.max(green - decrease, minimumTarget);
+        return newGreen;
       }
     }
     

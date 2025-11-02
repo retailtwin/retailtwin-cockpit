@@ -103,16 +103,15 @@ serve(async (req) => {
           (row.in_transit_units || 0)
         );
 
-        // CRITICAL: Only bootstrap on first date, then use previous day's green
+        // Phase 1: Fix initial target - use economicUnits with minimum of 1
+        const minimumTarget = settings.accelerator_minimum_target || 1;
         let initialGreen: number;
         if (idx === 0) {
-          // First date: use economic units or calculate from weekly sales
-          initialGreen = economicUnits || 
-            Math.max(1, Math.ceil((row.avg_weekly_sales || 0) * 
-              ((settings.production_lead_time_global || 7) + (settings.shipping_lead_time || 3)) / 7));
+          // First date: use economic units (with minimum enforced)
+          initialGreen = Math.max(economicUnits, minimumTarget);
         } else {
           // Subsequent dates: use previous day's calculated green
-          initialGreen = previousCalculated!.green || 1;
+          initialGreen = previousCalculated!.green || minimumTarget;
         }
 
         const input: SkuLocDate = {
@@ -144,10 +143,22 @@ serve(async (req) => {
           last_manual: previousCalculated?.last_manual || '2000-01-01',
           last_non_overstock: previousCalculated?.last_non_overstock || row.d,
           last_out_of_red: previousCalculated?.last_out_of_red || '2000-01-01',
-          responsiveness_up_percentage: settings.accelerator_up_percentage || 0.3,
-          responsiveness_down_percentage: settings.accelerator_down_percentage || 0.5,
-          responsiveness_idle_days: settings.acceleration_idle_days || 3,
+          
+          // Phase 3: Use configurable accelerator settings
+          responsiveness_up_percentage: settings.accelerator_up_percentage ?? 0.4,
+          responsiveness_down_percentage: settings.accelerator_down_percentage ?? 0.2,
+          responsiveness_idle_days: settings.acceleration_idle_days ?? 3,
           average_weekly_sales_units: row.avg_weekly_sales || 0,
+          
+          // Phase 3: Add magnitude multipliers
+          accelerator_up_multiplier: settings.accelerator_up_multiplier ?? 1.0,
+          accelerator_down_multiplier: settings.accelerator_down_multiplier ?? 0.67,
+          
+          // Phase 3: Add safety guards
+          accelerator_requires_inventory: settings.accelerator_requires_inventory ?? true,
+          accelerator_minimum_target: minimumTarget,
+          accelerator_enable_zero_sales: settings.accelerator_enable_zero_sales ?? true,
+          
           units_economic: 0,
           units_economic_overstock: 0,
           units_economic_understock: 0,
@@ -163,7 +174,7 @@ serve(async (req) => {
         calculated.units_economic_understock = economics.understock;
         
         // Log after DBM calculation
-        console.log(`Day ${idx + 1} ${row.location_code}/${row.sku} OUT: green_out=${calculated.green}, decision=${calculated.decision}, state=${calculated.state}, zone=${calculated.zone}`);
+        console.log(`Day ${idx + 1} ${row.location_code}/${row.sku} OUT: green_out=${calculated.green}, decision=${calculated.decision}, state=${calculated.state}, zone=${calculated.dbm_zone}`);
         
         previousCalculated = calculated;
         results.push(calculated);
