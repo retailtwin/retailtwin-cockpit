@@ -8,7 +8,7 @@ import { ArchieChatDock } from "@/components/ArchieChatDock";
 import { ArchieFloatingButton } from "@/components/ArchieFloatingButton";
 import { ParetoReportModal } from "@/components/ParetoReportModal";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, Play, Settings } from "lucide-react";
+import { Download, Loader2, Play, Settings, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
@@ -26,6 +26,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
+import { runDbmSimulation } from "@/lib/dbm";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Dashboard = () => {
   const { toast } = useToast();
@@ -44,6 +46,8 @@ const Dashboard = () => {
   const [paretoModalOpen, setParetoModalOpen] = useState(false);
   const [isRunningDBM, setIsRunningDBM] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [simulationResult, setSimulationResult] = useState<any>(null);
+  const [showResultDetails, setShowResultDetails] = useState(false);
 
   // Check admin status
   useEffect(() => {
@@ -182,6 +186,7 @@ const Dashboard = () => {
 
   const runDBMAnalysis = async () => {
     setIsRunningDBM(true);
+    setSimulationResult(null);
     
     try {
       const startDate = dateRange?.from
@@ -190,23 +195,29 @@ const Dashboard = () => {
       const endDate = dateRange?.to
         ? format(dateRange.to, "yyyy-MM-dd")
         : "2023-12-31";
-      const locationCodes = selectedLocation !== "ALL" ? [selectedLocation] : undefined;
-      const skus = selectedProduct !== "ALL" ? [selectedProduct] : undefined;
 
-      const { data, error } = await supabase.functions.invoke('run-dbm-analysis', {
-        body: {
-          start_date: startDate,
-          end_date: endDate,
-          location_codes: locationCodes,
-          skus: skus
-        }
+      // Fetch raw fact_daily data
+      const { data: rawData, error: fetchError } = await supabase.rpc('get_fact_daily_raw', {
+        p_location_code: selectedLocation,
+        p_sku: selectedProduct,
+        p_start_date: startDate,
+        p_end_date: endDate
       });
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
+
+      if (!rawData || rawData.length === 0) {
+        throw new Error("No data found for selected filters");
+      }
+
+      // Call the dbm-calculator Edge Function
+      const result = await runDbmSimulation(rawData);
+
+      setSimulationResult(result);
 
       toast({
-        title: "DBM Analysis Complete!",
-        description: `Processed ${data.processed_count} SKU/Location combinations.`,
+        title: "DBM Simulation Complete!",
+        description: `Processed ${rawData.length} records.`,
         duration: 5000,
       });
 
@@ -219,10 +230,10 @@ const Dashboard = () => {
       setFactDaily(facts);
 
     } catch (error: any) {
-      console.error("DBM Analysis Error:", error);
+      console.error("DBM Simulation Error:", error);
       toast({
-        title: "Analysis Failed",
-        description: error.message || "Failed to run DBM analysis",
+        title: "Simulation Failed",
+        description: error.message || "Failed to run DBM simulation",
         variant: "destructive",
       });
     } finally {
@@ -442,7 +453,7 @@ const Dashboard = () => {
               {isRunningDBM ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Running Analysis...
+                  Running Simulation...
                 </>
               ) : (
                 <>
@@ -469,6 +480,64 @@ const Dashboard = () => {
               </Button>
             </div>
           </div>
+
+          {/* Simulation Results Display */}
+          {simulationResult && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Simulation Results</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowResultDetails(!showResultDetails)}
+                    className="gap-2"
+                  >
+                    {showResultDetails ? (
+                      <>
+                        <ChevronUp className="h-4 w-4" />
+                        Hide Details
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-4 w-4" />
+                        Show Details
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-6 text-sm">
+                  <div>
+                    <span className="font-semibold">Total Records:</span>{" "}
+                    {simulationResult.results?.length || 0}
+                  </div>
+                  <div>
+                    <span className="font-semibold">Increases:</span>{" "}
+                    <span className="text-green-600">{simulationResult.increases || 0}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">Decreases:</span>{" "}
+                    <span className="text-orange-600">{simulationResult.decreases || 0}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">Unchanged:</span>{" "}
+                    {simulationResult.unchanged || 0}
+                  </div>
+                </div>
+
+                {showResultDetails && (
+                  <div className="mt-4">
+                    <div className="text-sm font-semibold mb-2">Raw JSON Response:</div>
+                    <pre className="bg-muted p-4 rounded-md overflow-auto max-h-[400px] text-xs">
+                      {JSON.stringify(simulationResult, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Graph and Table Grid */}
           <div className="grid lg:grid-cols-2 gap-6">
