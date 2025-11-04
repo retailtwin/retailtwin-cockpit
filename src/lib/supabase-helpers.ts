@@ -32,6 +32,9 @@ export interface FactDaily {
   units_sold: number;
   on_hand_units: number | null;
   on_hand_units_sim: number | null;
+  target_units?: number | null;
+  economic_units?: number | null;
+  economic_overstock_units?: number | null;
 }
 
 export interface DBMCalculation {

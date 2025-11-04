@@ -372,7 +372,7 @@ const Dashboard = () => {
         serviceLevelSimulated: "0.0",
       };
 
-  // Prepare graph data
+  // Prepare graph data with target units
   const inventoryFlowData = factDaily.map((row) => ({
     day: new Date(row.d).toLocaleDateString("en-US", {
       month: "short",
@@ -381,6 +381,8 @@ const Dashboard = () => {
     sales: Number(row.units_sold),
     inventory: Number(row.on_hand_units ?? 0),
     inventorySimulated: Number(row.on_hand_units_sim ?? 0),
+    targetUnits: Number(row.target_units ?? 0),
+    economicUnits: Number(row.economic_units ?? 0),
   }));
 
   if (loading) {

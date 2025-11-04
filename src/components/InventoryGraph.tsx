@@ -8,6 +8,8 @@ interface InventoryGraphProps {
     sales: number;
     inventory: number;
     inventorySimulated: number;
+    targetUnits?: number;
+    economicUnits?: number;
   }>;
 }
 
@@ -28,9 +30,30 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   const sales = payload.find(p => p.dataKey === "sales")?.value ?? 0;
   const inventory = payload.find(p => p.dataKey === "inventory")?.value ?? 0;
   const inventorySimulated = payload.find(p => p.dataKey === "inventorySimulated")?.value ?? 0;
+  const targetUnits = payload.find(p => p.dataKey === "targetUnits")?.value ?? 0;
+  const economicUnits = payload.find(p => p.dataKey === "economicUnits")?.value ?? 0;
   
   const isStockoutCurrent = inventory <= 0;
   const isStockoutSimulated = inventorySimulated <= 0;
+  
+  // Calculate DBM zone
+  let zone = "unknown";
+  let zoneColor = "hsl(var(--muted-foreground))";
+  if (targetUnits > 0) {
+    if (inventory > targetUnits) {
+      zone = "Overstock";
+      zoneColor = "hsl(var(--chart-5))";
+    } else if (inventory > targetUnits * 2/3) {
+      zone = "Green";
+      zoneColor = "hsl(var(--success))";
+    } else if (inventory > targetUnits * 1/3) {
+      zone = "Yellow";
+      zoneColor = "hsl(var(--warning))";
+    } else {
+      zone = "Red";
+      zoneColor = "hsl(var(--destructive))";
+    }
+  }
 
   return (
     <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
@@ -58,6 +81,23 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
             )}
           </div>
         </div>
+        {targetUnits > 0 && (
+          <>
+            <div className="h-px bg-border my-2" />
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Target Units:</span>
+              <span className="font-medium text-primary">{targetUnits.toFixed(0)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Economic Units:</span>
+              <span className="font-medium">{economicUnits.toFixed(0)}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">DBM Zone:</span>
+              <span className="font-semibold" style={{ color: zoneColor }}>{zone}</span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -108,6 +148,24 @@ export const InventoryGraph = ({ data }: InventoryGraphProps) => {
               strokeWidth={2}
               dot={false}
               strokeDasharray="5 5"
+            />
+            <Line 
+              type="monotone" 
+              dataKey="targetUnits" 
+              stroke="hsl(var(--primary))" 
+              name="Target Units"
+              strokeWidth={2}
+              dot={false}
+              strokeDasharray="3 3"
+            />
+            <Line 
+              type="monotone" 
+              dataKey="economicUnits" 
+              stroke="hsl(var(--chart-2))" 
+              name="Economic Units"
+              strokeWidth={1}
+              dot={false}
+              opacity={0.6}
             />
           </LineChart>
         </ResponsiveContainer>
