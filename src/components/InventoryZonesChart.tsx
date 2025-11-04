@@ -1,7 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Line, ComposedChart, ReferenceLine } from "recharts";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Search } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { SkuBufferAnalysis } from "./SkuBufferAnalysis";
+import { useState } from "react";
 
 interface InventoryZoneData {
   sku: string;
@@ -23,6 +27,9 @@ interface InventoryZonesChartProps {
 }
 
 export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProps) => {
+  const [selectedSku, setSelectedSku] = useState<string | null>(null);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+
   if (isLoading) {
     return (
       <Card className="p-6">
@@ -72,13 +79,54 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
     };
   });
 
+  const handleSkuClick = (sku: string) => {
+    setSelectedSku(sku);
+    setAnalysisOpen(true);
+  };
+
+  const selectedSkuData = selectedSku ? data.find(item => item.sku === selectedSku) : null;
+  const analysisData = selectedSkuData ? {
+    sku: selectedSkuData.sku,
+    skuName: selectedSkuData.sku_name,
+    targetUnits: Number(selectedSkuData.avg_target),
+    economicUnits: Number(selectedSkuData.avg_economic),
+    onHandUnits: Number(selectedSkuData.avg_on_hand),
+    onOrderUnits: 0, // Not available in this view
+    inTransitUnits: 0, // Not available in this view
+    avgWeeklySales: Number(selectedSkuData.avg_weekly_sales),
+    calculation: {
+      initial: Number(selectedSkuData.avg_target),
+      afterAccelerator: Number(selectedSkuData.avg_target),
+      acceleratorApplied: false,
+      acceleratorType: 'none' as const,
+      acceleratorReason: 'Historical data - calculation details not available',
+      minimumTarget: 1,
+      safetyLevel: 0,
+      excludedLevel: 0,
+      leadTimeDays: 0,
+    }
+  } : null;
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
         <div className="bg-popover border rounded-lg p-3 shadow-lg">
-          <p className="font-semibold text-sm">{data.skuName}</p>
-          <p className="text-xs text-muted-foreground">SKU: {data.sku}</p>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <p className="font-semibold text-sm">{data.skuName}</p>
+              <p className="text-xs text-muted-foreground">SKU: {data.sku}</p>
+            </div>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => handleSkuClick(data.sku)}
+              className="h-6 text-xs"
+            >
+              <Search className="h-3 w-3 mr-1" />
+              Analyze
+            </Button>
+          </div>
           <p className="text-xs mt-2">Rank: #{data.rank} of {chartData.length}</p>
           <p className="text-xs font-semibold">Weekly Sales (21d Avg): {data.weeklySales} units/week</p>
           <p className="text-xs">Daily Avg (21d): {data.dailyAvg21d} units/day</p>
@@ -109,6 +157,16 @@ export const InventoryZonesChart = ({ data, isLoading }: InventoryZonesChartProp
 
   return (
     <div className="space-y-6">
+      {/* Analysis Dialog */}
+      <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Buffer Calculation Analysis</DialogTitle>
+          </DialogHeader>
+          <SkuBufferAnalysis data={analysisData} />
+        </DialogContent>
+      </Dialog>
+
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">
