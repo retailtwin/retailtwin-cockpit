@@ -167,7 +167,7 @@ export default function DBMExplainer() {
           </p>
         </div>
 
-        {/* Core Principles */}
+        {/* What is DBM */}
         <Card>
           <CardHeader>
             <CardTitle>What is DBM?</CardTitle>
@@ -178,52 +178,85 @@ export default function DBMExplainer() {
               based on actual consumption patterns and lead times. Unlike traditional min-max systems, DBM uses <strong>only a maximum value</strong> 
               (the "green" zone) without a minimum, as replenishment decisions are calculated daily.
             </p>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <h3 className="font-semibold text-lg">Key Principles</h3>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span><strong>Economic Stock Base:</strong> Buffers are set based on economic inventory levels (on-hand + on-order + in-transit)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span><strong>Daily Calculation:</strong> Orders are calculated daily, eliminating the need for a traditional "min" reorder point</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span><strong>Lead Time Driven:</strong> All buffer adjustments are governed by actual lead times to prevent over-reactions</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span><strong>Zone-Based Logic:</strong> Inventory position determines which zone you're in and triggers appropriate responses</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-semibold text-lg">Why DBM?</h3>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Reduces stockouts without excessive inventory</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Automatically adapts to demand changes</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Prevents manual buffer adjustments</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Optimizes working capital efficiency</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
           </CardContent>
         </Card>
+
+        {/* Key Principles */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Key Principles</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-start gap-2">
+                <span className="text-primary">•</span>
+                <span><strong>Economic Stock Base:</strong> Buffers are set based on economic inventory levels (on-hand + on-order + in-transit)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary">•</span>
+                <span><strong>Daily Calculation:</strong> Orders are calculated daily, eliminating the need for a traditional "min" reorder point</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary">•</span>
+                <span><strong>Lead Time Driven:</strong> All buffer adjustments are governed by actual lead times to prevent over-reactions</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-primary">•</span>
+                <span><strong>Zone-Based Logic:</strong> Inventory position determines which zone you're in and triggers appropriate responses</span>
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
+
+        {/* Why DBM and When DBM - Side by Side */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Why DBM?</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary">•</span>
+                  <span>Reduces stockouts without excessive inventory</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary">•</span>
+                  <span>Automatically adapts to demand changes</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary">•</span>
+                  <span>Prevents manual buffer adjustments</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary">•</span>
+                  <span>Optimizes working capital efficiency</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>When DBM?</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm mb-3">
+                DBM works best for items with a <strong>relatively long offer window</strong> compared to their cash cycle.
+              </p>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-start gap-2">
+                  <span className="text-primary">•</span>
+                  <span><strong>NOOS & Basics:</strong> Never Out Of Stock items with continuous demand</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-primary">•</span>
+                  <span><strong>High Volume Seasonal:</strong> Popular seasonal items with predictable demand patterns</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Zone System */}
         <Card>
