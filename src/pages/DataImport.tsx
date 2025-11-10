@@ -25,14 +25,47 @@ export default function DataImport() {
   });
   const { toast } = useToast();
 
+  const getTemplateContent = (type: ImportType): string => {
+    switch (type) {
+      case 'locations':
+        return `store_code,name,production_lead_time,shipping_lead_time,order_days
+STORE001,Example Store 1,0,5,"mon,tue,wed,thu,fri,sat,sun"
+STORE002,Example Store 2,2,3,"mon,wed,fri"`;
+      case 'products':
+        return `product_code,name,cost_price,sales_price,pack_size,minimum_order_quantity,group_1,group_2,group_3
+SKU001,Example Product 1,16.00,35.00,3,3,CATEGORY1,SUBCATEGORY1,SEASON1
+SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
+      case 'sales':
+        return `day,store,product,units
+2023-01-01,STORE001,SKU001,5
+2023-01-02,STORE001,SKU001,3
+2023-01-01,STORE002,SKU002,10`;
+      case 'inventory':
+        return `day,store,product,units_on_hand,units_on_order,units_in_transit
+2023-01-01,STORE001,SKU001,25,10,5
+2023-01-05,STORE001,SKU001,18,15,0
+2023-01-03,STORE002,SKU002,50,0,10`;
+      default:
+        return '';
+    }
+  };
+
   const downloadTemplate = (type: ImportType) => {
+    const content = getTemplateContent(type);
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = `${window.location.origin}/templates/${type}_template.csv`;
+    link.href = url;
     link.download = `${type}_template.csv`;
-    link.target = '_blank';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Template Downloaded",
+      description: `${type} template has been downloaded successfully`,
+    });
   };
 
   const handleImport = async (type: ImportType) => {
