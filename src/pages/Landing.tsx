@@ -183,6 +183,15 @@ const Landing = () => {
                 </CardContent>
               </Card>
             </div>
+            
+            {/* Learn More Button */}
+            <div className="flex justify-center mt-12">
+              <Link to="/about">
+                <Button size="lg" className="text-lg px-10 shadow-lg">
+                  Learn More
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
