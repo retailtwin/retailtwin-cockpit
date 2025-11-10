@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import retailTwinLabsLogo from "@/assets/retail-twin-labs-logo.png";
+import retailTwinIcon from "@/assets/retail-twin-icon.png";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -77,9 +78,14 @@ export const Layout = ({ children }: LayoutProps) => {
           <div className="flex h-16 items-center justify-between">
             <Link to="/" className="flex items-center space-x-3">
               <img
+                src={retailTwinIcon}
+                alt="Retail Twin Labs Icon"
+                className="h-10 w-10"
+              />
+              <img
                 src={retailTwinLabsLogo}
                 alt="Retail Twin Labs"
-                className="h-10 w-auto"
+                className="h-8 w-auto"
               />
             </Link>
             

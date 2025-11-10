@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AlertTriangle, Target, Zap, Mail, Layers, TrendingUp, Brain, Gauge } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import retailCycleImage from "@/assets/retail-cycle.png";
+import retailTwinIcon from "@/assets/retail-twin-icon.png";
 
 const Landing = () => {
   return (
@@ -88,10 +89,17 @@ const Landing = () => {
 
       {/* About Retail Twin Labs Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-20">
-        <div className="container mx-auto px-6">
+        <div 
+          className="absolute inset-0 opacity-5 bg-center bg-no-repeat bg-cover"
+          style={{ backgroundImage: `url(${retailCycleImage})` }}
+        />
+        <div className="relative container mx-auto px-6">
           <div className="max-w-5xl mx-auto space-y-12">
             {/* Section Header */}
-            <div className="text-center space-y-4">
+            <div className="text-center space-y-6">
+              <div className="flex justify-center mb-4">
+                <img src={retailTwinIcon} alt="Retail Twin Labs" className="h-20 w-20" />
+              </div>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
                 About Retail Twin Labs
               </h2>
