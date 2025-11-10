@@ -5,17 +5,14 @@ import { AlertTriangle, Target, Zap, Mail, Layers, TrendingUp, Brain, Gauge } fr
 import { Layout } from "@/components/Layout";
 import retailCycleImage from "@/assets/retail-cycle.png";
 import retailTwinIcon from "@/assets/retail-twin-icon.png";
-
 const Landing = () => {
-  return (
-    <Layout>
+  return <Layout>
       {/* Hero Section with Background */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
-        <div 
-          className="absolute inset-0 opacity-10 bg-center bg-no-repeat bg-cover"
-          style={{ backgroundImage: `url(${retailCycleImage})` }}
-        />
+        <div className="absolute inset-0 opacity-10 bg-center bg-no-repeat bg-cover" style={{
+        backgroundImage: `url(${retailCycleImage})`
+      }} />
         
         <div className="relative container mx-auto px-6 py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
@@ -89,10 +86,9 @@ const Landing = () => {
 
       {/* About Retail Twin Labs Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-20">
-        <div 
-          className="absolute inset-0 opacity-5 bg-center bg-no-repeat bg-cover"
-          style={{ backgroundImage: `url(${retailCycleImage})` }}
-        />
+        <div className="absolute inset-0 opacity-5 bg-center bg-no-repeat bg-cover" style={{
+        backgroundImage: `url(${retailCycleImage})`
+      }} />
         <div className="relative container mx-auto px-6">
           <div className="max-w-5xl mx-auto space-y-12">
             {/* Section Header */}
@@ -114,9 +110,7 @@ const Landing = () => {
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                   <Layers className="h-6 w-6 text-primary" />
                 </div>
-                <CardDescription className="text-base leading-relaxed">
-                  At Retail Twin Labs, we combine deep SaaS knowledge with cutting-edge AI and decades of experience in merchandise planning and distribution to deliver workflows that simply work.
-                </CardDescription>
+                <CardDescription className="text-base leading-relaxed">At Retail Twin Labs, we combine our deep SaaS knowledge with cutting-edge AI and decades of industry experience to deliver key insights and workflows that work. Your data, your rules, your tools.</CardDescription>
               </CardHeader>
             </Card>
 
@@ -180,7 +174,7 @@ const Landing = () => {
             ))}
           </div>
         </div>
-      </section> */}
+       </section> */}
 
       {/* Footer */}
       <footer className="border-t bg-card mt-20">
@@ -192,30 +186,19 @@ const Landing = () => {
               </p>
             </div>
             <div className="flex items-center gap-8">
-              <Link
-                to="/about"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-              >
+              <Link to="/about" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 About
               </Link>
-              <Link
-                to="/blogs"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-              >
+              <Link to="/blogs" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Blog
               </Link>
-              <Link
-                to="/login"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-              >
+              <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Login
               </Link>
             </div>
           </div>
         </div>
       </footer>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default Landing;
