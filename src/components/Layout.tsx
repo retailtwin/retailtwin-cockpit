@@ -85,6 +85,9 @@ export const Layout = ({
                   <Link to="/report" className="text-sm font-medium text-foreground/60 transition-colors hover:text-foreground">
                     Reports
                   </Link>
+                  <Link to="/dbm-explainer" className="text-sm font-medium text-foreground/60 transition-colors hover:text-foreground">
+                    DBM Guide
+                  </Link>
                   <Link to="/import" className="text-sm font-medium text-foreground/60 transition-colors hover:text-foreground">
                     Data Import
                   </Link>
