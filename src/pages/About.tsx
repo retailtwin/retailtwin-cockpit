@@ -20,7 +20,7 @@ const About = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground">We help retailers find and remove bottlenecks that limit cash flow and throughput.</p>
-                <p className="text-muted-foreground">We use the learnings from Theory of Constraints (TOC), and many years of experience in Footwear, Apparel and SaaS to focus on maximizing Throughput while minimizing inventory and operating expenses.<strong>Theory of Constraints (TOC)</strong> learnings, 
+                <p className="text-muted-foreground">We use the learnings from Theory of Constraints (TOC), and three decades of experience in Footwear, Apparel and SaaS to focus on maximizing Throughput while minimizing inventory and operating expenses.<strong>Theory of Constraints (TOC)</strong> learnings, 
                   and many years of experience in Footwear, Apparel and SaaS to focus on maximizing{" "}
                   <strong>Throughput</strong> (revenue minus truly variable
                   costs) while minimizing inventory and operating expenses.
