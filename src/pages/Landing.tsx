@@ -114,7 +114,7 @@ const Landing = () => {
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                   <Layers className="h-6 w-6 text-primary" />
                 </div>
-                <CardDescription className="text-base leading-relaxed">At Retail Twin Labs, we combine decades of experience in Footwear, Apparel and Sporting Goods, with deep SaaS knowledge and AI, to deliver key insights and workflows that simply work. Your data, your rules, your tools.</CardDescription>
+                <CardDescription className="text-base leading-relaxed">At Retail Twin Labs, we combine decades of experience in Footwear, Apparel and Sporting Goods, with deep SaaS knowledge and AI, to deliver key insights and simple workflows. Your data, your rules, your tools.</CardDescription>
               </CardHeader>
             </Card>
 
@@ -126,7 +126,7 @@ const Landing = () => {
                     <TrendingUp className="h-6 w-6 text-accent" />
                   </div>
                   <CardTitle className="text-xl mb-4">From the founder: Lessons from Retailisation </CardTitle>
-                  <CardDescription className="text-base leading-relaxed">At Retailisation, my SaaS company, I learned that order automation is only effective when internal rules and metrics strictly govern flow. At Retail Twin Labs, we focus on these rules and metrics, and use AI agents to explain how rules like lead-times and minimum order quantities impact flow.</CardDescription>
+                  <CardDescription className="text-base leading-relaxed">At Retailisation, my SaaS company, I learned that order automation is only effective when internal rules and metrics strictly govern flow. At Retail Twin Labs, we help you focus on these rules and metrics, and use AI agents to explain how lead-times and minimum order quantities impact flow.</CardDescription>
                 </CardHeader>
               </Card>
 
