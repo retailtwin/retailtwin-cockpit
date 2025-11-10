@@ -9,10 +9,10 @@ export default function DBMExplainer() {
   const [animationDay, setAnimationDay] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const [replenishmentMode, setReplenishmentMode] = useState<"weekly" | "daily">("weekly");
 
-  // Simulation data: 7-day lead time, weekly ordering, with buffer adjustments
-  const leadTime = 7; // days
-  const simulationData = [
+  // Weekly replenishment simulation: 7-day lead time, weekly ordering
+  const weeklySimulationData = [
     // Week 1 - Starting with target buffer of 21
     { day: 0, sales: 0, receipt: 0, onHand: 21, economic: 21, target: 21, decision: "Initial state", zone: "green" },
     { day: 1, sales: 3, receipt: 0, onHand: 18, economic: 18, target: 21, decision: "Sales: 3 units", zone: "green" },
@@ -50,6 +50,67 @@ export default function DBMExplainer() {
     { day: 29, sales: 2, receipt: 0, onHand: 21, economic: 21, target: 19, decision: "Sales: 2 units", zone: "overstock" },
     { day: 30, sales: 1, receipt: 0, onHand: 20, economic: 20, target: 19, decision: "Sales: 1 unit", zone: "overstock" },
   ];
+
+  // Daily replenishment simulation: 7-day lead time, daily ordering
+  const dailySimulationData = [
+    { day: 0, sales: 0, receipt: 0, onHand: 18, economic: 18, target: 18, decision: "Initial state", zone: "green" },
+    { day: 1, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 2, sales: 2, receipt: 2, onHand: 18, economic: 18, target: 18, decision: "Sales: 2, Receipt: 2", zone: "green" },
+    { day: 3, sales: 4, receipt: 4, onHand: 18, economic: 18, target: 18, decision: "Sales: 4, Receipt: 4", zone: "green" },
+    { day: 4, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 5, sales: 2, receipt: 2, onHand: 18, economic: 18, target: 18, decision: "Sales: 2, Receipt: 2", zone: "green" },
+    { day: 6, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 7, sales: 4, receipt: 4, onHand: 18, economic: 18, target: 18, decision: "Sales: 4, Receipt: 4", zone: "green" },
+    { day: 8, sales: 5, receipt: 5, onHand: 18, economic: 18, target: 18, decision: "Sales: 5, Receipt: 5", zone: "green" },
+    { day: 9, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 10, sales: 4, receipt: 4, onHand: 18, economic: 18, target: 18, decision: "Sales: 4, Receipt: 4", zone: "green" },
+    { day: 11, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 12, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 13, sales: 2, receipt: 2, onHand: 18, economic: 18, target: 18, decision: "Sales: 2, Receipt: 2", zone: "green" },
+    { day: 14, sales: 0, receipt: 0, onHand: 18, economic: 18, target: 18, decision: "No activity", zone: "green" },
+    { day: 15, sales: 4, receipt: 4, onHand: 18, economic: 18, target: 18, decision: "Sales: 4, Receipt: 4", zone: "green" },
+    { day: 16, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 17, sales: 2, receipt: 2, onHand: 18, economic: 18, target: 18, decision: "Sales: 2, Receipt: 2", zone: "green" },
+    { day: 18, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 19, sales: 4, receipt: 4, onHand: 18, economic: 18, target: 18, decision: "Sales: 4, Receipt: 4", zone: "green" },
+    { day: 20, sales: 5, receipt: 5, onHand: 18, economic: 18, target: 18, decision: "Sales: 5, Receipt: 5", zone: "green" },
+    { day: 21, sales: 4, receipt: 4, onHand: 18, economic: 18, target: 18, decision: "Sales: 4, Receipt: 4", zone: "green" },
+    { day: 22, sales: 0, receipt: 0, onHand: 18, economic: 18, target: 18, decision: "No activity", zone: "green" },
+    { day: 23, sales: 1, receipt: 1, onHand: 18, economic: 18, target: 18, decision: "Sales: 1, Receipt: 1", zone: "green" },
+    { day: 24, sales: 1, receipt: 1, onHand: 18, economic: 18, target: 18, decision: "Sales: 1, Receipt: 1", zone: "green" },
+    { day: 25, sales: 0, receipt: 0, onHand: 18, economic: 18, target: 18, decision: "No activity", zone: "green" },
+    { day: 26, sales: 2, receipt: 2, onHand: 18, economic: 18, target: 18, decision: "Sales: 2, Receipt: 2", zone: "green" },
+    { day: 27, sales: 1, receipt: 1, onHand: 18, economic: 18, target: 18, decision: "Sales: 1, Receipt: 1", zone: "green" },
+    { day: 28, sales: 0, receipt: 0, onHand: 18, economic: 18, target: 18, decision: "No activity", zone: "green" },
+    { day: 29, sales: 2, receipt: 2, onHand: 18, economic: 18, target: 18, decision: "Sales: 2, Receipt: 2", zone: "green" },
+    { day: 30, sales: 1, receipt: 1, onHand: 18, economic: 18, target: 18, decision: "Sales: 1, Receipt: 1", zone: "green" },
+  ];
+
+  const simulationData = replenishmentMode === "weekly" ? weeklySimulationData : dailySimulationData;
+
+  // Calculate metrics for comparison
+  const calculateMetrics = (data: typeof weeklySimulationData) => {
+    const totalSales = data.reduce((sum, d) => sum + d.sales, 0);
+    const avgInventory = data.reduce((sum, d) => sum + d.onHand, 0) / data.length;
+    return { totalSales, avgInventory };
+  };
+
+  const weeklyMetrics = calculateMetrics(weeklySimulationData);
+  const dailyMetrics = calculateMetrics(dailySimulationData);
+  
+  // Calculate indices (using weekly as baseline = 100)
+  const salesIndex = {
+    weekly: 100,
+    daily: (dailyMetrics.totalSales / weeklyMetrics.totalSales) * 100
+  };
+  const inventoryIndex = {
+    weekly: 100,
+    daily: (dailyMetrics.avgInventory / weeklyMetrics.avgInventory) * 100
+  };
+  const roiDelta = {
+    weekly: salesIndex.weekly / inventoryIndex.weekly,
+    daily: salesIndex.daily / inventoryIndex.daily
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -362,8 +423,60 @@ export default function DBMExplainer() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Mode Toggle */}
+            <div className="flex gap-2 justify-center">
+              <Button
+                variant={replenishmentMode === "weekly" ? "default" : "outline"}
+                onClick={() => {
+                  setReplenishmentMode("weekly");
+                  setAnimationDay(0);
+                  setIsPlaying(false);
+                }}
+              >
+                Weekly Replenishment
+              </Button>
+              <Button
+                variant={replenishmentMode === "daily" ? "default" : "outline"}
+                onClick={() => {
+                  setReplenishmentMode("daily");
+                  setAnimationDay(0);
+                  setIsPlaying(false);
+                }}
+              >
+                Daily Replenishment
+              </Button>
+            </div>
+
+            {replenishmentMode === "daily" && (
+              <div className="bg-gradient-to-r from-blue-500/10 to-green-500/10 border border-primary/20 p-4 rounded-lg">
+                <h4 className="font-semibold mb-3">ROI Comparison</h4>
+                <div className="grid md:grid-cols-3 gap-4 text-sm">
+                  <div className="bg-background/50 p-3 rounded-lg">
+                    <div className="text-muted-foreground mb-1">Sales Performance</div>
+                    <div className="text-lg font-bold">Weekly: {weeklyMetrics.totalSales} units</div>
+                    <div className="text-lg font-bold text-primary">Daily: {dailyMetrics.totalSales} units</div>
+                    <div className="text-xs mt-1 text-muted-foreground">Sales Index: {salesIndex.daily.toFixed(1)}</div>
+                  </div>
+                  <div className="bg-background/50 p-3 rounded-lg">
+                    <div className="text-muted-foreground mb-1">Avg Inventory</div>
+                    <div className="text-lg font-bold">Weekly: {weeklyMetrics.avgInventory.toFixed(1)} units</div>
+                    <div className="text-lg font-bold text-primary">Daily: {dailyMetrics.avgInventory.toFixed(1)} units</div>
+                    <div className="text-xs mt-1 text-muted-foreground">Inventory Index: {inventoryIndex.daily.toFixed(1)}</div>
+                  </div>
+                  <div className="bg-background/50 p-3 rounded-lg">
+                    <div className="text-muted-foreground mb-1">ROI Delta</div>
+                    <div className="text-lg font-bold">Weekly: {roiDelta.weekly.toFixed(2)}</div>
+                    <div className="text-lg font-bold text-primary">Daily: {roiDelta.daily.toFixed(2)}</div>
+                    <div className="text-xs mt-1 text-green-500 font-semibold">
+                      {roiDelta.daily > roiDelta.weekly ? "+" : ""}{((roiDelta.daily - roiDelta.weekly) / roiDelta.weekly * 100).toFixed(1)}% improvement
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-sm">
-              <strong>Simulation Parameters:</strong> 7-day lead time • Weekly ordering • Variable sales (15+ sales days) • 2 stockouts • Buffer increase on day 14 • Buffer decrease on day 28
+              <strong>Simulation Parameters:</strong> 7-day lead time • {replenishmentMode === "weekly" ? "Weekly ordering • Variable sales (15+ sales days) • 2 stockouts • Buffer increase on day 14 • Buffer decrease on day 28" : "Daily ordering • Same sales pattern • No stockouts • Stable inventory"}
             </div>
 
             <div className="space-y-2">
@@ -445,8 +558,8 @@ export default function DBMExplainer() {
                     <span>30</span>
                   </div>
 
-                  {/* Colored zone backgrounds - drawn dynamically per day */}
-                  {simulationData.slice(0, animationDay + 1).map((point, idx) => {
+                  {/* Colored zone backgrounds - drawn dynamically per day (only for weekly mode) */}
+                  {replenishmentMode === "weekly" && simulationData.slice(0, animationDay + 1).map((point, idx) => {
                     const xPos = (idx / 30) * 100;
                     const width = (1 / 30) * 100;
                     const target = point.target;
@@ -629,63 +742,65 @@ export default function DBMExplainer() {
               </div>
             </div>
 
-            {/* Zone Visualization */}
-            <div className="space-y-2">
-              <h4 className="font-semibold text-sm">Current Zone Boundaries (Dynamic)</h4>
-              <div className="relative h-32 border rounded-lg overflow-hidden bg-muted/20">
-                {/* Overstock zone */}
-                <div 
-                  className="absolute left-0 right-0 bg-blue-500/20 border-b-2 border-blue-500 flex items-center justify-center text-xs font-medium"
-                  style={{ 
-                    top: 0,
-                    height: `${Math.max(15, (1 - currentState.target / 30) * 100)}%`
-                  }}
-                >
-                  Overstock (&gt; {currentState.target})
+            {/* Zone Visualization - Only for weekly mode */}
+            {replenishmentMode === "weekly" && (
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm">Current Zone Boundaries (Dynamic)</h4>
+                <div className="relative h-32 border rounded-lg overflow-hidden bg-muted/20">
+                  {/* Overstock zone */}
+                  <div 
+                    className="absolute left-0 right-0 bg-blue-500/20 border-b-2 border-blue-500 flex items-center justify-center text-xs font-medium"
+                    style={{ 
+                      top: 0,
+                      height: `${Math.max(15, (1 - currentState.target / 30) * 100)}%`
+                    }}
+                  >
+                    Overstock (&gt; {currentState.target})
+                  </div>
+                  {/* Green zone */}
+                  <div 
+                    className="absolute left-0 right-0 bg-green-500/20 border-b-2 border-green-500 flex items-center justify-center text-xs font-medium"
+                    style={{ 
+                      top: `${Math.max(15, (1 - currentState.target / 30) * 100)}%`,
+                      height: `${((currentState.target - yellow) / 30) * 100}%`
+                    }}
+                  >
+                    Green ({yellow + 1} to {currentState.target})
+                  </div>
+                  {/* Yellow zone */}
+                  <div 
+                    className="absolute left-0 right-0 bg-yellow-500/20 border-b-2 border-yellow-500 flex items-center justify-center text-xs font-medium"
+                    style={{ 
+                      top: `${Math.max(15, (1 - currentState.target / 30) * 100) + ((currentState.target - yellow) / 30) * 100}%`,
+                      height: `${((yellow - red) / 30) * 100}%`
+                    }}
+                  >
+                    Yellow ({red + 1} to {yellow})
+                  </div>
+                  {/* Red zone */}
+                  <div 
+                    className="absolute left-0 right-0 bottom-0 bg-red-500/20 border-b-2 border-red-500 flex items-center justify-center text-xs font-medium"
+                    style={{ 
+                      height: `${(red / 30) * 100}%`
+                    }}
+                  >
+                    Red (0 to {red})
+                  </div>
+                  {/* Current position indicator */}
+                  <div 
+                    className="absolute left-0 right-0 h-1 bg-black transition-all duration-300 z-10"
+                    style={{ 
+                      bottom: `${(currentState.onHand / 30) * 100}%`
+                    }}
+                  >
+                    <div className="absolute left-1/2 -translate-x-1/2 -top-2 w-4 h-4 bg-black rounded-full border-2 border-white" />
+                  </div>
                 </div>
-                {/* Green zone */}
-                <div 
-                  className="absolute left-0 right-0 bg-green-500/20 border-b-2 border-green-500 flex items-center justify-center text-xs font-medium"
-                  style={{ 
-                    top: `${Math.max(15, (1 - currentState.target / 30) * 100)}%`,
-                    height: `${((currentState.target - yellow) / 30) * 100}%`
-                  }}
-                >
-                  Green ({yellow + 1} to {currentState.target})
-                </div>
-                {/* Yellow zone */}
-                <div 
-                  className="absolute left-0 right-0 bg-yellow-500/20 border-b-2 border-yellow-500 flex items-center justify-center text-xs font-medium"
-                  style={{ 
-                    top: `${Math.max(15, (1 - currentState.target / 30) * 100) + ((currentState.target - yellow) / 30) * 100}%`,
-                    height: `${((yellow - red) / 30) * 100}%`
-                  }}
-                >
-                  Yellow ({red + 1} to {yellow})
-                </div>
-                {/* Red zone */}
-                <div 
-                  className="absolute left-0 right-0 bottom-0 bg-red-500/20 border-b-2 border-red-500 flex items-center justify-center text-xs font-medium"
-                  style={{ 
-                    height: `${(red / 30) * 100}%`
-                  }}
-                >
-                  Red (0 to {red})
-                </div>
-                {/* Current position indicator */}
-                <div 
-                  className="absolute left-0 right-0 h-1 bg-black transition-all duration-300 z-10"
-                  style={{ 
-                    bottom: `${(currentState.onHand / 30) * 100}%`
-                  }}
-                >
-                  <div className="absolute left-1/2 -translate-x-1/2 -top-2 w-4 h-4 bg-black rounded-full border-2 border-white" />
-                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Black indicator shows current on-hand position within dynamic zones
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground text-center">
-                Black indicator shows current on-hand position within dynamic zones
-              </p>
-            </div>
+            )}
 
             {/* Show detailed table */}
             <Button
