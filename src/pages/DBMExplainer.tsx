@@ -12,78 +12,79 @@ export default function DBMExplainer() {
   const [replenishmentMode, setReplenishmentMode] = useState<"weekly" | "daily">("weekly");
 
   // Weekly replenishment simulation: 7-day lead time, weekly ordering
+  // Track demand separately to calculate lost sales from stockouts
   const weeklySimulationData = [
     // Week 1 - Starting with target buffer of 21
-    { day: 0, sales: 0, receipt: 0, onHand: 21, economic: 21, target: 21, decision: "Initial state", zone: "green" },
-    { day: 1, sales: 3, receipt: 0, onHand: 18, economic: 18, target: 21, decision: "Sales: 3 units", zone: "green" },
-    { day: 2, sales: 2, receipt: 0, onHand: 16, economic: 16, target: 21, decision: "Sales: 2 units", zone: "yellow" },
-    { day: 3, sales: 4, receipt: 0, onHand: 12, economic: 12, target: 21, decision: "Sales: 4 units", zone: "yellow" },
-    { day: 4, sales: 3, receipt: 0, onHand: 9, economic: 9, target: 21, decision: "Sales: 3 units", zone: "red" },
-    { day: 5, sales: 2, receipt: 0, onHand: 7, economic: 7, target: 21, decision: "Sales: 2 units", zone: "red" },
-    { day: 6, sales: 3, receipt: 0, onHand: 4, economic: 4, target: 21, decision: "Sales: 3 units", zone: "red" },
+    { day: 0, sales: 0, demand: 0, receipt: 0, onHand: 21, economic: 21, target: 21, decision: "Initial state", zone: "green" },
+    { day: 1, sales: 3, demand: 3, receipt: 0, onHand: 18, economic: 18, target: 21, decision: "Sales: 3 units", zone: "green" },
+    { day: 2, sales: 2, demand: 2, receipt: 0, onHand: 16, economic: 16, target: 21, decision: "Sales: 2 units", zone: "yellow" },
+    { day: 3, sales: 4, demand: 4, receipt: 0, onHand: 12, economic: 12, target: 21, decision: "Sales: 4 units", zone: "yellow" },
+    { day: 4, sales: 3, demand: 3, receipt: 0, onHand: 9, economic: 9, target: 21, decision: "Sales: 3 units", zone: "red" },
+    { day: 5, sales: 2, demand: 2, receipt: 0, onHand: 7, economic: 7, target: 21, decision: "Sales: 2 units", zone: "red" },
+    { day: 6, sales: 3, demand: 3, receipt: 0, onHand: 4, economic: 4, target: 21, decision: "Sales: 3 units", zone: "red" },
     // Week 2 - Order arrives, but high sales continue
-    { day: 7, sales: 4, receipt: 20, onHand: 20, economic: 20, target: 21, decision: "Receipt: 20 units, Sales: 4", zone: "yellow" },
-    { day: 8, sales: 5, receipt: 0, onHand: 15, economic: 15, target: 21, decision: "Sales: 5 units", zone: "yellow" },
-    { day: 9, sales: 3, receipt: 0, onHand: 12, economic: 12, target: 21, decision: "Sales: 3 units", zone: "yellow" },
-    { day: 10, sales: 4, receipt: 0, onHand: 8, economic: 8, target: 21, decision: "Sales: 4 units", zone: "red" },
-    { day: 11, sales: 3, receipt: 0, onHand: 5, economic: 5, target: 21, decision: "Sales: 3 units", zone: "red" },
-    { day: 12, sales: 3, receipt: 0, onHand: 2, economic: 2, target: 21, decision: "Sales: 3 units", zone: "red" },
-    { day: 13, sales: 2, receipt: 0, onHand: 0, economic: 0, target: 21, decision: "STOCKOUT - Sales: 2 units", zone: "red" },
+    { day: 7, sales: 4, demand: 4, receipt: 20, onHand: 20, economic: 20, target: 21, decision: "Receipt: 20 units, Sales: 4", zone: "yellow" },
+    { day: 8, sales: 5, demand: 5, receipt: 0, onHand: 15, economic: 15, target: 21, decision: "Sales: 5 units", zone: "yellow" },
+    { day: 9, sales: 3, demand: 3, receipt: 0, onHand: 12, economic: 12, target: 21, decision: "Sales: 3 units", zone: "yellow" },
+    { day: 10, sales: 4, demand: 4, receipt: 0, onHand: 8, economic: 8, target: 21, decision: "Sales: 4 units", zone: "red" },
+    { day: 11, sales: 3, demand: 3, receipt: 0, onHand: 5, economic: 5, target: 21, decision: "Sales: 3 units", zone: "red" },
+    { day: 12, sales: 3, demand: 3, receipt: 0, onHand: 2, economic: 2, target: 21, decision: "Sales: 3 units", zone: "red" },
+    { day: 13, sales: 0, demand: 2, receipt: 0, onHand: 0, economic: 0, target: 21, decision: "STOCKOUT - Lost 2 units", zone: "red" },
     // Week 3 - Buffer increases after 7 days in red. New target: 28
-    { day: 14, sales: 0, receipt: 25, onHand: 25, economic: 25, target: 28, decision: "Receipt: 25, BUFFER INCREASED to 28", zone: "yellow" },
-    { day: 15, sales: 4, receipt: 0, onHand: 21, economic: 21, target: 28, decision: "Sales: 4 units", zone: "yellow" },
-    { day: 16, sales: 3, receipt: 0, onHand: 18, economic: 18, target: 28, decision: "Sales: 3 units", zone: "yellow" },
-    { day: 17, sales: 2, receipt: 0, onHand: 16, economic: 16, target: 28, decision: "Sales: 2 units", zone: "yellow" },
-    { day: 18, sales: 3, receipt: 0, onHand: 13, economic: 13, target: 28, decision: "Sales: 3 units", zone: "yellow" },
-    { day: 19, sales: 4, receipt: 0, onHand: 9, economic: 9, target: 28, decision: "Sales: 4 units", zone: "red" },
-    { day: 20, sales: 5, receipt: 0, onHand: 4, economic: 4, target: 28, decision: "Sales: 5 units", zone: "red" },
-    // Week 4 - Another stockout
-    { day: 21, sales: 4, receipt: 28, onHand: 28, economic: 28, target: 28, decision: "Receipt: 28, Sales: 4 - At target", zone: "green" },
-    { day: 22, sales: 0, receipt: 0, onHand: 28, economic: 28, target: 28, decision: "No sales", zone: "green" },
-    { day: 23, sales: 1, receipt: 0, onHand: 27, economic: 27, target: 28, decision: "Sales: 1 unit", zone: "green" },
-    { day: 24, sales: 1, receipt: 0, onHand: 26, economic: 26, target: 28, decision: "Sales: 1 unit", zone: "green" },
-    { day: 25, sales: 0, receipt: 0, onHand: 26, economic: 26, target: 28, decision: "No sales", zone: "green" },
-    { day: 26, sales: 2, receipt: 0, onHand: 24, economic: 24, target: 28, decision: "Sales: 2 units", zone: "green" },
-    { day: 27, sales: 1, receipt: 0, onHand: 23, economic: 23, target: 28, decision: "Sales: 1 unit", zone: "green" },
-    // Week 5 - Buffer decreases after 7 days in green. New target: 19
-    { day: 28, sales: 0, receipt: 0, onHand: 23, economic: 23, target: 19, decision: "BUFFER DECREASED to 19", zone: "overstock" },
-    { day: 29, sales: 2, receipt: 0, onHand: 21, economic: 21, target: 19, decision: "Sales: 2 units", zone: "overstock" },
-    { day: 30, sales: 1, receipt: 0, onHand: 20, economic: 20, target: 19, decision: "Sales: 1 unit", zone: "overstock" },
+    { day: 14, sales: 0, demand: 3, receipt: 25, onHand: 25, economic: 25, target: 28, decision: "Receipt: 25, STOCKOUT - Lost 3 units", zone: "yellow" },
+    { day: 15, sales: 4, demand: 4, receipt: 0, onHand: 21, economic: 21, target: 28, decision: "Sales: 4 units", zone: "yellow" },
+    { day: 16, sales: 3, demand: 3, receipt: 0, onHand: 18, economic: 18, target: 28, decision: "Sales: 3 units", zone: "yellow" },
+    { day: 17, sales: 2, demand: 2, receipt: 0, onHand: 16, economic: 16, target: 28, decision: "Sales: 2 units", zone: "yellow" },
+    { day: 18, sales: 3, demand: 3, receipt: 0, onHand: 13, economic: 13, target: 28, decision: "Sales: 3 units", zone: "yellow" },
+    { day: 19, sales: 4, demand: 4, receipt: 0, onHand: 9, economic: 9, target: 28, decision: "Sales: 4 units", zone: "red" },
+    { day: 20, sales: 5, demand: 5, receipt: 0, onHand: 4, economic: 4, target: 28, decision: "Sales: 5 units", zone: "red" },
+    // Week 4 - Receipt arrives
+    { day: 21, sales: 4, demand: 4, receipt: 28, onHand: 28, economic: 28, target: 28, decision: "Receipt: 28, Sales: 4 - At target", zone: "green" },
+    { day: 22, sales: 0, demand: 0, receipt: 0, onHand: 28, economic: 28, target: 28, decision: "No sales", zone: "green" },
+    { day: 23, sales: 1, demand: 1, receipt: 0, onHand: 27, economic: 27, target: 28, decision: "Sales: 1 unit", zone: "green" },
+    { day: 24, sales: 1, demand: 1, receipt: 0, onHand: 26, economic: 26, target: 28, decision: "Sales: 1 unit", zone: "green" },
+    { day: 25, sales: 0, demand: 0, receipt: 0, onHand: 26, economic: 26, target: 28, decision: "No sales", zone: "green" },
+    { day: 26, sales: 2, demand: 2, receipt: 0, onHand: 24, economic: 24, target: 28, decision: "Sales: 2 units", zone: "green" },
+    { day: 27, sales: 1, demand: 1, receipt: 0, onHand: 23, economic: 23, target: 28, decision: "Sales: 1 unit", zone: "green" },
+    // Week 5
+    { day: 28, sales: 0, demand: 0, receipt: 0, onHand: 23, economic: 23, target: 28, decision: "No sales", zone: "green" },
+    { day: 29, sales: 2, demand: 2, receipt: 0, onHand: 21, economic: 21, target: 28, decision: "Sales: 2 units", zone: "green" },
+    { day: 30, sales: 1, demand: 1, receipt: 0, onHand: 20, economic: 20, target: 28, decision: "Sales: 1 unit", zone: "green" },
   ];
 
-  // Daily replenishment simulation: 7-day lead time, daily ordering
+  // Daily replenishment simulation: same demand pattern but no stockouts
   const dailySimulationData = [
-    { day: 0, sales: 0, receipt: 0, onHand: 18, economic: 18, target: 18, decision: "Initial state", zone: "green" },
-    { day: 1, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 2, sales: 2, receipt: 2, onHand: 18, economic: 18, target: 18, decision: "Sales: 2, Receipt: 2", zone: "green" },
-    { day: 3, sales: 4, receipt: 4, onHand: 18, economic: 18, target: 18, decision: "Sales: 4, Receipt: 4", zone: "green" },
-    { day: 4, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 5, sales: 2, receipt: 2, onHand: 18, economic: 18, target: 18, decision: "Sales: 2, Receipt: 2", zone: "green" },
-    { day: 6, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 7, sales: 4, receipt: 4, onHand: 18, economic: 18, target: 18, decision: "Sales: 4, Receipt: 4", zone: "green" },
-    { day: 8, sales: 5, receipt: 5, onHand: 18, economic: 18, target: 18, decision: "Sales: 5, Receipt: 5", zone: "green" },
-    { day: 9, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 10, sales: 4, receipt: 4, onHand: 18, economic: 18, target: 18, decision: "Sales: 4, Receipt: 4", zone: "green" },
-    { day: 11, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 12, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 13, sales: 2, receipt: 2, onHand: 18, economic: 18, target: 18, decision: "Sales: 2, Receipt: 2", zone: "green" },
-    { day: 14, sales: 0, receipt: 0, onHand: 18, economic: 18, target: 18, decision: "No activity", zone: "green" },
-    { day: 15, sales: 4, receipt: 4, onHand: 18, economic: 18, target: 18, decision: "Sales: 4, Receipt: 4", zone: "green" },
-    { day: 16, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 17, sales: 2, receipt: 2, onHand: 18, economic: 18, target: 18, decision: "Sales: 2, Receipt: 2", zone: "green" },
-    { day: 18, sales: 3, receipt: 3, onHand: 18, economic: 18, target: 18, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 19, sales: 4, receipt: 4, onHand: 18, economic: 18, target: 18, decision: "Sales: 4, Receipt: 4", zone: "green" },
-    { day: 20, sales: 5, receipt: 5, onHand: 18, economic: 18, target: 18, decision: "Sales: 5, Receipt: 5", zone: "green" },
-    { day: 21, sales: 4, receipt: 4, onHand: 18, economic: 18, target: 18, decision: "Sales: 4, Receipt: 4", zone: "green" },
-    { day: 22, sales: 0, receipt: 0, onHand: 18, economic: 18, target: 18, decision: "No activity", zone: "green" },
-    { day: 23, sales: 1, receipt: 1, onHand: 18, economic: 18, target: 18, decision: "Sales: 1, Receipt: 1", zone: "green" },
-    { day: 24, sales: 1, receipt: 1, onHand: 18, economic: 18, target: 18, decision: "Sales: 1, Receipt: 1", zone: "green" },
-    { day: 25, sales: 0, receipt: 0, onHand: 18, economic: 18, target: 18, decision: "No activity", zone: "green" },
-    { day: 26, sales: 2, receipt: 2, onHand: 18, economic: 18, target: 18, decision: "Sales: 2, Receipt: 2", zone: "green" },
-    { day: 27, sales: 1, receipt: 1, onHand: 18, economic: 18, target: 18, decision: "Sales: 1, Receipt: 1", zone: "green" },
-    { day: 28, sales: 0, receipt: 0, onHand: 18, economic: 18, target: 18, decision: "No activity", zone: "green" },
-    { day: 29, sales: 2, receipt: 2, onHand: 18, economic: 18, target: 18, decision: "Sales: 2, Receipt: 2", zone: "green" },
-    { day: 30, sales: 1, receipt: 1, onHand: 18, economic: 18, target: 18, decision: "Sales: 1, Receipt: 1", zone: "green" },
+    { day: 0, sales: 0, demand: 0, receipt: 0, onHand: 10, economic: 10, target: 10, decision: "Initial state", zone: "green" },
+    { day: 1, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 2, sales: 2, demand: 2, receipt: 2, onHand: 10, economic: 10, target: 10, decision: "Sales: 2, Receipt: 2", zone: "green" },
+    { day: 3, sales: 4, demand: 4, receipt: 4, onHand: 10, economic: 10, target: 10, decision: "Sales: 4, Receipt: 4", zone: "green" },
+    { day: 4, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 5, sales: 2, demand: 2, receipt: 2, onHand: 10, economic: 10, target: 10, decision: "Sales: 2, Receipt: 2", zone: "green" },
+    { day: 6, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 7, sales: 4, demand: 4, receipt: 4, onHand: 10, economic: 10, target: 10, decision: "Sales: 4, Receipt: 4", zone: "green" },
+    { day: 8, sales: 5, demand: 5, receipt: 5, onHand: 10, economic: 10, target: 10, decision: "Sales: 5, Receipt: 5", zone: "green" },
+    { day: 9, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 10, sales: 4, demand: 4, receipt: 4, onHand: 10, economic: 10, target: 10, decision: "Sales: 4, Receipt: 4", zone: "green" },
+    { day: 11, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 12, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 13, sales: 2, demand: 2, receipt: 2, onHand: 10, economic: 10, target: 10, decision: "Sales: 2, Receipt: 2", zone: "green" },
+    { day: 14, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 15, sales: 4, demand: 4, receipt: 4, onHand: 10, economic: 10, target: 10, decision: "Sales: 4, Receipt: 4", zone: "green" },
+    { day: 16, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 17, sales: 2, demand: 2, receipt: 2, onHand: 10, economic: 10, target: 10, decision: "Sales: 2, Receipt: 2", zone: "green" },
+    { day: 18, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
+    { day: 19, sales: 4, demand: 4, receipt: 4, onHand: 10, economic: 10, target: 10, decision: "Sales: 4, Receipt: 4", zone: "green" },
+    { day: 20, sales: 5, demand: 5, receipt: 5, onHand: 10, economic: 10, target: 10, decision: "Sales: 5, Receipt: 5", zone: "green" },
+    { day: 21, sales: 4, demand: 4, receipt: 4, onHand: 10, economic: 10, target: 10, decision: "Sales: 4, Receipt: 4", zone: "green" },
+    { day: 22, sales: 0, demand: 0, receipt: 0, onHand: 10, economic: 10, target: 10, decision: "No activity", zone: "green" },
+    { day: 23, sales: 1, demand: 1, receipt: 1, onHand: 10, economic: 10, target: 10, decision: "Sales: 1, Receipt: 1", zone: "green" },
+    { day: 24, sales: 1, demand: 1, receipt: 1, onHand: 10, economic: 10, target: 10, decision: "Sales: 1, Receipt: 1", zone: "green" },
+    { day: 25, sales: 0, demand: 0, receipt: 0, onHand: 10, economic: 10, target: 10, decision: "No activity", zone: "green" },
+    { day: 26, sales: 2, demand: 2, receipt: 2, onHand: 10, economic: 10, target: 10, decision: "Sales: 2, Receipt: 2", zone: "green" },
+    { day: 27, sales: 1, demand: 1, receipt: 1, onHand: 10, economic: 10, target: 10, decision: "Sales: 1, Receipt: 1", zone: "green" },
+    { day: 28, sales: 0, demand: 0, receipt: 0, onHand: 10, economic: 10, target: 10, decision: "No activity", zone: "green" },
+    { day: 29, sales: 2, demand: 2, receipt: 2, onHand: 10, economic: 10, target: 10, decision: "Sales: 2, Receipt: 2", zone: "green" },
+    { day: 30, sales: 1, demand: 1, receipt: 1, onHand: 10, economic: 10, target: 10, decision: "Sales: 1, Receipt: 1", zone: "green" },
   ];
 
   const simulationData = replenishmentMode === "weekly" ? weeklySimulationData : dailySimulationData;
@@ -91,17 +92,32 @@ export default function DBMExplainer() {
   // Calculate metrics for comparison
   const calculateMetrics = (data: typeof weeklySimulationData) => {
     const totalSales = data.reduce((sum, d) => sum + d.sales, 0);
+    const totalDemand = data.reduce((sum, d) => sum + d.demand, 0);
     const avgInventory = data.reduce((sum, d) => sum + d.onHand, 0) / data.length;
-    return { totalSales, avgInventory };
+    const stockoutDays = data.filter(d => d.onHand === 0 && d.demand > 0).length;
+    const daysInStock = data.length - stockoutDays;
+    const availability = stockoutDays > 0 ? daysInStock / data.length : 1;
+    const potentialSales = availability > 0 ? totalDemand : totalSales;
+    const daysToCash = totalSales > 0 ? (avgInventory / (totalSales / data.length)) : 0;
+    
+    return { 
+      totalSales, 
+      totalDemand,
+      potentialSales,
+      avgInventory, 
+      stockoutDays, 
+      availability,
+      daysToCash
+    };
   };
 
   const weeklyMetrics = calculateMetrics(weeklySimulationData);
   const dailyMetrics = calculateMetrics(dailySimulationData);
   
-  // Calculate indices (using weekly as baseline = 100)
+  // Calculate indices and ROI improvement
   const salesIndex = {
     weekly: 100,
-    daily: (dailyMetrics.totalSales / weeklyMetrics.totalSales) * 100
+    daily: (dailyMetrics.potentialSales / weeklyMetrics.potentialSales) * 100
   };
   const inventoryIndex = {
     weekly: 100,
@@ -111,6 +127,7 @@ export default function DBMExplainer() {
     weekly: salesIndex.weekly / inventoryIndex.weekly,
     daily: salesIndex.daily / inventoryIndex.daily
   };
+  const roiImprovement = ((roiDelta.daily - roiDelta.weekly) / roiDelta.weekly) * 100;
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -449,26 +466,50 @@ export default function DBMExplainer() {
 
             {replenishmentMode === "daily" && (
               <div className="bg-gradient-to-r from-blue-500/10 to-green-500/10 border border-primary/20 p-4 rounded-lg">
-                <h4 className="font-semibold mb-3">ROI Comparison</h4>
-                <div className="grid md:grid-cols-3 gap-4 text-sm">
+                <h4 className="font-semibold mb-3">ROI Comparison: Weekly vs Daily Replenishment</h4>
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                   <div className="bg-background/50 p-3 rounded-lg">
-                    <div className="text-muted-foreground mb-1">Sales Performance</div>
-                    <div className="text-lg font-bold">Weekly: {weeklyMetrics.totalSales} units</div>
-                    <div className="text-lg font-bold text-primary">Daily: {dailyMetrics.totalSales} units</div>
-                    <div className="text-xs mt-1 text-muted-foreground">Sales Index: {salesIndex.daily.toFixed(1)}</div>
+                    <div className="text-muted-foreground mb-1">Availability & Sales</div>
+                    <div className="text-sm">
+                      <div className="mb-2">
+                        <span className="font-semibold">Weekly:</span> {(weeklyMetrics.availability * 100).toFixed(1)}% ({weeklyMetrics.stockoutDays} stockout days)
+                      </div>
+                      <div className="mb-2">
+                        <span className="font-semibold">Daily:</span> 100% (0 stockouts)
+                      </div>
+                    </div>
+                    <div className="border-t border-border/50 pt-2 mt-2">
+                      <div>Weekly: {weeklyMetrics.totalSales} units sold</div>
+                      <div className="text-primary font-bold">Daily: {dailyMetrics.totalSales} units sold</div>
+                      <div className="text-xs mt-1 text-green-500">+{((dailyMetrics.totalSales - weeklyMetrics.totalSales) / weeklyMetrics.totalSales * 100).toFixed(1)}% more sales</div>
+                    </div>
                   </div>
                   <div className="bg-background/50 p-3 rounded-lg">
                     <div className="text-muted-foreground mb-1">Avg Inventory</div>
-                    <div className="text-lg font-bold">Weekly: {weeklyMetrics.avgInventory.toFixed(1)} units</div>
-                    <div className="text-lg font-bold text-primary">Daily: {dailyMetrics.avgInventory.toFixed(1)} units</div>
-                    <div className="text-xs mt-1 text-muted-foreground">Inventory Index: {inventoryIndex.daily.toFixed(1)}</div>
+                    <div className="text-lg font-bold mb-1">Weekly: {weeklyMetrics.avgInventory.toFixed(1)} units</div>
+                    <div className="text-lg font-bold text-primary mb-2">Daily: {dailyMetrics.avgInventory.toFixed(1)} units</div>
+                    <div className="text-xs text-green-500 font-semibold">
+                      {((1 - dailyMetrics.avgInventory / weeklyMetrics.avgInventory) * 100).toFixed(1)}% less inventory
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">Inventory Index: {inventoryIndex.daily.toFixed(1)}</div>
                   </div>
                   <div className="bg-background/50 p-3 rounded-lg">
-                    <div className="text-muted-foreground mb-1">ROI Delta</div>
-                    <div className="text-lg font-bold">Weekly: {roiDelta.weekly.toFixed(2)}</div>
-                    <div className="text-lg font-bold text-primary">Daily: {roiDelta.daily.toFixed(2)}</div>
-                    <div className="text-xs mt-1 text-green-500 font-semibold">
-                      {roiDelta.daily > roiDelta.weekly ? "+" : ""}{((roiDelta.daily - roiDelta.weekly) / roiDelta.weekly * 100).toFixed(1)}% improvement
+                    <div className="text-muted-foreground mb-1">Days to Cash</div>
+                    <div className="text-lg font-bold mb-1">Weekly: {weeklyMetrics.daysToCash.toFixed(1)} days</div>
+                    <div className="text-lg font-bold text-primary mb-2">Daily: {dailyMetrics.daysToCash.toFixed(1)} days</div>
+                    <div className="text-xs text-green-500 font-semibold">
+                      {((weeklyMetrics.daysToCash - dailyMetrics.daysToCash) / weeklyMetrics.daysToCash * 100).toFixed(1)}% faster cash conversion
+                    </div>
+                  </div>
+                  <div className="bg-background/50 p-3 rounded-lg">
+                    <div className="text-muted-foreground mb-1">ROI Improvement</div>
+                    <div className="text-lg font-bold mb-1">Weekly: {roiDelta.weekly.toFixed(2)}</div>
+                    <div className="text-lg font-bold text-primary mb-2">Daily: {roiDelta.daily.toFixed(2)}</div>
+                    <div className="text-xs text-green-500 font-semibold">
+                      +{roiImprovement.toFixed(1)}% profit improvement
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Sales ↑{salesIndex.daily.toFixed(0)}% / Inv ↓{(100 - inventoryIndex.daily).toFixed(0)}%
                     </div>
                   </div>
                 </div>
