@@ -1,18 +1,13 @@
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lightbulb, TrendingUp, Layers } from "lucide-react";
-
 const About = () => {
-  return (
-    <Layout>
+  return <Layout>
       <div className="container mx-auto px-6 py-16 max-w-5xl">
         <div className="space-y-8">
           <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold tracking-tight">About AIFO</h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Supply chain optimization powered by Theory of Constraints and
-              Dynamic Buffer Management
-            </p>
+            <h1 className="text-4xl font-bold tracking-tight">About Retail Twin Labs</h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">Decades of retail experience inside. Powered by AI. Guided by Archie.</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
@@ -24,12 +19,8 @@ const About = () => {
                 <CardTitle>Our Approach</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-muted-foreground">
-                  We help retailers identify and eliminate bottlenecks that limit cash
-                  flow and throughput.
-                </p>
-                <p className="text-muted-foreground">
-                  Our methodology uses <strong>Theory of Constraints (TOC)</strong> learnings, 
+                <p className="text-muted-foreground">We help retailers find and remove bottlenecks that limit cash flow and throughput.</p>
+                <p className="text-muted-foreground">We use the learnings from Theory of Constraints (TOC), and many years of experience in Footwear, Apparel and SaaS to focus on maximizing Throughput while minimizing inventory and operating expenses.<strong>Theory of Constraints (TOC)</strong> learnings, 
                   and many years of experience in Footwear, Apparel and SaaS to focus on maximizing{" "}
                   <strong>Throughput</strong> (revenue minus truly variable
                   costs) while minimizing inventory and operating expenses.
@@ -121,8 +112,6 @@ const About = () => {
           </Card>
         </div>
       </div>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default About;
