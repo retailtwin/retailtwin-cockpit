@@ -114,7 +114,7 @@ export default function DBMExplainer() {
   // Calculate indices and ROI improvement
   const salesIndex = {
     weekly: 100,
-    daily: (dailyMetrics.potentialSales / weeklyMetrics.potentialSales) * 100
+    daily: (dailyMetrics.totalSales / weeklyMetrics.totalSales) * 100
   };
   const inventoryIndex = {
     weekly: 100,
