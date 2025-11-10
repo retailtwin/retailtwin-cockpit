@@ -7,6 +7,7 @@ import retailCycleImage from "@/assets/retail-cycle.png";
 import retailTwinIcon from "@/assets/retail-twin-icon.png";
 import dashboardPreview from "@/assets/dashboard-preview.png";
 import archieChatPreview from "@/assets/archie-chat-preview.png";
+import archieLogo from "@/assets/archie-logo.png";
 const Landing = () => {
   return <Layout>
       {/* Hero Section with Background */}
@@ -22,9 +23,16 @@ const Landing = () => {
               AI that Governs Flow,{" "}
               <span className="text-primary">Not Just Automates It</span>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Deployed in your environment, Archie enforces and improves the rules and metrics that drive supply performance — ensuring better decisions, with none of the SaaS complexity.
-            </p>
+            <div className="flex items-start gap-4 max-w-3xl mx-auto">
+              <img 
+                src={archieLogo} 
+                alt="Archie Logo" 
+                className="w-16 h-auto mt-1 mb-auto flex-shrink-0"
+              />
+              <p className="text-xl text-muted-foreground text-left">
+                Deployed in your environment, Archie enforces and improves the rules and metrics that drive supply performance — ensuring better decisions, with none of the SaaS complexity.
+              </p>
+            </div>
             <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">
               In distribution, flow runs on rules — not forecasts. The Theory of Constraints shows that responsiveness comes from managing buffers, not predicting demand. Archie applies these flow rules — ordering to the buffer, keeping lead times short and reliable, and tracking 'speed to cash' — to sustain service and turns without excess stock or SaaS complexity.
             </p>
