@@ -24,18 +24,12 @@ const Landing = () => {
               <span className="text-primary">Not Just Automates It</span>
             </h1>
             <div className="flex items-start gap-4 max-w-3xl mx-auto">
-              <img 
-                src={archieLogo} 
-                alt="Archie Logo" 
-                className="w-16 h-auto mt-1 mb-auto flex-shrink-0"
-              />
+              <img src={archieLogo} alt="Archie Logo" className="w-16 h-auto mt-1 mb-auto flex-shrink-0" />
               <p className="text-xl text-muted-foreground text-left">
                 Deployed in your environment, Archie enforces and improves the rules and metrics that drive supply performance — ensuring better decisions, with none of the SaaS complexity.
               </p>
             </div>
-            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">
-              In distribution, flow runs on rules — not forecasts. The Theory of Constraints shows that responsiveness comes from managing buffers, not predicting demand. Archie applies these flow rules — ordering to the buffer, keeping lead times short and reliable, and tracking 'speed to cash' — to sustain service and turns without excess stock or SaaS complexity.
-            </p>
+            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">In distribution, flow runs on rules — not forecasts. The Theory of Constraints shows that responsiveness comes from managing buffers, not predicting demand. Archie applies these flow rules — ordering to the buffer, keeping lead times short and reliable, and tracking 'speed to cash' — to sustain service levels and turns without the SaaS complexity.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/login">
                 <Button size="lg" className="text-lg px-10 shadow-lg">
@@ -121,7 +115,7 @@ const Landing = () => {
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                   <Layers className="h-6 w-6 text-primary" />
                 </div>
-                <CardDescription className="text-base leading-relaxed">At Retail Twin Labs, we combine our deep SaaS knowledge with cutting-edge AI and decades of industry experience to deliver key insights and workflows that work. Your data, your rules, your tools.</CardDescription>
+                <CardDescription className="text-base leading-relaxed">At Retail Twin Labs, we combine decades of experience in Footwear, Apparel and Sporting Goods, with deep SaaS knowledge and AI, to deliver key insights and workflows that simply work. Your data, your rules, your tools.</CardDescription>
               </CardHeader>
             </Card>
 
@@ -132,10 +126,8 @@ const Landing = () => {
                   <div className="h-12 w-12 rounded-2xl bg-accent/10 flex items-center justify-center mb-6">
                     <TrendingUp className="h-6 w-6 text-accent" />
                   </div>
-                  <CardTitle className="text-xl mb-4">Lessons from Retailisation</CardTitle>
-                  <CardDescription className="text-base leading-relaxed">
-                    At Retailisation, our previous SaaS company, we learned that success requires good automation, but is also critically dependent on the internal rules and metrics that govern flow. At Retail Twin Labs, we focus on these rules and metrics, with AI agents that understand and explain things like lead-times and minimum order quantities and their impacts on flow.
-                  </CardDescription>
+                  <CardTitle className="text-xl mb-4">From the founder: Lessons from Retailisation </CardTitle>
+                  <CardDescription className="text-base leading-relaxed">At Retailisation, my previous SaaS company, I learned that effective order automation is only possible when internal rules and metrics strictly govern flow. Hence at Retail Twin Labs, we focus on these rules and metrics, with AI agents that understand and explain lead-times and minimum order quantities, and their impacts on flow.</CardDescription>
                 </CardHeader>
               </Card>
 
@@ -145,9 +137,7 @@ const Landing = () => {
                     <Brain className="h-6 w-6 text-primary" />
                   </div>
                   <CardTitle className="text-xl mb-4">AI That Understands Your Business</CardTitle>
-                  <CardDescription className="text-base leading-relaxed">
-                    Our AI agents don't just process data—they understand the nuances of your supply chain. Lead-times, minimum order quantities, batch constraints—we model the real-world factors that impact flow, so you can make decisions with confidence.
-                  </CardDescription>
+                  <CardDescription className="text-base leading-relaxed">Our AI agents don't just process data—they understand the nuances of your supply chain. Lead-times, batch constraints—we model the real-world factors that impact flow, so you can make decisions with confidence.</CardDescription>
                 </CardHeader>
               </Card>
             </div>
@@ -176,11 +166,7 @@ const Landing = () => {
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
                   <div className="relative w-full aspect-video overflow-hidden rounded-t-lg">
-                    <img 
-                      src={dashboardPreview} 
-                      alt="Dashboard interface showing inventory analytics and KPIs" 
-                      className="w-full h-full object-cover object-top shadow-lg"
-                    />
+                    <img src={dashboardPreview} alt="Dashboard interface showing inventory analytics and KPIs" className="w-full h-full object-cover object-top shadow-lg" />
                   </div>
                 </CardContent>
               </Card>
@@ -194,11 +180,7 @@ const Landing = () => {
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
                   <div className="relative w-full aspect-video overflow-hidden rounded-t-lg">
-                    <img 
-                      src={archieChatPreview} 
-                      alt="Archie AI chat interface providing supply chain insights" 
-                      className="w-full h-full object-cover object-top shadow-lg"
-                    />
+                    <img src={archieChatPreview} alt="Archie AI chat interface providing supply chain insights" className="w-full h-full object-cover object-top shadow-lg" />
                   </div>
                 </CardContent>
               </Card>
