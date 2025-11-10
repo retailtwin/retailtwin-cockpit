@@ -4,9 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, Download, MapPin, Package, TrendingUp, Archive } from "lucide-react";
+import { Loader2, Upload, Download, MapPin, Package, TrendingUp, Archive, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/Layout";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 type ImportType = 'locations' | 'products' | 'sales' | 'inventory';
 
@@ -23,6 +24,7 @@ export default function DataImport() {
     sales: false,
     inventory: false,
   });
+  const [showInstructions, setShowInstructions] = useState(false);
   const { toast } = useToast();
 
   const getTemplateContent = (type: ImportType): string => {
@@ -139,11 +141,108 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
     <Layout>
       <div className="container mx-auto py-8 space-y-8">
         {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Data Import</h1>
-          <p className="text-muted-foreground">
-            Download CSV templates, populate them with your data, then upload them below.
-          </p>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold">Data Import</h1>
+            <p className="text-muted-foreground">
+              Download CSV templates, populate them with your data, then upload them below.
+            </p>
+          </div>
+
+          {/* Detailed Instructions Collapsible */}
+          <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Info className="h-4 w-4" />
+                {showInstructions ? "Hide" : "Show"} Detailed Instructions
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Import Guidelines & Format Requirements</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div>
+                    <h3 className="font-semibold mb-2">General Rules</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <li>All CSV files must include the header row as shown in templates</li>
+                      <li>Date format must be <strong>YYYY-MM-DD</strong> (e.g., 2024-01-15)</li>
+                      <li>Use commas as separators, quotes for text containing commas</li>
+                      <li>Ensure no empty rows or extra whitespace</li>
+                      <li>Character encoding should be UTF-8</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-2 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" /> Locations
+                    </h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <li><strong>store_code:</strong> Unique identifier for each location</li>
+                      <li><strong>name:</strong> Display name of the store</li>
+                      <li><strong>production_lead_time:</strong> Days needed for production (number)</li>
+                      <li><strong>shipping_lead_time:</strong> Days needed for shipping (number)</li>
+                      <li><strong>order_days:</strong> Comma-separated days of week in quotes (e.g., "mon,wed,fri")</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-2 flex items-center gap-2">
+                      <Package className="h-4 w-4" /> Products
+                    </h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <li><strong>product_code:</strong> Unique SKU identifier</li>
+                      <li><strong>name:</strong> Product display name</li>
+                      <li><strong>cost_price:</strong> Cost price (decimal, e.g., 16.00)</li>
+                      <li><strong>sales_price:</strong> Selling price (decimal, e.g., 35.00)</li>
+                      <li><strong>pack_size:</strong> Units per pack (integer)</li>
+                      <li><strong>minimum_order_quantity:</strong> Minimum order quantity (integer)</li>
+                      <li><strong>group_1, group_2, group_3:</strong> Product categorization (text)</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-2 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4" /> Sales
+                    </h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <li><strong>day:</strong> Transaction date in YYYY-MM-DD format</li>
+                      <li><strong>store:</strong> Store code matching locations</li>
+                      <li><strong>product:</strong> Product code matching products</li>
+                      <li><strong>units:</strong> Number of units sold (integer)</li>
+                      <li>Import daily sales data for accurate trend analysis</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-2 flex items-center gap-2">
+                      <Archive className="h-4 w-4" /> Inventory
+                    </h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <li><strong>day:</strong> Inventory snapshot date in YYYY-MM-DD format</li>
+                      <li><strong>store:</strong> Store code matching locations</li>
+                      <li><strong>product:</strong> Product code matching products</li>
+                      <li><strong>units_on_hand:</strong> Current stock level (integer)</li>
+                      <li><strong>units_on_order:</strong> Quantity ordered but not received (integer)</li>
+                      <li><strong>units_in_transit:</strong> Quantity in transit (integer)</li>
+                      <li><strong>Important:</strong> Only upload inventory records when values change from previous day</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h3 className="font-semibold mb-2">Best Practices</h3>
+                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                      <li>Import master data (Locations, Products) before transactional data (Sales, Inventory)</li>
+                      <li>Validate your CSV in a spreadsheet application before uploading</li>
+                      <li>Start with a small test batch to verify format correctness</li>
+                      <li>Keep backup copies of your source data</li>
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         {/* Download Templates Section */}
