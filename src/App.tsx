@@ -13,6 +13,8 @@ import DataImport from "./pages/DataImport";
 import Settings from "./pages/Settings";
 import BlogList from "./pages/BlogList";
 import BlogPost from "./pages/BlogPost";
+import Impressum from "./pages/Impressum";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +31,8 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/blogs" element={<BlogList />} />
           <Route path="/blogs/:slug" element={<BlogPost />} />
+          <Route path="/impressum" element={<Impressum />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
           <Route path="/import" element={<ProtectedRoute><DataImport /></ProtectedRoute>} />

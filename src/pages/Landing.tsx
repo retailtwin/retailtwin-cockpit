@@ -17,11 +17,14 @@ const Landing = () => {
         <div className="relative container mx-auto px-6 py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
-              Increase Throughput and Turns with{" "}
-              <span className="text-primary">AI-guided inventory flow</span>
+              AI that Governs Flow,{" "}
+              <span className="text-primary">Not Just Automates It</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Tune your supply to Flow: find bottlenecks, automate good rules, and maximize cash velocity.
+              Deployed in your environment, Archie enforces and improves the rules and metrics that drive supply performance — ensuring better decisions, with none of the SaaS complexity.
+            </p>
+            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">
+              In distribution, flow is governed by a few essential rules and metrics — not by forecasts. The Theory of Constraints teaches that responsiveness depends on managing buffers, not predicting demand. Stock is positioned where variability accumulates, and every replenishment follows clear rules: order to the buffer, size replenishment by short and reliable lead times, and measure performance by 'speed to cash' — how quickly inventory moves from supplier to customer without creating shortages or excess. Key metrics such as turns, service levels and missed throughput value indicate how well the system balances availability and cash. A responsive supply chain thrives on fast feedback and disciplined rule execution — not on chasing forecast accuracy. Archie automates this governance, maintaining service and flow even as demand shifts.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/login">
@@ -48,10 +51,9 @@ const Landing = () => {
               <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                 <Target className="h-7 w-7 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Set rules and apply them</CardTitle>
+              <CardTitle className="text-2xl">Rule-driven workflows for allocation & replenishment</CardTitle>
               <CardDescription className="text-base pt-2">
-                Monitor compliance.
-                Flag exceptions.
+                Good rules enhance flow with better service levels and higher turns.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -76,8 +78,7 @@ const Landing = () => {
               </div>
               <CardTitle className="text-2xl">Scale across your network</CardTitle>
               <CardDescription className="text-base pt-2">
-                From single warehouse to retail networks. 
-                Works where there is data.
+                From single warehouse to retail networks and Vendor Managed Inventory (VMI). Works where there is data, and customers who come to buy.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -191,6 +192,12 @@ const Landing = () => {
               </Link>
               <Link to="/blogs" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Blog
+              </Link>
+              <Link to="/impressum" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                Impressum
+              </Link>
+              <Link to="/privacy-policy" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                Privacy Policy
               </Link>
               <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Login
