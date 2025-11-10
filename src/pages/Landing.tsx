@@ -228,12 +228,8 @@ const Landing = () => {
                   <p>
                     I'm excited to announce that I've joined Zefyr Solutions as Director - Responsive Retail Supply Chains, based in Amsterdam, The Netherlands.
                   </p>
-                  <p>
-                    I bring 30+ years of retail leadership across EMEA and a proven record as a SaaS founder. Having led retailing teams at scale and founded technology solutions that enable smarter, faster decisions, I offer a unique combination of strategic insight and operational know-how. I excel at connecting supply chain planning to real-world retail performance, helping businesses unlock value and free cash for top and bottom-line results.
-                  </p>
-                  <p>
-                    I'm thrilled to join Zefyr as the team extends beyond their deep expertise in Footwear and Apparel product management, product creation, sourcing, logistics, and innovation with my market-facing, retail-driven perspective.
-                  </p>
+                  <p>I bring 30+ years of retail leadership across EMEA and a proven record as a SaaS founder. Having led retailing teams at scale and founded technology solutions that enable smarter, faster decisions, I offer a unique combination of strategic insight and operational know-how. Connecting supply flows to retail, helping businesses unlock value and free cash.</p>
+                  <p>I'm thrilled to join Zefyr as the team extends beyond their already deep expertise in Footwear and Apparel product management, product creation, sourcing, logistics, and innovation with my market-facing, retail-driven perspective.</p>
                   <p>
                     Contact me to learn how I can help strengthen the link between your supply chain and your retail success.
                   </p>
