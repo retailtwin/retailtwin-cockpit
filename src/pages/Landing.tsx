@@ -75,7 +75,7 @@ const Landing = () => {
               </div>
               <CardTitle className="text-2xl">Free Cash</CardTitle>
               <CardDescription className="text-base pt-2">
-                Run scenarios to find excess inventory and missed sales. 
+                Run scenarios with different rules to find excess inventory and extra sales. 
                 Get automated insights that release capital and improve flow.
               </CardDescription>
             </CardHeader>
@@ -88,7 +88,7 @@ const Landing = () => {
               </div>
               <CardTitle className="text-2xl">Scale across your network</CardTitle>
               <CardDescription className="text-base pt-2">
-                From single warehouse to retail networks and Vendor Managed Inventory (VMI). Works where there is data, and customers who come to buy.
+                From single warehouse to retail networks and Vendor Managed Inventory (VMI). Works where your customers come to buy, when there is data.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -111,7 +111,7 @@ const Landing = () => {
                 About Retail Twin Labs
               </h2>
               <p className="text-2xl text-primary font-semibold">
-                Sustained by Simplicity
+                Flow. Sustained by Simplicity
               </p>
             </div>
 
