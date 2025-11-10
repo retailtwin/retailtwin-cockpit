@@ -3,6 +3,18 @@ project_id = "zgsrbhfazvgtqbpkhabg"
 [functions.import-fact-daily]
 verify_jwt = true
 
+[functions.import-locations]
+verify_jwt = true
+
+[functions.import-products]
+verify_jwt = true
+
+[functions.import-sales]
+verify_jwt = true
+
+[functions.import-inventory]
+verify_jwt = true
+
 [functions.archie-chat]
 verify_jwt = true
 

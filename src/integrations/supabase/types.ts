@@ -366,6 +366,9 @@ export type Database = {
       }
       insert_fact_daily_batch: { Args: { records: Json }; Returns: undefined }
       update_fact_daily_batch: { Args: { updates: Json }; Returns: undefined }
+      upsert_inventory_batch: { Args: { records: Json }; Returns: undefined }
+      upsert_locations_batch: { Args: { records: Json }; Returns: undefined }
+      upsert_products_batch: { Args: { records: Json }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
