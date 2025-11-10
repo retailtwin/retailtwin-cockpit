@@ -5,6 +5,8 @@ import { AlertTriangle, Target, Zap, Mail, Layers, TrendingUp, Brain, Gauge } fr
 import { Layout } from "@/components/Layout";
 import retailCycleImage from "@/assets/retail-cycle.png";
 import retailTwinIcon from "@/assets/retail-twin-icon.png";
+import dashboardPreview from "@/assets/dashboard-preview.png";
+import archieChatPreview from "@/assets/archie-chat-preview.png";
 const Landing = () => {
   return <Layout>
       {/* Hero Section with Background */}
@@ -24,7 +26,7 @@ const Landing = () => {
               Deployed in your environment, Archie enforces and improves the rules and metrics that drive supply performance — ensuring better decisions, with none of the SaaS complexity.
             </p>
             <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">
-              In distribution, flow is governed by a few essential rules and metrics — not by forecasts. The Theory of Constraints teaches that responsiveness depends on managing buffers, not predicting demand. Stock is positioned where variability accumulates, and every replenishment follows clear rules: order to the buffer, size replenishment by short and reliable lead times, and measure performance by 'speed to cash' — how quickly inventory moves from supplier to customer without creating shortages or excess. Key metrics such as turns, service levels and missed throughput value indicate how well the system balances availability and cash. A responsive supply chain thrives on fast feedback and disciplined rule execution — not on chasing forecast accuracy. Archie automates this governance, maintaining service and flow even as demand shifts.
+              In distribution, flow runs on rules — not forecasts. The Theory of Constraints shows that responsiveness comes from managing buffers, not predicting demand. Archie applies these flow rules — ordering to the buffer, keeping lead times short and reliable, and tracking 'speed to cash' — to sustain service and turns without excess stock or SaaS complexity.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/login">
@@ -154,6 +156,45 @@ const Landing = () => {
                 </CardDescription>
               </CardHeader>
             </Card>
+
+            {/* Visual Showcase Section */}
+            <div className="grid md:grid-cols-2 gap-8 mt-12">
+              <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50 overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="text-xl mb-4">Dashboard View</CardTitle>
+                  <CardDescription className="text-base leading-relaxed mb-6">
+                    Monitor your inventory flow with real-time KPIs, analytics, and actionable insights all in one place.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="px-0 pb-0">
+                  <div className="relative w-full aspect-video overflow-hidden rounded-t-lg">
+                    <img 
+                      src={dashboardPreview} 
+                      alt="Dashboard interface showing inventory analytics and KPIs" 
+                      className="w-full h-full object-cover object-top shadow-lg"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50 overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="text-xl mb-4">Archie AI Assistant</CardTitle>
+                  <CardDescription className="text-base leading-relaxed mb-6">
+                    Get intelligent recommendations and explanations about your supply chain directly from Archie.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="px-0 pb-0">
+                  <div className="relative w-full aspect-video overflow-hidden rounded-t-lg">
+                    <img 
+                      src={archieChatPreview} 
+                      alt="Archie AI chat interface providing supply chain insights" 
+                      className="w-full h-full object-cover object-top shadow-lg"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </section>
