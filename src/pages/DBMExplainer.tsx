@@ -528,7 +528,7 @@ export default function DBMExplainer() {
                     );
                   })}
 
-                  {/* On Hand line - BLACK sawtooth */}
+                  {/* On Hand line - BLACK step function (only changes with sales/receipts) */}
                   {simulationData.slice(0, animationDay + 1).map((point, idx) => {
                     if (idx === 0) return null;
                     const prev = simulationData[idx - 1];
@@ -543,8 +543,18 @@ export default function DBMExplainer() {
                         className="absolute inset-0 w-full h-full pointer-events-none"
                         style={{ overflow: 'visible' }}
                       >
+                        {/* Horizontal line - inventory stays constant */}
                         <line
                           x1={`${x1}%`}
+                          y1={`${100 - y1}%`}
+                          x2={`${x2}%`}
+                          y2={`${100 - y1}%`}
+                          stroke="rgb(0, 0, 0)"
+                          strokeWidth="3"
+                        />
+                        {/* Vertical line - inventory changes (sale or receipt) */}
+                        <line
+                          x1={`${x2}%`}
                           y1={`${100 - y1}%`}
                           x2={`${x2}%`}
                           y2={`${100 - y2}%`}
@@ -555,21 +565,21 @@ export default function DBMExplainer() {
                     );
                   })}
 
-                  {/* Receipt indicators - vertical green arrows */}
+                  {/* Sales bars at the bottom - orange bars showing when sales occurred */}
                   {simulationData.slice(0, animationDay + 1).map((point, idx) => {
-                    if (point.receipt === 0 || idx === 0) return null;
+                    if (point.sales === 0) return null;
                     const x = (idx / 30) * 100;
-                    const yStart = (simulationData[idx - 1]?.onHand || 0) / 30 * 100;
-                    const yEnd = (point.onHand / 30) * 100;
+                    const barHeight = (point.sales / 5) * 15; // Scale sales to max 15% of chart height
 
                     return (
                       <div
-                        key={`receipt-${idx}`}
-                        className="absolute w-1 bg-green-600"
+                        key={`sales-${idx}`}
+                        className="absolute bg-orange-500/60 border-l-2 border-orange-600"
                         style={{
                           left: `${x}%`,
-                          bottom: `${yStart}%`,
-                          height: `${yEnd - yStart}%`,
+                          width: `${100 / 30}%`,
+                          bottom: 0,
+                          height: `${barHeight}%`,
                         }}
                       />
                     );
@@ -609,8 +619,8 @@ export default function DBMExplainer() {
                   <span>Target Buffer (Green)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-600" />
-                  <span>Receipt</span>
+                  <div className="w-3 h-3 bg-orange-500" />
+                  <span>Sales</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xl">⚠️</span>
