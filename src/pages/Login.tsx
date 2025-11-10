@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -26,7 +27,8 @@ const Login = () => {
         setSession(session);
         
         if (session?.user) {
-          navigate("/dashboard");
+          const from = (location.state as any)?.from?.pathname || '/dashboard';
+          navigate(from, { replace: true });
         }
       }
     );
@@ -35,12 +37,13 @@ const Login = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
-        navigate("/dashboard");
+        const from = (location.state as any)?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, location]);
 
   const assignAdminToFirstUser = async () => {
     try {

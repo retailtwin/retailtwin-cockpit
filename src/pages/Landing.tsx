@@ -26,12 +26,12 @@ const Landing = () => {
               Tune your supply to Flow: find bottlenecks, automate good rules, and maximize cash velocity.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Link to="/dashboard">
+              <Link to="/login">
                 <Button size="lg" className="text-lg px-10 shadow-lg">
-                  View Demo
+                  Login to Dashboard
                 </Button>
               </Link>
-              <a href="mailto:contact@aifo.example.com">
+              <a href="mailto:contact@retailtwin.com">
                 <Button size="lg" variant="secondary" className="text-lg px-10 shadow-lg">
                   <Mail className="mr-2 h-5 w-5" />
                   Talk to Retail Twin
@@ -111,7 +111,7 @@ const Landing = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="text-center md:text-left">
               <p className="text-sm text-muted-foreground">
-                © 2025 AIFO — AI Flow Optimiser. All rights reserved.
+                © 2025 RetailTwin Labs. All rights reserved.
               </p>
             </div>
             <div className="flex items-center gap-8">
@@ -122,10 +122,10 @@ const Landing = () => {
                 About
               </Link>
               <Link
-                to="/report"
+                to="/blogs"
                 className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
               >
-                Reports
+                Blog
               </Link>
               <Link
                 to="/login"
