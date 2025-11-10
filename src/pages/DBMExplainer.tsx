@@ -444,34 +444,11 @@ export default function DBMExplainer() {
         {/* Interactive Animation */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>DBM in Action: 30-Day Simulation</span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsPlaying(!isPlaying)}
-                >
-                  {isPlaying ? <PauseCircle className="w-4 h-4 mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />}
-                  {isPlaying ? "Pause" : "Play"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setAnimationDay(0);
-                    setIsPlaying(false);
-                  }}
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Reset
-                </Button>
-              </div>
-            </CardTitle>
+            <CardTitle>DBM in Action: 30-Day Simulation</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Mode Toggle */}
-            <div className="flex gap-2 justify-center">
+            {/* Control Buttons - All Aligned */}
+            <div className="flex gap-2 justify-center items-center flex-wrap">
               <Button
                 variant={replenishmentMode === "weekly" ? "default" : "outline"}
                 onClick={() => {
@@ -480,7 +457,7 @@ export default function DBMExplainer() {
                   setIsPlaying(false);
                 }}
               >
-                Weekly Replenishment
+                Simulate Weekly Replenishment
               </Button>
               <Button
                 variant={replenishmentMode === "daily" ? "default" : "outline"}
@@ -490,7 +467,24 @@ export default function DBMExplainer() {
                   setIsPlaying(false);
                 }}
               >
-                Daily Replenishment
+                Simulate Daily Replenishment
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setIsPlaying(!isPlaying)}
+              >
+                {isPlaying ? <PauseCircle className="w-4 h-4 mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />}
+                {isPlaying ? "Pause" : "Play"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAnimationDay(0);
+                  setIsPlaying(false);
+                }}
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Reset
               </Button>
             </div>
 
@@ -546,9 +540,6 @@ export default function DBMExplainer() {
               </div>
             )}
 
-            <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-sm">
-              <strong>Simulation Parameters:</strong> 7-day lead time • {replenishmentMode === "weekly" ? "Weekly ordering • Variable sales (15+ sales days) • 2 stockouts • Buffer increase on day 14 • Buffer decrease on day 28" : "Daily ordering • Same sales pattern • No stockouts • Stable inventory"}
-            </div>
 
             <div className="space-y-2">
               <div className="flex justify-between items-center text-sm">
