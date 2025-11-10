@@ -742,66 +742,6 @@ export default function DBMExplainer() {
               </div>
             </div>
 
-            {/* Zone Visualization - Only for weekly mode */}
-            {replenishmentMode === "weekly" && (
-              <div className="space-y-2">
-                <h4 className="font-semibold text-sm">Current Zone Boundaries (Dynamic)</h4>
-                <div className="relative h-32 border rounded-lg overflow-hidden bg-muted/20">
-                  {/* Overstock zone */}
-                  <div 
-                    className="absolute left-0 right-0 bg-blue-500/20 border-b-2 border-blue-500 flex items-center justify-center text-xs font-medium"
-                    style={{ 
-                      top: 0,
-                      height: `${Math.max(15, (1 - currentState.target / 30) * 100)}%`
-                    }}
-                  >
-                    Overstock (&gt; {currentState.target})
-                  </div>
-                  {/* Green zone */}
-                  <div 
-                    className="absolute left-0 right-0 bg-green-500/20 border-b-2 border-green-500 flex items-center justify-center text-xs font-medium"
-                    style={{ 
-                      top: `${Math.max(15, (1 - currentState.target / 30) * 100)}%`,
-                      height: `${((currentState.target - yellow) / 30) * 100}%`
-                    }}
-                  >
-                    Green ({yellow + 1} to {currentState.target})
-                  </div>
-                  {/* Yellow zone */}
-                  <div 
-                    className="absolute left-0 right-0 bg-yellow-500/20 border-b-2 border-yellow-500 flex items-center justify-center text-xs font-medium"
-                    style={{ 
-                      top: `${Math.max(15, (1 - currentState.target / 30) * 100) + ((currentState.target - yellow) / 30) * 100}%`,
-                      height: `${((yellow - red) / 30) * 100}%`
-                    }}
-                  >
-                    Yellow ({red + 1} to {yellow})
-                  </div>
-                  {/* Red zone */}
-                  <div 
-                    className="absolute left-0 right-0 bottom-0 bg-red-500/20 border-b-2 border-red-500 flex items-center justify-center text-xs font-medium"
-                    style={{ 
-                      height: `${(red / 30) * 100}%`
-                    }}
-                  >
-                    Red (0 to {red})
-                  </div>
-                  {/* Current position indicator */}
-                  <div 
-                    className="absolute left-0 right-0 h-1 bg-black transition-all duration-300 z-10"
-                    style={{ 
-                      bottom: `${(currentState.onHand / 30) * 100}%`
-                    }}
-                  >
-                    <div className="absolute left-1/2 -translate-x-1/2 -top-2 w-4 h-4 bg-black rounded-full border-2 border-white" />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground text-center">
-                  Black indicator shows current on-hand position within dynamic zones
-                </p>
-              </div>
-            )}
-
             {/* Show detailed table */}
             <Button
               variant="outline"
