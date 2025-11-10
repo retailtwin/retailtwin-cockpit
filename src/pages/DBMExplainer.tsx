@@ -10,50 +10,45 @@ export default function DBMExplainer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
-  // Simulation data showing DBM sawtooth pattern with realistic lead-time variance
-  const leadTime = 16; // days
+  // Simulation data: 7-day lead time, weekly ordering, with buffer adjustments
+  const leadTime = 7; // days
   const simulationData = [
-    { day: 0, sales: 0, receipt: 0, onHand: 9, economic: 9, target: 6, decision: "Initial state", zone: "green" },
-    { day: 1, sales: 0.5, receipt: 0, onHand: 8.5, economic: 8.5, target: 6, decision: "Normal consumption", zone: "green" },
-    { day: 2, sales: 0.5, receipt: 0, onHand: 8, economic: 8, target: 6, decision: "Normal consumption", zone: "green" },
-    { day: 3, sales: 0.5, receipt: 0, onHand: 7.5, economic: 7.5, target: 6, decision: "Normal consumption", zone: "green" },
-    { day: 4, sales: 0.5, receipt: 0, onHand: 7, economic: 7, target: 6, decision: "Normal consumption", zone: "green" },
-    { day: 5, sales: 0.5, receipt: 0, onHand: 6.5, economic: 6.5, target: 6, decision: "Normal consumption", zone: "green" },
-    { day: 6, sales: 0.5, receipt: 0, onHand: 6, economic: 6, target: 6, decision: "At target", zone: "yellow" },
-    { day: 7, sales: 0.5, receipt: 0, onHand: 5.5, economic: 5.5, target: 6, decision: "Below target", zone: "yellow" },
-    { day: 8, sales: 0.5, receipt: 0, onHand: 5, economic: 5, target: 6, decision: "Below target", zone: "yellow" },
-    { day: 9, sales: 0.5, receipt: 0, onHand: 4.5, economic: 4.5, target: 6, decision: "Below target", zone: "yellow" },
-    { day: 10, sales: 0.5, receipt: 0, onHand: 4, economic: 4, target: 6, decision: "Below target", zone: "red" },
-    { day: 11, sales: 0.5, receipt: 0, onHand: 3.5, economic: 3.5, target: 6, decision: "Below target", zone: "red" },
-    { day: 12, sales: 0.5, receipt: 0, onHand: 3, economic: 3, target: 6, decision: "Below target", zone: "red" },
-    { day: 13, sales: 0.5, receipt: 0, onHand: 2.5, economic: 2.5, target: 6, decision: "Below target", zone: "red" },
-    { day: 14, sales: 0.5, receipt: 0, onHand: 2, economic: 2, target: 6, decision: "Below target", zone: "red" },
-    { day: 15, sales: 0.5, receipt: 0, onHand: 1.5, economic: 1.5, target: 6, decision: "Critical low", zone: "red" },
-    { day: 16, sales: 0.5, receipt: 9, onHand: 10, economic: 10, target: 6, decision: "Receipt +9", zone: "overstock" },
-    { day: 17, sales: 0.5, receipt: 0, onHand: 9.5, economic: 9.5, target: 6, decision: "Above target", zone: "overstock" },
-    { day: 18, sales: 0.5, receipt: 0, onHand: 9, economic: 9, target: 6, decision: "Above target", zone: "green" },
-    { day: 19, sales: 0.5, receipt: 0, onHand: 8.5, economic: 8.5, target: 6, decision: "Normal", zone: "green" },
-    { day: 20, sales: 0.5, receipt: 0, onHand: 8, economic: 8, target: 6, decision: "Normal", zone: "green" },
-    { day: 21, sales: 0.5, receipt: 0, onHand: 7.5, economic: 7.5, target: 6, decision: "Normal", zone: "green" },
-    { day: 22, sales: 0.5, receipt: 0, onHand: 7, economic: 7, target: 6, decision: "Normal", zone: "green" },
-    { day: 23, sales: 0.5, receipt: 0, onHand: 6.5, economic: 6.5, target: 6, decision: "Normal", zone: "green" },
-    { day: 24, sales: 0.5, receipt: 0, onHand: 6, economic: 6, target: 6, decision: "At target", zone: "yellow" },
-    { day: 25, sales: 0.5, receipt: 0, onHand: 5.5, economic: 5.5, target: 6, decision: "Below target", zone: "yellow" },
-    { day: 26, sales: 0.5, receipt: 0, onHand: 5, economic: 5, target: 6, decision: "Below target", zone: "yellow" },
-    { day: 27, sales: 0.5, receipt: 0, onHand: 4.5, economic: 4.5, target: 6, decision: "Below target", zone: "yellow" },
-    { day: 28, sales: 0.5, receipt: 0, onHand: 4, economic: 4, target: 6, decision: "Below target", zone: "red" },
-    { day: 29, sales: 0.5, receipt: 0, onHand: 3.5, economic: 3.5, target: 6, decision: "Below target", zone: "red" },
-    { day: 30, sales: 0.5, receipt: 0, onHand: 3, economic: 3, target: 6, decision: "Below target", zone: "red" },
-    { day: 31, sales: 0.5, receipt: 0, onHand: 2.5, economic: 2.5, target: 6, decision: "Below target", zone: "red" },
-    { day: 32, sales: 0.5, receipt: 9, onHand: 11, economic: 11, target: 6, decision: "Receipt +9 (Early)", zone: "overstock" },
-    { day: 33, sales: 0.5, receipt: 0, onHand: 10.5, economic: 10.5, target: 6, decision: "Above target", zone: "overstock" },
-    { day: 34, sales: 0.5, receipt: 0, onHand: 10, economic: 10, target: 6, decision: "Above target", zone: "overstock" },
-    { day: 35, sales: 0.5, receipt: 0, onHand: 9.5, economic: 9.5, target: 6, decision: "Above target", zone: "overstock" },
-    { day: 36, sales: 0.5, receipt: 0, onHand: 9, economic: 9, target: 6, decision: "Above target", zone: "green" },
-    { day: 37, sales: 0.5, receipt: 0, onHand: 8.5, economic: 8.5, target: 6, decision: "Normal", zone: "green" },
-    { day: 38, sales: 0.5, receipt: 0, onHand: 8, economic: 8, target: 6, decision: "Normal", zone: "green" },
-    { day: 39, sales: 0.5, receipt: 0, onHand: 7.5, economic: 7.5, target: 6, decision: "Normal", zone: "green" },
-    { day: 40, sales: 0.5, receipt: 0, onHand: 7, economic: 7, target: 6, decision: "Normal", zone: "green" },
+    // Week 1 - Starting with target buffer of 21
+    { day: 0, sales: 0, receipt: 0, onHand: 21, economic: 21, target: 21, decision: "Initial state", zone: "green" },
+    { day: 1, sales: 3, receipt: 0, onHand: 18, economic: 18, target: 21, decision: "Sales: 3 units", zone: "green" },
+    { day: 2, sales: 2, receipt: 0, onHand: 16, economic: 16, target: 21, decision: "Sales: 2 units", zone: "yellow" },
+    { day: 3, sales: 4, receipt: 0, onHand: 12, economic: 12, target: 21, decision: "Sales: 4 units", zone: "yellow" },
+    { day: 4, sales: 3, receipt: 0, onHand: 9, economic: 9, target: 21, decision: "Sales: 3 units", zone: "red" },
+    { day: 5, sales: 2, receipt: 0, onHand: 7, economic: 7, target: 21, decision: "Sales: 2 units", zone: "red" },
+    { day: 6, sales: 3, receipt: 0, onHand: 4, economic: 4, target: 21, decision: "Sales: 3 units", zone: "red" },
+    // Week 2 - Order arrives, but high sales continue
+    { day: 7, sales: 4, receipt: 20, onHand: 20, economic: 20, target: 21, decision: "Receipt: 20 units, Sales: 4", zone: "yellow" },
+    { day: 8, sales: 5, receipt: 0, onHand: 15, economic: 15, target: 21, decision: "Sales: 5 units", zone: "yellow" },
+    { day: 9, sales: 3, receipt: 0, onHand: 12, economic: 12, target: 21, decision: "Sales: 3 units", zone: "yellow" },
+    { day: 10, sales: 4, receipt: 0, onHand: 8, economic: 8, target: 21, decision: "Sales: 4 units", zone: "red" },
+    { day: 11, sales: 3, receipt: 0, onHand: 5, economic: 5, target: 21, decision: "Sales: 3 units", zone: "red" },
+    { day: 12, sales: 3, receipt: 0, onHand: 2, economic: 2, target: 21, decision: "Sales: 3 units", zone: "red" },
+    { day: 13, sales: 2, receipt: 0, onHand: 0, economic: 0, target: 21, decision: "STOCKOUT - Sales: 2 units", zone: "red" },
+    // Week 3 - Buffer increases after 7 days in red. New target: 28
+    { day: 14, sales: 0, receipt: 25, onHand: 25, economic: 25, target: 28, decision: "Receipt: 25, BUFFER INCREASED to 28", zone: "yellow" },
+    { day: 15, sales: 4, receipt: 0, onHand: 21, economic: 21, target: 28, decision: "Sales: 4 units", zone: "yellow" },
+    { day: 16, sales: 3, receipt: 0, onHand: 18, economic: 18, target: 28, decision: "Sales: 3 units", zone: "yellow" },
+    { day: 17, sales: 2, receipt: 0, onHand: 16, economic: 16, target: 28, decision: "Sales: 2 units", zone: "yellow" },
+    { day: 18, sales: 3, receipt: 0, onHand: 13, economic: 13, target: 28, decision: "Sales: 3 units", zone: "yellow" },
+    { day: 19, sales: 4, receipt: 0, onHand: 9, economic: 9, target: 28, decision: "Sales: 4 units", zone: "red" },
+    { day: 20, sales: 5, receipt: 0, onHand: 4, economic: 4, target: 28, decision: "Sales: 5 units", zone: "red" },
+    // Week 4 - Another stockout
+    { day: 21, sales: 4, receipt: 28, onHand: 28, economic: 28, target: 28, decision: "Receipt: 28, Sales: 4 - At target", zone: "green" },
+    { day: 22, sales: 0, receipt: 0, onHand: 28, economic: 28, target: 28, decision: "No sales", zone: "green" },
+    { day: 23, sales: 1, receipt: 0, onHand: 27, economic: 27, target: 28, decision: "Sales: 1 unit", zone: "green" },
+    { day: 24, sales: 1, receipt: 0, onHand: 26, economic: 26, target: 28, decision: "Sales: 1 unit", zone: "green" },
+    { day: 25, sales: 0, receipt: 0, onHand: 26, economic: 26, target: 28, decision: "No sales", zone: "green" },
+    { day: 26, sales: 2, receipt: 0, onHand: 24, economic: 24, target: 28, decision: "Sales: 2 units", zone: "green" },
+    { day: 27, sales: 1, receipt: 0, onHand: 23, economic: 23, target: 28, decision: "Sales: 1 unit", zone: "green" },
+    // Week 5 - Buffer decreases after 7 days in green. New target: 19
+    { day: 28, sales: 0, receipt: 0, onHand: 23, economic: 23, target: 19, decision: "BUFFER DECREASED to 19", zone: "overstock" },
+    { day: 29, sales: 2, receipt: 0, onHand: 21, economic: 21, target: 19, decision: "Sales: 2 units", zone: "overstock" },
+    { day: 30, sales: 1, receipt: 0, onHand: 20, economic: 20, target: 19, decision: "Sales: 1 unit", zone: "overstock" },
   ];
 
   useEffect(() => {
@@ -341,20 +336,17 @@ export default function DBMExplainer() {
         {/* Interactive Animation */}
         <Card>
           <CardHeader>
-            <CardTitle>DBM in Action: 20-Day Simulation</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <div className="text-2xl font-bold">Day {currentState.day}</div>
-                <div className="flex items-center gap-2">
-                  <Badge className={getZoneColor(currentState.zone)}>
-                    {currentState.zone.toUpperCase()}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">{currentState.decision}</span>
-                </div>
-              </div>
+            <CardTitle className="flex items-center justify-between">
+              <span>DBM in Action: 30-Day Simulation</span>
               <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsPlaying(!isPlaying)}
+                >
+                  {isPlaying ? <PauseCircle className="w-4 h-4 mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />}
+                  {isPlaying ? "Pause" : "Play"}
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -363,229 +355,369 @@ export default function DBMExplainer() {
                     setIsPlaying(false);
                   }}
                 >
-                  <RotateCcw className="h-4 w-4" />
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Reset
                 </Button>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  disabled={animationDay >= simulationData.length - 1}
-                >
-                  {isPlaying ? <PauseCircle className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
-                  {isPlaying ? "Pause" : "Play"}
-                </Button>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-sm">
+              <strong>Simulation Parameters:</strong> 7-day lead time • Weekly ordering • Variable sales (15+ sales days) • 2 stockouts • Buffer increase on day 14 • Buffer decrease on day 28
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-sm">
+                <span className="font-medium">Day {currentState.day} of {simulationData.length - 1}</span>
+                <Badge className={getZoneColor(currentState.zone)}>
+                  {currentState.zone.toUpperCase()}
+                </Badge>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max={simulationData.length - 1}
+                value={animationDay}
+                onChange={(e) => setAnimationDay(parseInt(e.target.value))}
+                className="w-full"
+              />
+            </div>
+
+            {/* Current State Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-muted p-3 rounded-lg">
+                <div className="text-xs text-muted-foreground">On Hand</div>
+                <div className="text-2xl font-bold">{currentState.onHand.toFixed(0)}</div>
+              </div>
+              <div className="bg-muted p-3 rounded-lg">
+                <div className="text-xs text-muted-foreground">Target Buffer</div>
+                <div className="text-2xl font-bold text-green-500">{currentState.target}</div>
+              </div>
+              <div className="bg-muted p-3 rounded-lg">
+                <div className="text-xs text-muted-foreground">Economic Units</div>
+                <div className="text-2xl font-bold text-amber-500">{currentState.economic.toFixed(0)}</div>
+              </div>
+              <div className="bg-muted p-3 rounded-lg">
+                <div className="text-xs text-muted-foreground">Day Sales</div>
+                <div className="text-2xl font-bold text-orange-500">{currentState.sales}</div>
               </div>
             </div>
 
-            {/* Visual Representation - Sawtooth Chart */}
-            <div className="space-y-4">
-              <div className="relative h-96 border rounded-lg p-6 bg-muted/20">
-                <div className="absolute top-2 left-2 bg-background/90 border rounded-lg p-2 text-xs">
-                  <div className="font-bold mb-1">Lead-time = {leadTime} days</div>
-                </div>
+            {/* Decision */}
+            <div className="bg-primary/5 p-4 rounded-lg border border-primary/10">
+              <div className="text-sm font-semibold mb-1">📊 Decision:</div>
+              <div className="text-sm">{currentState.decision}</div>
+            </div>
 
-                {/* Legend */}
-                <div className="absolute top-2 right-2 bg-background/90 border rounded-lg p-2 text-xs space-y-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5 bg-red-600"></div>
-                    <span>On-hand</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5 border-t-2 border-green-600 border-dashed"></div>
-                    <span>Target</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-0.5 bg-orange-500"></div>
-                    <span>Economic Inventory</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-orange-400"></div>
-                    <span>Sales</span>
-                  </div>
-                </div>
-
+            {/* Visual Chart Area with Colored Zones */}
+            <div className="border rounded-lg p-6 bg-card">
+              <div className="relative h-96">
                 {/* Y-axis labels */}
-                <div className="absolute left-2 top-16 bottom-16 flex flex-col justify-between text-xs text-muted-foreground">
-                  {[12, 10, 8, 6, 4, 2, 0].map(val => (
-                    <div key={val}>{val}</div>
-                  ))}
+                <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-xs text-muted-foreground">
+                  <span>30</span>
+                  <span>25</span>
+                  <span>20</span>
+                  <span>15</span>
+                  <span>10</span>
+                  <span>5</span>
+                  <span>0</span>
                 </div>
 
-                {/* Chart area */}
-                <div className="ml-8 mt-8 h-[calc(100%-4rem)] relative">
+                {/* Chart container */}
+                <div className="ml-14 h-full relative border-l border-b border-border">
                   {/* Grid lines */}
-                  {[0, 1, 2, 3, 4, 5, 6].map(i => (
-                    <div 
+                  {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                    <div
                       key={i}
-                      className="absolute left-0 right-0 border-t border-muted"
-                      style={{ top: `${(i / 6) * 100}%` }}
+                      className="absolute left-0 right-0 border-t border-dashed border-border/30"
+                      style={{ bottom: `${(i / 6) * 100}%` }}
                     />
                   ))}
 
-                  {/* Target line (dashed green) */}
-                  <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-                    <line
-                      x1="0%"
-                      y1={`${100 - (currentState.target / 12) * 100}%`}
-                      x2="100%"
-                      y2={`${100 - (currentState.target / 12) * 100}%`}
-                      stroke="rgb(34, 197, 94)"
-                      strokeWidth="2"
-                      strokeDasharray="5,5"
-                    />
-                  </svg>
+                  {/* Day markers on X-axis */}
+                  <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-xs text-muted-foreground px-1">
+                    <span>0</span>
+                    <span>5</span>
+                    <span>10</span>
+                    <span>15</span>
+                    <span>20</span>
+                    <span>25</span>
+                    <span>30</span>
+                  </div>
 
-                  {/* Economic Inventory line (orange) */}
-                  <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-                    <polyline
-                      points={simulationData
-                        .slice(0, animationDay + 1)
-                        .map((d, i) => {
-                          const x = (i / (simulationData.length - 1)) * 100;
-                          const y = 100 - (d.economic / 12) * 100;
-                          return `${x}%,${y}%`;
-                        })
-                        .join(' ')}
-                      fill="none"
-                      stroke="rgb(249, 115, 22)"
-                      strokeWidth="2"
-                    />
-                  </svg>
+                  {/* Colored zone backgrounds - drawn dynamically per day */}
+                  {simulationData.slice(0, animationDay + 1).map((point, idx) => {
+                    const xPos = (idx / 30) * 100;
+                    const width = (1 / 30) * 100;
+                    const target = point.target;
+                    const yellow = Math.floor((target / 3) * 2);
+                    const red = Math.floor(target / 3);
 
-                  {/* On-Hand inventory line (red sawtooth) */}
-                  <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-                    <polyline
-                      points={simulationData
-                        .slice(0, animationDay + 1)
-                        .map((d, i) => {
-                          const x = (i / (simulationData.length - 1)) * 100;
-                          const y = 100 - (d.onHand / 12) * 100;
-                          return `${x}%,${y}%`;
-                        })
-                        .join(' ')}
-                      fill="none"
-                      stroke="rgb(220, 38, 38)"
-                      strokeWidth="2.5"
-                    />
-                    {/* Current point marker */}
-                    <circle
-                      cx={`${(animationDay / (simulationData.length - 1)) * 100}%`}
-                      cy={`${100 - (currentState.onHand / 12) * 100}%`}
-                      r="4"
-                      fill="rgb(220, 38, 38)"
-                    />
-                  </svg>
+                    return (
+                      <div key={`zones-${idx}`} className="absolute inset-0 pointer-events-none">
+                        {/* Overstock zone - above target */}
+                        <div
+                          className="absolute bg-blue-500/10"
+                          style={{
+                            left: `${xPos}%`,
+                            width: `${width}%`,
+                            bottom: `${(target / 30) * 100}%`,
+                            height: `${((30 - target) / 30) * 100}%`,
+                          }}
+                        />
+                        {/* Green zone */}
+                        <div
+                          className="absolute bg-green-500/10"
+                          style={{
+                            left: `${xPos}%`,
+                            width: `${width}%`,
+                            bottom: `${(yellow / 30) * 100}%`,
+                            height: `${((target - yellow) / 30) * 100}%`,
+                          }}
+                        />
+                        {/* Yellow zone */}
+                        <div
+                          className="absolute bg-yellow-500/10"
+                          style={{
+                            left: `${xPos}%`,
+                            width: `${width}%`,
+                            bottom: `${(red / 30) * 100}%`,
+                            height: `${((yellow - red) / 30) * 100}%`,
+                          }}
+                        />
+                        {/* Red zone */}
+                        <div
+                          className="absolute bg-red-500/10"
+                          style={{
+                            left: `${xPos}%`,
+                            width: `${width}%`,
+                            bottom: 0,
+                            height: `${(red / 30) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
 
-                  {/* Sales bars at the bottom */}
-                  {simulationData.slice(0, animationDay + 1).map((d, i) => 
-                    d.sales > 0 ? (
+                  {/* Target (Green) buffer line - dashed green */}
+                  {simulationData.slice(0, animationDay + 1).map((point, idx) => {
+                    if (idx === 0) return null;
+                    const prev = simulationData[idx - 1];
+                    const x1 = ((idx - 1) / 30) * 100;
+                    const x2 = (idx / 30) * 100;
+                    const y1 = (prev.target / 30) * 100;
+                    const y2 = (point.target / 30) * 100;
+
+                    return (
+                      <svg
+                        key={`target-${idx}`}
+                        className="absolute inset-0 w-full h-full pointer-events-none"
+                        style={{ overflow: 'visible' }}
+                      >
+                        <line
+                          x1={`${x1}%`}
+                          y1={`${100 - y1}%`}
+                          x2={`${x2}%`}
+                          y2={`${100 - y2}%`}
+                          stroke="rgb(34, 197, 94)"
+                          strokeWidth="2"
+                          strokeDasharray="5 5"
+                          opacity="0.8"
+                        />
+                      </svg>
+                    );
+                  })}
+
+                  {/* On Hand line - BLACK sawtooth */}
+                  {simulationData.slice(0, animationDay + 1).map((point, idx) => {
+                    if (idx === 0) return null;
+                    const prev = simulationData[idx - 1];
+                    const x1 = ((idx - 1) / 30) * 100;
+                    const x2 = (idx / 30) * 100;
+                    const y1 = (prev.onHand / 30) * 100;
+                    const y2 = (point.onHand / 30) * 100;
+
+                    return (
+                      <svg
+                        key={`onhand-${idx}`}
+                        className="absolute inset-0 w-full h-full pointer-events-none"
+                        style={{ overflow: 'visible' }}
+                      >
+                        <line
+                          x1={`${x1}%`}
+                          y1={`${100 - y1}%`}
+                          x2={`${x2}%`}
+                          y2={`${100 - y2}%`}
+                          stroke="rgb(0, 0, 0)"
+                          strokeWidth="3"
+                        />
+                      </svg>
+                    );
+                  })}
+
+                  {/* Receipt indicators - vertical green arrows */}
+                  {simulationData.slice(0, animationDay + 1).map((point, idx) => {
+                    if (point.receipt === 0 || idx === 0) return null;
+                    const x = (idx / 30) * 100;
+                    const yStart = (simulationData[idx - 1]?.onHand || 0) / 30 * 100;
+                    const yEnd = (point.onHand / 30) * 100;
+
+                    return (
                       <div
-                        key={i}
-                        className="absolute bg-orange-400"
+                        key={`receipt-${idx}`}
+                        className="absolute w-1 bg-green-600"
                         style={{
-                          left: `${(i / (simulationData.length - 1)) * 100}%`,
-                          bottom: 0,
-                          width: '2px',
-                          height: `${(d.sales / 1) * 30}px`,
-                          transform: 'translateX(-1px)'
+                          left: `${x}%`,
+                          bottom: `${yStart}%`,
+                          height: `${yEnd - yStart}%`,
                         }}
                       />
-                    ) : null
-                  )}
-                </div>
+                    );
+                  })}
 
-                {/* X-axis */}
-                <div className="absolute bottom-2 left-8 right-2 flex justify-between text-xs text-muted-foreground">
-                  <span>Day 0</span>
-                  <span>Day {Math.floor(simulationData.length / 2)}</span>
-                  <span>Day {simulationData.length - 1}</span>
+                  {/* Stockout indicators */}
+                  {simulationData.slice(0, animationDay + 1).map((point, idx) => {
+                    if (point.onHand > 0) return null;
+                    const x = (idx / 30) * 100;
+
+                    return (
+                      <div
+                        key={`stockout-${idx}`}
+                        className="absolute bottom-0 flex items-center justify-center"
+                        style={{
+                          left: `${x}%`,
+                          transform: 'translateX(-50%)',
+                        }}
+                      >
+                        <div className="text-2xl">⚠️</div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-5 gap-4">
-                <div className="text-center p-3 bg-muted rounded-lg">
-                  <div className="text-2xl font-bold">{currentState.sales.toFixed(1)}</div>
-                  <div className="text-xs text-muted-foreground">Sales</div>
+              {/* Legend */}
+              <div className="flex flex-wrap gap-4 mt-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-0.5 bg-black" style={{ height: '3px' }} />
+                  <span>On Hand Inventory (Black)</span>
                 </div>
-                <div className="text-center p-3 bg-muted rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{currentState.receipt}</div>
-                  <div className="text-xs text-muted-foreground">Receipt</div>
+                <div className="flex items-center gap-2">
+                  <svg width="24" height="12" className="opacity-80">
+                    <line x1="0" y1="6" x2="24" y2="6" stroke="rgb(34, 197, 94)" strokeWidth="2" strokeDasharray="5 5" />
+                  </svg>
+                  <span>Target Buffer (Green)</span>
                 </div>
-                <div className="text-center p-3 bg-muted rounded-lg">
-                  <div className="text-2xl font-bold text-red-600">{currentState.onHand.toFixed(1)}</div>
-                  <div className="text-xs text-muted-foreground">On-Hand</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-600" />
+                  <span>Receipt</span>
                 </div>
-                <div className="text-center p-3 bg-muted rounded-lg">
-                  <div className="text-2xl font-bold text-orange-500">{currentState.economic.toFixed(1)}</div>
-                  <div className="text-xs text-muted-foreground">Economic</div>
-                </div>
-                <div className="text-center p-3 bg-muted rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">{currentState.target}</div>
-                  <div className="text-xs text-muted-foreground">Target</div>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2 text-sm bg-primary/5 border border-primary/20 rounded-lg p-3">
-                <div className="text-primary font-semibold">ℹ</div>
-                <div>
-                  <strong>Sawtooth Pattern:</strong> On-hand inventory (red line) decreases gradually with daily sales, 
-                  then jumps up sharply when receipts arrive. Economic inventory (orange line) includes on-hand plus on-order. 
-                  The target (green dashed line) represents the optimal buffer level. Lead-time variance is shown when receipts 
-                  arrive earlier or later than expected.
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">⚠️</span>
+                  <span>Stockout</span>
                 </div>
               </div>
             </div>
 
-            <Button 
-              variant="outline" 
-              className="w-full"
+            {/* Zone Visualization */}
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm">Current Zone Boundaries (Dynamic)</h4>
+              <div className="relative h-32 border rounded-lg overflow-hidden bg-muted/20">
+                {/* Overstock zone */}
+                <div 
+                  className="absolute left-0 right-0 bg-blue-500/20 border-b-2 border-blue-500 flex items-center justify-center text-xs font-medium"
+                  style={{ 
+                    top: 0,
+                    height: `${Math.max(15, (1 - currentState.target / 30) * 100)}%`
+                  }}
+                >
+                  Overstock (&gt; {currentState.target})
+                </div>
+                {/* Green zone */}
+                <div 
+                  className="absolute left-0 right-0 bg-green-500/20 border-b-2 border-green-500 flex items-center justify-center text-xs font-medium"
+                  style={{ 
+                    top: `${Math.max(15, (1 - currentState.target / 30) * 100)}%`,
+                    height: `${((currentState.target - yellow) / 30) * 100}%`
+                  }}
+                >
+                  Green ({yellow + 1} to {currentState.target})
+                </div>
+                {/* Yellow zone */}
+                <div 
+                  className="absolute left-0 right-0 bg-yellow-500/20 border-b-2 border-yellow-500 flex items-center justify-center text-xs font-medium"
+                  style={{ 
+                    top: `${Math.max(15, (1 - currentState.target / 30) * 100) + ((currentState.target - yellow) / 30) * 100}%`,
+                    height: `${((yellow - red) / 30) * 100}%`
+                  }}
+                >
+                  Yellow ({red + 1} to {yellow})
+                </div>
+                {/* Red zone */}
+                <div 
+                  className="absolute left-0 right-0 bottom-0 bg-red-500/20 border-b-2 border-red-500 flex items-center justify-center text-xs font-medium"
+                  style={{ 
+                    height: `${(red / 30) * 100}%`
+                  }}
+                >
+                  Red (0 to {red})
+                </div>
+                {/* Current position indicator */}
+                <div 
+                  className="absolute left-0 right-0 h-1 bg-black transition-all duration-300 z-10"
+                  style={{ 
+                    bottom: `${(currentState.onHand / 30) * 100}%`
+                  }}
+                >
+                  <div className="absolute left-1/2 -translate-x-1/2 -top-2 w-4 h-4 bg-black rounded-full border-2 border-white" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                Black indicator shows current on-hand position within dynamic zones
+              </p>
+            </div>
+
+            {/* Show detailed table */}
+            <Button
+              variant="outline"
               onClick={() => setShowDetails(!showDetails)}
+              className="w-full"
             >
-              {showDetails ? "Hide" : "Show"} Detailed Timeline
+              {showDetails ? "Hide" : "Show"} Detailed Data Table
             </Button>
 
             {showDetails && (
-              <div className="border rounded-lg overflow-hidden">
-                <div className="max-h-96 overflow-y-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted sticky top-0">
-                      <tr>
-                        <th className="p-2 text-left">Day</th>
-                        <th className="p-2 text-right">Sales</th>
-                        <th className="p-2 text-right">Receipt</th>
-                        <th className="p-2 text-right">On-Hand</th>
-                        <th className="p-2 text-right">Economic</th>
-                        <th className="p-2 text-right">Target</th>
-                        <th className="p-2 text-center">Zone</th>
-                        <th className="p-2 text-left">Decision</th>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border">
+                  <thead>
+                    <tr className="bg-muted">
+                      <th className="p-2 border">Day</th>
+                      <th className="p-2 border">Sales</th>
+                      <th className="p-2 border">Receipt</th>
+                      <th className="p-2 border">On Hand</th>
+                      <th className="p-2 border">Target</th>
+                      <th className="p-2 border">Economic</th>
+                      <th className="p-2 border">Zone</th>
+                      <th className="p-2 border">Decision</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {simulationData.slice(0, animationDay + 1).map((data) => (
+                      <tr key={data.day} className={data.day === animationDay ? "bg-primary/10 font-semibold" : ""}>
+                        <td className="p-2 border text-center">{data.day}</td>
+                        <td className="p-2 border text-center">{data.sales}</td>
+                        <td className="p-2 border text-center">{data.receipt}</td>
+                        <td className="p-2 border text-center font-mono">{data.onHand}</td>
+                        <td className="p-2 border text-center font-mono">{data.target}</td>
+                        <td className="p-2 border text-center font-mono">{data.economic}</td>
+                        <td className="p-2 border text-center">
+                          <Badge className={getZoneColor(data.zone)}>{data.zone}</Badge>
+                        </td>
+                        <td className="p-2 border text-sm">{data.decision}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {simulationData.map((day, idx) => (
-                        <tr 
-                          key={idx} 
-                          className={`border-t ${idx === animationDay ? 'bg-primary/10' : ''}`}
-                        >
-                          <td className="p-2">{day.day}</td>
-                          <td className="p-2 text-right">{day.sales.toFixed(1)}</td>
-                          <td className="p-2 text-right font-bold text-blue-600">
-                            {day.receipt > 0 ? `+${day.receipt}` : '-'}
-                          </td>
-                          <td className="p-2 text-right font-mono text-red-600">{day.onHand.toFixed(1)}</td>
-                          <td className="p-2 text-right font-mono text-orange-500">{day.economic.toFixed(1)}</td>
-                          <td className="p-2 text-right font-mono text-green-600">{day.target}</td>
-                          <td className="p-2 text-center">
-                            <Badge className={`${getZoneColor(day.zone)} text-xs`}>
-                              {day.zone}
-                            </Badge>
-                          </td>
-                          <td className="p-2 text-xs">{day.decision}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
