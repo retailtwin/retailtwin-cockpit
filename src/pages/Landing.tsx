@@ -114,7 +114,7 @@ const Landing = () => {
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                   <Layers className="h-6 w-6 text-primary" />
                 </div>
-                <CardDescription className="text-base leading-relaxed">At Retail Twin Labs, we combine decades of experience in Footwear, Apparel and Sporting Goods, with deep SaaS knowledge and AI, to deliver key insights and simple workflows. Your data, your rules, your tools.</CardDescription>
+                <CardDescription className="text-base leading-relaxed">At Retail Twin Labs, we combine decades of experience in merchandise planning and distribution for Footwear, Apparel and Sporting Goods, with deep SaaS knowledge and AI, to deliver critical insights and simple workflows. Your data, your rules, your tools.</CardDescription>
               </CardHeader>
             </Card>
 
@@ -125,8 +125,8 @@ const Landing = () => {
                   <div className="h-12 w-12 rounded-2xl bg-accent/10 flex items-center justify-center mb-6">
                     <TrendingUp className="h-6 w-6 text-accent" />
                   </div>
-                  <CardTitle className="text-xl mb-4">From the founder: Lessons from Retailisation </CardTitle>
-                  <CardDescription className="text-base leading-relaxed">At Retailisation, my SaaS company, I learned that order automation is only effective when internal rules and metrics strictly govern flow. At Retail Twin Labs, we help you focus on these rules and metrics, and use AI agents to explain how lead-times and minimum order quantities impact flow.</CardDescription>
+                  <CardTitle className="text-xl mb-4">From the founder: Jasper Zeelenberg</CardTitle>
+                  <CardDescription className="text-base leading-relaxed">Order automation is only as effective as the internal rules and metrics that govern flow. At Retail Twin Labs, we help you focus on these rules and metrics for good automation, and use AI agents to explain how lead-times and minimum order quantities impact flow.</CardDescription>
                 </CardHeader>
               </Card>
 
@@ -136,7 +136,7 @@ const Landing = () => {
                     <Brain className="h-6 w-6 text-primary" />
                   </div>
                   <CardTitle className="text-xl mb-4">AI That Understands Your Business</CardTitle>
-                  <CardDescription className="text-base leading-relaxed">Our AI agents don't just process data—they understand the nuances of your supply chain. Order frequency, pack sizes—we model the real-world factors that impact flow, so you can make decisions with confidence.</CardDescription>
+                  <CardDescription className="text-base leading-relaxed">Our AI agents don't just process data—they understand the nuances of your supply chain down to the level of SKU and Location. Order frequency, pack sizes—we model the real-world factors that impact flow, so you can automate decisions with confidence.</CardDescription>
                 </CardHeader>
               </Card>
             </div>
