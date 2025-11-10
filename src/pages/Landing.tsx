@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, Target, Zap, Mail, Layers, TrendingUp, Brain, Gauge } from "lucide-react";
 import { Layout } from "@/components/Layout";
+import { FloatingContactButton } from "@/components/FloatingContactButton";
 import retailCycleImage from "@/assets/retail-cycle.png";
 import retailTwinIcon from "@/assets/retail-twin-icon.png";
 import dashboardPreview from "@/assets/dashboard-preview.png";
@@ -11,6 +12,7 @@ import archieLogo from "@/assets/archie-logo.png";
 import zefyrLogo from "@/assets/zefyr-logo.jpeg";
 const Landing = () => {
   return <Layout>
+      <FloatingContactButton />
       {/* Hero Section with Background */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
@@ -38,7 +40,7 @@ const Landing = () => {
               <a href="mailto:hello@retailtwin.com">
                 <Button size="lg" variant="secondary" className="text-lg px-10 shadow-lg">
                   <Mail className="mr-2 h-5 w-5" />
-                  Talk to Retail Twin
+                  Talk to Us
                 </Button>
               </a>
             </div>
@@ -243,8 +245,9 @@ const Landing = () => {
                 </Button>
               </a>
               <a href="mailto:hello@retailtwin.com">
-                <Button size="lg" variant="secondary" className="text-lg px-10 shadow-lg">Contact Retail Twin Labs<Mail className="mr-2 h-5 w-5" />
-                  Contact Retail Twin
+                <Button size="lg" variant="secondary" className="text-lg px-10 shadow-lg">
+                  <Mail className="mr-2 h-5 w-5" />
+                  Talk to Us
                 </Button>
               </a>
             </div>
