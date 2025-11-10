@@ -506,7 +506,7 @@ export default function DBMExplainer() {
                       +{roiImprovement.toFixed(1)}% profit improvement
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Sales ↑{salesIndex.daily.toFixed(0)}% / Inv ↓{(100 - inventoryIndex.daily).toFixed(0)}%
+                      Sales ↑{(salesIndex.daily - 100).toFixed(1)}% / Inv ↓{(100 - inventoryIndex.daily).toFixed(0)}%
                     </div>
                   </div>
                 </div>
