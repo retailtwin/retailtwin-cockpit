@@ -127,7 +127,7 @@ const Landing = () => {
                     <TrendingUp className="h-6 w-6 text-accent" />
                   </div>
                   <CardTitle className="text-xl mb-4">From the founder: Lessons from Retailisation </CardTitle>
-                  <CardDescription className="text-base leading-relaxed">At Retailisation, my previous SaaS company, I learned that effective order automation is only possible when internal rules and metrics strictly govern flow. Hence at Retail Twin Labs, we focus on these rules and metrics, with AI agents that understand and explain lead-times and minimum order quantities, and their impacts on flow.</CardDescription>
+                  <CardDescription className="text-base leading-relaxed">At Retailisation, my previous company, I learned that effective order automation is only possible when internal rules and metrics strictly govern flow. Hence at Retail Twin Labs, we focus on these rules and metrics, with AI agents that understand and explain lead-times and minimum order quantities, and their impacts on flow.</CardDescription>
                 </CardHeader>
               </Card>
 
@@ -149,9 +149,7 @@ const Landing = () => {
                   <Gauge className="h-6 w-6 text-primary" />
                 </div>
                 <CardTitle className="text-2xl mb-4">Your Cockpit</CardTitle>
-                <CardDescription className="text-base leading-relaxed">
-                  Using your data and your rules, we build simple cockpits from where you control the flow. Humanly designed steps guide you toward the goal: increasing sales and turns through better service levels, real insights, and a much quicker supply chain.
-                </CardDescription>
+                <CardDescription className="text-base leading-relaxed">Using your data and your rules, we build intuitive cockpits from where you control the flow. Simple steps guide you toward the goal: increasing sales and turns through better service levels, real insights, and a much quicker supply chain.</CardDescription>
               </CardHeader>
             </Card>
 
