@@ -1,10 +1,10 @@
 project_id = "zgsrbhfazvgtqbpkhabg"
 
 [functions.import-fact-daily]
-verify_jwt = false
+verify_jwt = true
 
 [functions.archie-chat]
-verify_jwt = false
+verify_jwt = true
 
 [functions.dbm-calculator]
-verify_jwt = false
+verify_jwt = true

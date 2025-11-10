@@ -26,7 +26,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
-import { runDbmSimulation } from "@/lib/dbm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Dashboard = () => {
@@ -211,7 +210,16 @@ const Dashboard = () => {
       }
 
       // Call the dbm-calculator Edge Function
-      const result = await runDbmSimulation(rawData);
+      const { data: result, error: calcError } = await supabase.functions.invoke('dbm-calculator', {
+        body: {
+          location_code: selectedLocation,
+          sku: selectedProduct,
+          start_date: startDate,
+          end_date: endDate
+        }
+      });
+
+      if (calcError) throw calcError;
 
       setSimulationResult(result);
 

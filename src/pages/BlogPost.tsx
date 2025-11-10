@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Calendar, Clock, ArrowLeft, Share2 } from "lucide-react";
 import { format } from "date-fns";
+import DOMPurify from "dompurify";
 
 interface Blog {
   id: string;
@@ -114,6 +115,13 @@ export default function BlogPost() {
   }
 
   const readTime = calculateReadTime(blog.content);
+  
+  // Sanitize blog content to prevent XSS attacks
+  const sanitizedContent = DOMPurify.sanitize(blog.content, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'blockquote', 'code', 'pre', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'title', 'class'],
+    ALLOW_DATA_ATTR: false,
+  });
 
   return (
     <Layout>
@@ -178,10 +186,10 @@ export default function BlogPost() {
             </Button>
           </header>
 
-          {/* Content */}
+          {/* Content - Now sanitized with DOMPurify */}
           <div 
             className="prose prose-lg max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg"
-            dangerouslySetInnerHTML={{ __html: blog.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
           />
 
           {/* Footer */}
