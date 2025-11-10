@@ -20,7 +20,9 @@ const Landing = () => {
               Increase Throughput and Turns with{" "}
               <span className="text-primary">AI-guided inventory flow</span>
             </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">Tune your supply to Flow: Find and automate good rules, and maximize cash velocity.</p>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Tune your supply to Flow: find bottlenecks, automate good rules, and maximize cash velocity.
+            </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/login">
                 <Button size="lg" className="text-lg px-10 shadow-lg">
