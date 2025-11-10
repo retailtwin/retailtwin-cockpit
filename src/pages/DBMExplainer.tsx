@@ -53,39 +53,36 @@ export default function DBMExplainer() {
   ];
 
   // Daily replenishment simulation: same demand pattern but no stockouts
+  // Show inventory after sales (low point) to demonstrate daily dynamics
+  let dailyOnHand = 10;
   const dailySimulationData = [
-    { day: 0, sales: 0, demand: 0, receipt: 0, onHand: 10, economic: 10, target: 10, decision: "Initial state", zone: "green" },
-    { day: 1, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 2, sales: 2, demand: 2, receipt: 2, onHand: 10, economic: 10, target: 10, decision: "Sales: 2, Receipt: 2", zone: "green" },
-    { day: 3, sales: 4, demand: 4, receipt: 4, onHand: 10, economic: 10, target: 10, decision: "Sales: 4, Receipt: 4", zone: "green" },
-    { day: 4, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 5, sales: 2, demand: 2, receipt: 2, onHand: 10, economic: 10, target: 10, decision: "Sales: 2, Receipt: 2", zone: "green" },
-    { day: 6, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 7, sales: 4, demand: 4, receipt: 4, onHand: 10, economic: 10, target: 10, decision: "Sales: 4, Receipt: 4", zone: "green" },
-    { day: 8, sales: 5, demand: 5, receipt: 5, onHand: 10, economic: 10, target: 10, decision: "Sales: 5, Receipt: 5", zone: "green" },
-    { day: 9, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 10, sales: 4, demand: 4, receipt: 4, onHand: 10, economic: 10, target: 10, decision: "Sales: 4, Receipt: 4", zone: "green" },
-    { day: 11, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 12, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 13, sales: 2, demand: 2, receipt: 2, onHand: 10, economic: 10, target: 10, decision: "Sales: 2, Receipt: 2", zone: "green" },
-    { day: 14, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 15, sales: 4, demand: 4, receipt: 4, onHand: 10, economic: 10, target: 10, decision: "Sales: 4, Receipt: 4", zone: "green" },
-    { day: 16, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 17, sales: 2, demand: 2, receipt: 2, onHand: 10, economic: 10, target: 10, decision: "Sales: 2, Receipt: 2", zone: "green" },
-    { day: 18, sales: 3, demand: 3, receipt: 3, onHand: 10, economic: 10, target: 10, decision: "Sales: 3, Receipt: 3", zone: "green" },
-    { day: 19, sales: 4, demand: 4, receipt: 4, onHand: 10, economic: 10, target: 10, decision: "Sales: 4, Receipt: 4", zone: "green" },
-    { day: 20, sales: 5, demand: 5, receipt: 5, onHand: 10, economic: 10, target: 10, decision: "Sales: 5, Receipt: 5", zone: "green" },
-    { day: 21, sales: 4, demand: 4, receipt: 4, onHand: 10, economic: 10, target: 10, decision: "Sales: 4, Receipt: 4", zone: "green" },
-    { day: 22, sales: 0, demand: 0, receipt: 0, onHand: 10, economic: 10, target: 10, decision: "No activity", zone: "green" },
-    { day: 23, sales: 1, demand: 1, receipt: 1, onHand: 10, economic: 10, target: 10, decision: "Sales: 1, Receipt: 1", zone: "green" },
-    { day: 24, sales: 1, demand: 1, receipt: 1, onHand: 10, economic: 10, target: 10, decision: "Sales: 1, Receipt: 1", zone: "green" },
-    { day: 25, sales: 0, demand: 0, receipt: 0, onHand: 10, economic: 10, target: 10, decision: "No activity", zone: "green" },
-    { day: 26, sales: 2, demand: 2, receipt: 2, onHand: 10, economic: 10, target: 10, decision: "Sales: 2, Receipt: 2", zone: "green" },
-    { day: 27, sales: 1, demand: 1, receipt: 1, onHand: 10, economic: 10, target: 10, decision: "Sales: 1, Receipt: 1", zone: "green" },
-    { day: 28, sales: 0, demand: 0, receipt: 0, onHand: 10, economic: 10, target: 10, decision: "No activity", zone: "green" },
-    { day: 29, sales: 2, demand: 2, receipt: 2, onHand: 10, economic: 10, target: 10, decision: "Sales: 2, Receipt: 2", zone: "green" },
-    { day: 30, sales: 1, demand: 1, receipt: 1, onHand: 10, economic: 10, target: 10, decision: "Sales: 1, Receipt: 1", zone: "green" },
+    { day: 0, sales: 0, demand: 0, receipt: 0, onHand: dailyOnHand, economic: 10, target: 10, decision: "Initial state", zone: "green" },
   ];
+
+  // Generate daily replenishment data matching weekly demand but with daily receipts
+  const dailyDemandPattern = weeklySimulationData.slice(1).map(d => ({ sales: d.demand, demand: d.demand }));
+  
+  dailyDemandPattern.forEach((d, idx) => {
+    const dayNum = idx + 1;
+    // Show inventory after sales but before receipt (the low point of the day)
+    // This demonstrates the daily dynamics while maintaining overall stability
+    const lowPoint = Math.max(0, dailyOnHand - d.sales);
+    
+    dailySimulationData.push({
+      day: dayNum,
+      sales: d.sales,
+      demand: d.demand,
+      receipt: d.sales,
+      onHand: lowPoint, // Show the low point after sales, before receipt
+      economic: 10,
+      target: 10,
+      decision: d.sales > 0 ? `Sales: ${d.sales}, Receipt: ${d.sales}` : "No activity",
+      zone: "green"
+    });
+    
+    // Reset to target after receipt (for next day's calculation)
+    dailyOnHand = 10;
+  });
 
   const simulationData = replenishmentMode === "weekly" ? weeklySimulationData : dailySimulationData;
 
