@@ -200,7 +200,7 @@ export const ArchieChatDock = ({ onClose, kpiContext, preloadedPrompt }: ArchieC
   if (!isOpen) return null;
 
   return (
-    <div className="fixed right-0 top-0 h-full w-96 transition-all duration-300 z-40">
+    <div className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-96 transition-all duration-300 z-[60]">
       <Card className="h-full rounded-none border-l shadow-2xl bg-card">
         <CardHeader className="border-b relative bg-gradient-to-r from-primary/10 to-primary/5">
           <Button
