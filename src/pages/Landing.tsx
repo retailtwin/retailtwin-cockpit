@@ -28,7 +28,7 @@ const Landing = () => {
               <img src={archieLogo} alt="Archie Logo" className="w-16 h-auto mt-1 mb-auto flex-shrink-0" />
               <p className="text-xl text-muted-foreground text-left">Deployed in your environment, Archie enforces and improves the rules and metrics that drive supply performance — ensuring better decisions with none of the SaaS complexity.</p>
             </div>
-            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">In slow moving consumer goods, flow runs on rules — not forecasts — and SKU-responsiveness comes from dynamic buffers, not from predicted demand. Our AI applies your rules — orders to the buffer, keeps lead times short and reliable, and tracks the 'speed to cash' for every SKU — to sustain service levels and turns - without the SaaS complexity.</p>
+            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">For many slow moving consumer goods, flow runs on rules — not forecasts — and SKU-responsiveness comes from dynamic buffers, not from predicted demand. Our AI applies your rules — orders to the buffer, keeps lead times short and reliable, and tracks the 'speed to cash' for every SKU — to sustain service levels and turns - without the SaaS complexity.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/login">
                 <Button size="lg" className="text-lg px-10 shadow-lg">
@@ -114,7 +114,7 @@ const Landing = () => {
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                   <Layers className="h-6 w-6 text-primary" />
                 </div>
-                <CardDescription className="text-base leading-relaxed">At Retail Twin Labs, we combine decades of experience in merchandise planning and distribution for Footwear, Apparel and Sporting Goods, with deep SaaS knowledge and AI, to deliver critical insights and simple workflows. Your data, your rules, your tools.</CardDescription>
+                <CardDescription className="text-base leading-relaxed">At Retail Twin Labs, we combine decades of experience in merchandise planning and distribution for Footwear, Apparel and Sporting Goods with deep SaaS knowledge and AI, to deliver critical insights and simple workflows. Your data, your rules, your tools.</CardDescription>
               </CardHeader>
             </Card>
 
@@ -245,8 +245,7 @@ const Landing = () => {
                 </Button>
               </a>
               <a href="mailto:hello@retailtwin.com">
-                <Button size="lg" variant="secondary" className="text-lg px-10 shadow-lg">
-                  <Mail className="mr-2 h-5 w-5" />
+                <Button size="lg" variant="secondary" className="text-lg px-10 shadow-lg">Contact Retail Twin Labs<Mail className="mr-2 h-5 w-5" />
                   Contact Retail Twin
                 </Button>
               </a>
