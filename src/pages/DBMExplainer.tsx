@@ -620,8 +620,8 @@ export default function DBMExplainer() {
                     <span>30</span>
                   </div>
 
-                  {/* Colored zone backgrounds - drawn dynamically per day (only for weekly mode) */}
-                  {replenishmentMode === "weekly" && simulationData.slice(0, animationDay + 1).map((point, idx) => {
+                  {/* Colored zone backgrounds - drawn dynamically per day */}
+                  {simulationData.slice(0, animationDay + 1).map((point, idx) => {
                     const xPos = (idx / 30) * 100;
                     const width = (1 / 30) * 100;
                     const target = point.target;
