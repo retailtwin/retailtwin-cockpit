@@ -225,22 +225,19 @@ const Landing = () => {
             {/* Announcement Card */}
             <Card className="shadow-xl border-none bg-gradient-to-br from-card to-card/50">
               <CardHeader>
-                <CardTitle className="text-2xl mb-6">Jasper Zeelenberg Joins Zefyr Solutions</CardTitle>
+                <CardTitle className="text-2xl mb-6">Joining Zefyr Solutions</CardTitle>
                 <CardDescription className="text-base leading-relaxed space-y-4">
                   <p>
-                    Continuing our string of incredible additions to our team, Zefyr Solutions is proud to announce that Jasper Zeelenberg joins us as our Director - Responsive Retail Supply Chains, based in Amsterdam, The Netherlands.
+                    I'm excited to announce that I've joined Zefyr Solutions as Director - Responsive Retail Supply Chains, based in Amsterdam, The Netherlands.
                   </p>
                   <p>
-                    Jasper joins us with 30+ years of retail leadership across EMEA and a proven record as a SaaS founder. Having led retailing teams at scale and founded technology solutions that enable smarter, faster decisions, Jasper brings a unique combination of strategic insight and operational know-how. He excels at connecting supply chain planning to real-world retail performance, helping businesses unlock value and free cash for top and bottom-line results.
+                    I bring 30+ years of retail leadership across EMEA and a proven record as a SaaS founder. Having led retailing teams at scale and founded technology solutions that enable smarter, faster decisions, I offer a unique combination of strategic insight and operational know-how. I excel at connecting supply chain planning to real-world retail performance, helping businesses unlock value and free cash for top and bottom-line results.
                   </p>
                   <p>
-                    We are excited to have Jasper on board as Zefyr extends beyond our team's deep expertise in Footwear and Apparel product management, product creation, sourcing, logistics, and innovation with his market-facing, retail-driven perspective.
-                  </p>
-                  <p className="font-semibold">
-                    Please join us in welcoming Jasper to Zefyr!
+                    I'm thrilled to join Zefyr as the team extends beyond their deep expertise in Footwear and Apparel product management, product creation, sourcing, logistics, and innovation with my market-facing, retail-driven perspective.
                   </p>
                   <p>
-                    Contact us to learn how he can help strengthen the link between your supply chain and your retail success.
+                    Contact me to learn how I can help strengthen the link between your supply chain and your retail success.
                   </p>
                 </CardDescription>
               </CardHeader>
