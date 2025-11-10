@@ -20,7 +20,7 @@ const About = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-muted-foreground">We help retailers find and remove bottlenecks that limit cash flow and throughput.</p>
-                <p className="text-muted-foreground">We use the learnings from Theory of Constraints (TOC), and many years of experience in Footwear, Apparel and SaaS to focus on maximizing Throughput while minimizing inventory and operating expenses.<strong>Theory of Constraints (TOC)</strong> learnings, 
+                <p className="text-muted-foreground">We use the learnings from Theory of Constraints (TOC), and many years of experience in Footwear, Apparel and SaaS to focus on maximizing Throughput while minimizing inventory and operating expenses.<strong>Theory of Constraints (TOC)</strong> learnings, 
                   and many years of experience in Footwear, Apparel and SaaS to focus on maximizing{" "}
                   <strong>Throughput</strong> (revenue minus truly variable
                   costs) while minimizing inventory and operating expenses.
@@ -93,14 +93,6 @@ const About = () => {
                   </ul>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-primary/10 to-secondary/10 border-none shadow-xl">
-            <CardContent className="p-8">
-              <h2 className="text-2xl font-bold mb-4">Consultancy</h2>
-              <p className="text-muted-foreground mb-4">As founder, I partner with retail supply chain leaders to implement TOC and DBM methodologies that deliver measurable improvements in throughput, turns, and service levels.</p>
-              <p className="text-muted-foreground">I use TOC principles and AI to visualize key insights, test scenarios, and give you the tools you need to make and sustain the changes that accelerate flow.</p>
             </CardContent>
           </Card>
         </div>
