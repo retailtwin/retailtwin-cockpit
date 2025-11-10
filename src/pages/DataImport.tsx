@@ -27,9 +27,12 @@ export default function DataImport() {
 
   const downloadTemplate = (type: ImportType) => {
     const link = document.createElement('a');
-    link.href = `/templates/${type}_template.csv`;
+    link.href = `${window.location.origin}/templates/${type}_template.csv`;
     link.download = `${type}_template.csv`;
+    link.target = '_blank';
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   };
 
   const handleImport = async (type: ImportType) => {
