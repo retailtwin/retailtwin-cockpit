@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Bot } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import archieLogo from "@/assets/archie-logo.png";
 import {
   Tooltip,
   TooltipContent,
@@ -28,9 +28,12 @@ export const ArchieFloatingButton = ({
           <Button
             onClick={onClick}
             size="lg"
-            className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 z-50 bg-primary hover:bg-primary/90"
+            className="fixed bottom-6 right-6 h-14 px-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 z-50 bg-primary hover:bg-primary/90"
           >
-            <Bot className="h-6 w-6" />
+            <div className="flex items-center gap-2">
+              <img src={archieLogo} alt="Archie" className="h-6 w-6 rounded-full object-cover" />
+              <span className="font-medium">AI Assistant</span>
+            </div>
             {notificationCount > 0 && (
               <Badge 
                 variant="destructive" 
