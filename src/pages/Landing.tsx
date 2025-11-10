@@ -228,16 +228,16 @@ const Landing = () => {
                 <CardTitle className="text-2xl mb-6">Joining Zefyr Solutions</CardTitle>
                 <CardDescription className="text-base leading-relaxed space-y-4">
                   <p>
-                    I'm excited to announce that I've joined Zefyr Solutions as Director - Responsive Retail Supply Chains, based in Amsterdam, The Netherlands.
+                    I've recently joined Zefyr Solutions as Director - Responsive Retail Supply Chains, based in Amsterdam, The Netherlands.
                   </p>
                   <p>
-                    I bring 30+ years of retail leadership across EMEA and a proven record as a SaaS founder. Having led retailing teams at scale and founded technology solutions that enable smarter, faster decisions, I offer a unique combination of strategic insight and operational know-how. I excel at connecting supply chain planning to real-world retail performance, helping businesses unlock value and free cash for top and bottom-line results.
+                    With 30+ years of retail leadership across EMEA and experience as a SaaS founder, I focus on connecting supply chain planning to real-world retail performance. My background includes leading retailing teams at scale and building technology solutions that enable faster, more informed decisions.
                   </p>
                   <p>
-                    I'm thrilled to join Zefyr as the team extends beyond their deep expertise in Footwear and Apparel product management, product creation, sourcing, logistics, and innovation with my market-facing, retail-driven perspective.
+                    At Zefyr, I complement the team's deep expertise in Footwear and Apparel with a market-facing, retail-driven perspective—helping businesses identify opportunities to improve flow and free up working capital.
                   </p>
                   <p>
-                    Contact me to learn how I can help strengthen the link between your supply chain and your retail success.
+                    Reach out if you'd like to discuss how to strengthen the link between your supply chain and retail performance.
                   </p>
                 </CardDescription>
               </CardHeader>
