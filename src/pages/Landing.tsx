@@ -8,6 +8,7 @@ import retailTwinIcon from "@/assets/retail-twin-icon.png";
 import dashboardPreview from "@/assets/dashboard-preview.png";
 import archieChatPreview from "@/assets/archie-chat-preview.png";
 import archieLogo from "@/assets/archie-logo.png";
+import zefyrLogo from "@/assets/zefyr-logo.jpeg";
 const Landing = () => {
   return <Layout>
       {/* Hero Section with Background */}
@@ -202,6 +203,62 @@ const Landing = () => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Consultancy Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-secondary/5 via-background to-accent/5 py-20">
+        <div className="container mx-auto px-6">
+          <div className="max-w-5xl mx-auto space-y-12">
+            {/* Section Header */}
+            <div className="text-center space-y-6">
+              <div className="flex justify-center mb-4">
+                <img src={zefyrLogo} alt="Zefyr Solutions" className="h-24 w-auto" />
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+                Consultancy Partnership
+              </h2>
+            </div>
+
+            {/* Announcement Card */}
+            <Card className="shadow-xl border-none bg-gradient-to-br from-card to-card/50">
+              <CardHeader>
+                <CardTitle className="text-2xl mb-6">Jasper Zeelenberg Joins Zefyr Solutions</CardTitle>
+                <CardDescription className="text-base leading-relaxed space-y-4">
+                  <p>
+                    Continuing our string of incredible additions to our team, Zefyr Solutions is proud to announce that Jasper Zeelenberg joins us as our Director - Responsive Retail Supply Chains, based in Amsterdam, The Netherlands.
+                  </p>
+                  <p>
+                    Jasper joins us with 30+ years of retail leadership across EMEA and a proven record as a SaaS founder. Having led retailing teams at scale and founded technology solutions that enable smarter, faster decisions, Jasper brings a unique combination of strategic insight and operational know-how. He excels at connecting supply chain planning to real-world retail performance, helping businesses unlock value and free cash for top and bottom-line results.
+                  </p>
+                  <p>
+                    We are excited to have Jasper on board as Zefyr extends beyond our team's deep expertise in Footwear and Apparel product management, product creation, sourcing, logistics, and innovation with his market-facing, retail-driven perspective.
+                  </p>
+                  <p className="font-semibold">
+                    Please join us in welcoming Jasper to Zefyr!
+                  </p>
+                  <p>
+                    Contact us to learn how he can help strengthen the link between your supply chain and your retail success.
+                  </p>
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+              <a href="https://www.zefyrsolutions.com/contact" target="_blank" rel="noopener noreferrer">
+                <Button size="lg" className="text-lg px-10 shadow-lg">
+                  Visit Zefyr Solutions
+                </Button>
+              </a>
+              <a href="mailto:hello@retailtwin.com">
+                <Button size="lg" variant="secondary" className="text-lg px-10 shadow-lg">
+                  <Mail className="mr-2 h-5 w-5" />
+                  Contact Retail Twin
+                </Button>
+              </a>
             </div>
           </div>
         </div>
