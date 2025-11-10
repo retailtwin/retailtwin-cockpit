@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Send, Bot } from "lucide-react";
+import { X, Send } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import archieLogo from "@/assets/archie-logo.png";
 
 interface Message {
   role: "user" | "assistant";
@@ -212,8 +213,8 @@ export const ArchieChatDock = ({ onClose, kpiContext, preloadedPrompt }: ArchieC
             <X className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <Bot className="h-6 w-6 text-primary" />
+            <div className="h-10 w-10 rounded-full overflow-hidden flex items-center justify-center">
+              <img src={archieLogo} alt="Archie" className="h-full w-full object-cover" />
             </div>
             <div>
               <CardTitle className="text-lg">Archie, your AI assistant</CardTitle>
