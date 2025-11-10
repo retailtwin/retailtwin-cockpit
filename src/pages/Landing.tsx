@@ -29,7 +29,7 @@ const Landing = () => {
                 Deployed in your environment, Archie enforces and improves the rules and metrics that drive supply performance — ensuring better decisions, with none of the SaaS complexity.
               </p>
             </div>
-            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">In distribution, flow runs on rules — not forecasts. The Theory of Constraints shows that responsiveness comes from managing buffers, not predicting demand. Archie applies these flow rules — ordering to the buffer, keeping lead times short and reliable, and tracking 'speed to cash' — to sustain service levels and turns - without the SaaS complexity.</p>
+            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">In slow moving consumer goods, flow runs on rules — not forecasts — and responsiveness comes from dynamic buffers, not from predicting demand. Our AI applies these flow rules — orders to the buffer, keeps lead times short and reliable, and tracks the 'speed to cash' for every SKU — to sustain service levels and turns - without the SaaS complexity.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/login">
                 <Button size="lg" className="text-lg px-10 shadow-lg">
