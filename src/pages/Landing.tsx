@@ -148,7 +148,7 @@ const Landing = () => {
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                   <Gauge className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle className="text-2xl mb-4">Your Control Center</CardTitle>
+                <CardTitle className="text-2xl mb-4">Your Cockpit</CardTitle>
                 <CardDescription className="text-base leading-relaxed">
                   Using your data and your rules, we build simple cockpits from where you control the flow. Humanly designed steps guide you toward the goal: increasing sales and turns through better service levels, real insights, and a much quicker supply chain.
                 </CardDescription>
