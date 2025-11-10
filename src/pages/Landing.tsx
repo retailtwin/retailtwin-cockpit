@@ -115,7 +115,7 @@ const Landing = () => {
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                   <Layers className="h-6 w-6 text-primary" />
                 </div>
-                <CardDescription className="text-base leading-relaxed">At Retail Twin Labs, we combine decades of experience in Footwear, Apparel and Sporting Goods, with deep SaaS knowledge and AI, to deliver key insights and workflows that simply work. Your data, your rules, your tools.</CardDescription>
+                <CardDescription className="text-base leading-relaxed">At Retail Twin Labs, we combine decades of experience in Footwear, Apparel and Sporting Goods, with deep SaaS knowledge and AI, to deliver key insights and workflows that simply work. Your data, your rules, your tools.</CardDescription>
               </CardHeader>
             </Card>
 
@@ -126,7 +126,7 @@ const Landing = () => {
                   <div className="h-12 w-12 rounded-2xl bg-accent/10 flex items-center justify-center mb-6">
                     <TrendingUp className="h-6 w-6 text-accent" />
                   </div>
-                  <CardTitle className="text-xl mb-4">From the founder: Lessons from Retailisation </CardTitle>
+                  <CardTitle className="text-xl mb-4">From the founder: Lessons from Retailisation </CardTitle>
                   <CardDescription className="text-base leading-relaxed">At Retailisation, my previous company, I learned that effective order automation is only possible when internal rules and metrics strictly govern flow. Hence at Retail Twin Labs, we focus on these rules and metrics, with AI agents that understand and explain lead-times and minimum order quantities, and their impacts on flow.</CardDescription>
                 </CardHeader>
               </Card>
@@ -142,19 +142,39 @@ const Landing = () => {
               </Card>
             </div>
 
-            {/* Full Width Card */}
-            <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-primary/10 to-secondary/10">
-              <CardHeader>
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                  <Gauge className="h-6 w-6 text-primary" />
+            {/* Learn More Button */}
+            <div className="flex justify-center mt-12">
+              <Link to="/about">
+                <Button size="lg" className="text-lg px-10 shadow-lg">
+                  Learn More
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Your Cockpit Section */}
+      <section className="relative overflow-hidden py-20">
+        <div className="container mx-auto px-6">
+          <div className="max-w-5xl mx-auto space-y-12">
+            {/* Section Header */}
+            <div className="text-center space-y-6">
+              <div className="flex justify-center mb-4">
+                <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Gauge className="h-10 w-10 text-primary" />
                 </div>
-                <CardTitle className="text-2xl mb-4">Your Cockpit</CardTitle>
-                <CardDescription className="text-base leading-relaxed">Using your data and your rules, we build intuitive cockpits from where you control the flow. Simple steps guide you toward the goal: increasing sales and turns through better service levels, real insights, and a much quicker supply chain.</CardDescription>
-              </CardHeader>
-            </Card>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+                Your Cockpit
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Using your data and your rules, we build intuitive cockpits from where you control the flow. Simple steps guide you toward the goal: increasing sales and turns through better service levels, real insights, and a much quicker supply chain.
+              </p>
+            </div>
 
             {/* Visual Showcase Section */}
-            <div className="grid md:grid-cols-2 gap-8 mt-12">
+            <div className="grid md:grid-cols-2 gap-8">
               <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50 overflow-hidden">
                 <CardHeader>
                   <CardTitle className="text-xl mb-4">Dashboard View</CardTitle>
@@ -182,15 +202,6 @@ const Landing = () => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
-            
-            {/* Learn More Button */}
-            <div className="flex justify-center mt-12">
-              <Link to="/about">
-                <Button size="lg" className="text-lg px-10 shadow-lg">
-                  Learn More
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
