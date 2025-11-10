@@ -1,11 +1,64 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.0';
+import { z } from 'https://deno.land/x/zod@v3.21.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const chatSchema = z.object({
+  messages: z.array(z.object({
+    role: z.enum(['user', 'assistant', 'system']),
+    content: z.string().max(50000, 'Message too long')
+  })).min(1, 'At least one message required').max(100, 'Too many messages'),
+  context: z.object({
+    location: z.string().optional(),
+    product: z.string().optional(),
+    dateRange: z.string().optional(),
+    metrics: z.object({
+      tcm: z.number().optional(),
+      mtv: z.number().optional(),
+      riv: z.number().optional(),
+      service_level: z.number().optional(),
+      service_level_sim: z.number().optional(),
+      turns_current: z.number().optional(),
+      turns_sim: z.number().optional()
+    }).passthrough().optional(),
+    paretoSummary: z.object({
+      totalSkus: z.number().optional(),
+      top20Count: z.number().optional(),
+      top20Contribution: z.number().optional(),
+      topSkus: z.array(z.object({
+        sku: z.string().optional(),
+        name: z.string().optional(),
+        sales: z.number().optional(),
+        cumulativePercent: z.number().optional(),
+        availability: z.number().optional()
+      })).optional()
+    }).passthrough().optional()
+  }).passthrough().optional()
+});
+
+// Error sanitization function
+function sanitizeError(error: unknown, operation: string, supportId: string): object {
+  console.error(`[${operation}] Internal error [${supportId}]:`, error);
+  
+  const genericErrors: Record<string, string> = {
+    'chat': 'Chat processing failed. Please try again.',
+    'validation': 'Invalid message format. Please check your input.',
+    'ai': 'AI processing error. Please try again in a moment.',
+    'database': 'Database operation failed. Please contact support.'
+  };
+  
+  return {
+    error: genericErrors[operation] || 'An error occurred',
+    code: operation.toUpperCase() + '_ERROR',
+    support_id: supportId
+  };
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -36,7 +89,24 @@ serve(async (req) => {
       );
     }
 
-    const { messages, context } = await req.json();
+    // Parse and validate request body
+    const body = await req.json();
+    const validationResult = chatSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      return new Response(
+        JSON.stringify({
+          error: 'Validation failed',
+          details: validationResult.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { messages, context } = validationResult.data;
     console.log('📨 Received request:', { messageCount: messages?.length, hasContext: !!context });
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -265,12 +335,13 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ AI gateway error: ${response.status}`, errorText);
+      const supportId = crypto.randomUUID();
+      console.error(`❌ AI gateway error [${supportId}]: ${response.status}`);
       
       if (response.status === 429) {
         return new Response(JSON.stringify({ 
-          error: "Rate limits exceeded. Please try again in a moment." 
+          error: "Rate limits exceeded. Please try again in a moment.",
+          code: "RATE_LIMIT_ERROR"
         }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -279,17 +350,18 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
       
       if (response.status === 402) {
         return new Response(JSON.stringify({ 
-          error: "AI usage limit reached. Please contact support to add more credits." 
+          error: "AI usage limit reached. Please contact support to add more credits.",
+          code: "QUOTA_EXCEEDED"
         }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      return new Response(JSON.stringify({ error: "AI processing error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify(sanitizeError(new Error('AI gateway error'), 'ai', supportId)),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const firstResponse = await response.json();
@@ -322,12 +394,16 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
             });
             
             if (error) {
-              console.error(`❌ Error calling ${functionName}:`, error);
+              const supportId = crypto.randomUUID();
+              console.error(`❌ Error calling ${functionName} [${supportId}]:`, error);
               return {
                 role: "tool",
                 tool_call_id: toolCall.id,
                 name: functionName,
-                content: JSON.stringify({ error: error.message })
+                content: JSON.stringify({ 
+                  error: 'Database query failed',
+                  support_id: supportId
+                })
               };
             }
             
@@ -341,12 +417,16 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
               content: JSON.stringify(data)
             };
           } catch (err) {
-            console.error(`❌ Exception in ${functionName}:`, err);
+            const supportId = crypto.randomUUID();
+            console.error(`❌ Exception in ${functionName} [${supportId}]:`, err);
             return {
               role: "tool",
               tool_call_id: toolCall.id,
               name: functionName,
-              content: JSON.stringify({ error: String(err) })
+              content: JSON.stringify({ 
+                error: 'Tool execution failed',
+                support_id: supportId
+              })
             };
           }
         })
@@ -374,12 +454,13 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
       });
 
       if (!streamResponse.ok) {
-        const errorText = await streamResponse.text();
-        console.error(`❌ AI gateway error on second call: ${streamResponse.status}`, errorText);
+        const supportId = crypto.randomUUID();
+        console.error(`❌ AI gateway error on second call [${supportId}]: ${streamResponse.status}`);
         
         if (streamResponse.status === 429) {
           return new Response(JSON.stringify({ 
-            error: "Rate limits exceeded. Please try again in a moment." 
+            error: "Rate limits exceeded. Please try again in a moment.",
+            code: "RATE_LIMIT_ERROR"
           }), {
             status: 429,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -388,17 +469,18 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
         
         if (streamResponse.status === 402) {
           return new Response(JSON.stringify({ 
-            error: "AI usage limit reached. Please contact support to add more credits." 
+            error: "AI usage limit reached. Please contact support to add more credits.",
+            code: "QUOTA_EXCEEDED"
           }), {
             status: 402,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
         
-        return new Response(JSON.stringify({ error: "AI processing error" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify(sanitizeError(new Error('AI gateway error'), 'ai', supportId)),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
       console.info('✅ Archie streaming response with tool results');
@@ -429,12 +511,13 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
     });
     
     if (!directStreamResponse.ok) {
-      const errorText = await directStreamResponse.text();
-      console.error(`❌ AI gateway error: ${directStreamResponse.status}`, errorText);
+      const supportId = crypto.randomUUID();
+      console.error(`❌ AI gateway error [${supportId}]: ${directStreamResponse.status}`);
       
       if (directStreamResponse.status === 429) {
         return new Response(JSON.stringify({ 
-          error: "Rate limits exceeded. Please try again in a moment." 
+          error: "Rate limits exceeded. Please try again in a moment.",
+          code: "RATE_LIMIT_ERROR"
         }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -443,17 +526,18 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
       
       if (directStreamResponse.status === 402) {
         return new Response(JSON.stringify({ 
-          error: "AI usage limit reached. Please contact support to add more credits." 
+          error: "AI usage limit reached. Please contact support to add more credits.",
+          code: "QUOTA_EXCEEDED"
         }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       
-      return new Response(JSON.stringify({ error: "AI processing error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify(sanitizeError(new Error('AI gateway error'), 'ai', supportId)),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(directStreamResponse.body, {
@@ -461,12 +545,10 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
     });
     
   } catch (e) {
-    console.error("❌ Archie chat error:", e);
-    return new Response(JSON.stringify({ 
-      error: e instanceof Error ? e.message : "Unknown error" 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const supportId = crypto.randomUUID();
+    return new Response(
+      JSON.stringify(sanitizeError(e, 'chat', supportId)),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });

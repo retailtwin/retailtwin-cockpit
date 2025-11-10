@@ -1,10 +1,44 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { z } from 'https://deno.land/x/zod@v3.21.4/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const importSchema = z.object({
+  csvText: z.string()
+    .min(1, 'CSV cannot be empty')
+    .max(50_000_000, 'CSV exceeds 50MB limit')
+    .refine(text => {
+      const lines = text.trim().split('\n');
+      return lines.length > 1;
+    }, 'CSV must contain at least a header and one data row')
+    .refine(text => {
+      const firstLine = text.trim().split('\n')[0];
+      return firstLine.includes('d') || firstLine.includes('date');
+    }, 'CSV must have a valid header row')
+});
+
+// Error sanitization function
+function sanitizeError(error: unknown, operation: string, supportId: string): object {
+  console.error(`[${operation}] Internal error [${supportId}]:`, error);
+  
+  const genericErrors: Record<string, string> = {
+    'import': 'Data import failed. Please check your CSV format.',
+    'validation': 'Invalid CSV format. Please check your file.',
+    'database': 'Database operation failed. Please contact support.',
+    'parse': 'Failed to parse CSV data. Please check the format.'
+  };
+  
+  return {
+    error: genericErrors[operation] || 'An error occurred',
+    code: operation.toUpperCase() + '_ERROR',
+    support_id: supportId
+  };
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -53,14 +87,24 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { csvText } = await req.json();
-
-    if (!csvText) {
+    // Parse and validate request body
+    const body = await req.json();
+    const validationResult = importSchema.safeParse(body);
+    
+    if (!validationResult.success) {
       return new Response(
-        JSON.stringify({ error: 'CSV text is required' }),
+        JSON.stringify({
+          error: 'Validation failed',
+          details: validationResult.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    const { csvText } = validationResult.data;
 
     // Parse CSV (skip header)
     const lines = csvText.trim().split('\n');
@@ -136,10 +180,15 @@ serve(async (req) => {
       });
 
       if (error) {
-        console.error('Batch insert error:', error);
-        console.error('Sample record:', records[0]);
+        const supportId = crypto.randomUUID();
+        console.error(`[database] Batch insert error [${supportId}]:`, error);
+        console.error(`[database] Batch info [${supportId}]:`, { batchStart: i, recordCount: records.length });
         return new Response(
-          JSON.stringify({ error: `Failed at batch starting at row ${i}: ${error.message}` }),
+          JSON.stringify({
+            error: 'Failed to import CSV data. Please check the format.',
+            code: 'DATABASE_ERROR',
+            support_id: supportId
+          }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -156,10 +205,9 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Import error:', error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const supportId = crypto.randomUUID();
     return new Response(
-      JSON.stringify({ error: message }),
+      JSON.stringify(sanitizeError(error, 'import', supportId)),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

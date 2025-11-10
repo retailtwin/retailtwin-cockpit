@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { z } from 'https://deno.land/x/zod@v3.21.4/mod.ts';
 import { DBMEngine, calculateEconomicUnits } from './dbm-engine.ts';
 import type { SkuLocDate } from './types.ts';
 
@@ -7,6 +8,51 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Input validation schema
+const calculatorSchema = z.object({
+  location_code: z.string()
+    .regex(/^[A-Z0-9_-]+$|^ALL$/, 'Invalid location code format')
+    .max(50, 'Location code too long'),
+  sku: z.string()
+    .regex(/^[A-Z0-9_-]+$|^ALL$/, 'Invalid SKU format')
+    .max(50, 'SKU too long'),
+  start_date: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (use YYYY-MM-DD)')
+    .refine(date => {
+      const d = new Date(date);
+      return d >= new Date('2020-01-01') && d <= new Date('2030-12-31');
+    }, 'Date must be between 2020-01-01 and 2030-12-31'),
+  end_date: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (use YYYY-MM-DD)')
+    .refine(date => {
+      const d = new Date(date);
+      return d >= new Date('2020-01-01') && d <= new Date('2030-12-31');
+    }, 'Date must be between 2020-01-01 and 2030-12-31')
+}).refine(data => {
+  const start = new Date(data.start_date);
+  const end = new Date(data.end_date);
+  return start <= end;
+}, 'Start date must be before or equal to end date');
+
+// Error sanitization function
+function sanitizeError(error: unknown, operation: string, supportId: string): object {
+  // Log full error server-side for debugging
+  console.error(`[${operation}] Internal error [${supportId}]:`, error);
+  
+  const genericErrors: Record<string, string> = {
+    'calculation': 'Calculation failed. Please try again or contact support.',
+    'validation': 'Invalid input provided. Please check your parameters.',
+    'database': 'Database operation failed. Please contact support.',
+    'auth': 'Authentication failed. Please verify your credentials.'
+  };
+  
+  return {
+    error: genericErrors[operation] || 'An error occurred',
+    code: operation.toUpperCase() + '_ERROR',
+    support_id: supportId
+  };
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -50,7 +96,24 @@ serve(async (req) => {
       );
     }
 
-    const { location_code = 'ALL', sku = 'ALL', start_date, end_date } = await req.json();
+    // Parse and validate request body
+    const body = await req.json();
+    const validationResult = calculatorSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      return new Response(
+        JSON.stringify({
+          error: 'Validation failed',
+          details: validationResult.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { location_code, sku, start_date, end_date } = validationResult.data;
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -257,11 +320,10 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('DBM Calculation error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const supportId = crypto.randomUUID();
     return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      JSON.stringify(sanitizeError(error, 'calculation', supportId)),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
