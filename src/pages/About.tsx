@@ -99,15 +99,8 @@ const About = () => {
           <Card className="bg-gradient-to-br from-primary/10 to-secondary/10 border-none shadow-xl">
             <CardContent className="p-8">
               <h2 className="text-2xl font-bold mb-4">Our Consultancy</h2>
-              <p className="text-muted-foreground mb-4">
-                We partner with retail supply chain leaders to implement TOC and
-                DBM methodologies that deliver measurable improvements in
-                throughput, turns, and service levels.
-              </p>
-              <p className="text-muted-foreground">
-                Our AI-powered platform makes it easy to visualize constraints,
-                test scenarios, and make data-driven decisions—fast.
-              </p>
+              <p className="text-muted-foreground mb-4">As founder, I partner with retail supply chain leaders to implement TOC and DBM methodologies that deliver measurable improvements in throughput, turns, and service levels.</p>
+              <p className="text-muted-foreground">I use TOC principles and AI to visualize key insights, test scenarios, and give you the tools you need to make and sustain the changes that accelerate flow.</p>
             </CardContent>
           </Card>
         </div>
