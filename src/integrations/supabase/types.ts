@@ -297,6 +297,7 @@ export type Database = {
           missed_units: number
           mtv: number
           riv: number
+          riv_sim: number
           service_level: number
           service_level_sim: number
           sku: string

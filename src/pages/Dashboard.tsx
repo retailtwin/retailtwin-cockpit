@@ -558,6 +558,11 @@ const Dashboard = () => {
                 <KPICard
                   title="Throughput"
                   value={formatCurrency(kpiData.tcm)}
+                  delta7d={
+                    kpiData.tcm && kpiData.mtv !== null
+                      ? (((kpiData.tcm + kpiData.mtv) / kpiData.tcm - 1) * 100)
+                      : 0
+                  }
                   tooltip="Total throughput (cash margin) generated from sales"
                 />
                 <KPICard
@@ -586,6 +591,15 @@ const Dashboard = () => {
                     kpiData.tcm && kpiData.days_total
                       ? formatNumber((kpiData.riv || 0) / (kpiData.tcm / kpiData.days_total), 1)
                       : "—"
+                  }
+                  delta7d={
+                    kpiData.tcm && kpiData.days_total && kpiData.riv && kpiData.riv_sim !== null
+                      ? (() => {
+                          const currentDaysToCash = kpiData.riv / (kpiData.tcm / kpiData.days_total);
+                          const simulatedDaysToCash = kpiData.riv_sim / (kpiData.tcm / kpiData.days_total);
+                          return ((simulatedDaysToCash / currentDaysToCash - 1) * 100);
+                        })()
+                      : 0
                   }
                   tooltip="Average number of days inventory takes to convert to cash"
                 />
