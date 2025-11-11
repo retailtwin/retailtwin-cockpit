@@ -11,9 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Shield, UserPlus, Trash2, Settings2, Users, Calculator, CalendarIcon, Clock, Zap, Sliders, Bell } from "lucide-react";
+import { Loader2, Shield, UserPlus, Trash2, Settings2, Users, Calculator, CalendarIcon, Clock, Zap, Sliders, Bell, ChevronDown, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -39,7 +41,10 @@ const Settings = () => {
   // Lead Time Configuration
   const [productionLeadTime, setProductionLeadTime] = useState("");
   const [shippingLeadTime, setShippingLeadTime] = useState("");
-  const [orderDays, setOrderDays] = useState("");
+  const [shippingDays, setShippingDays] = useState<string[]>(["mon", "tue", "wed", "thu", "fri"]);
+  
+  // Other Settings visibility
+  const [showOtherSettings, setShowOtherSettings] = useState(false);
   
   // Responsiveness Thresholds
   const [acceleratorUpPercentage, setAcceleratorUpPercentage] = useState("");
@@ -143,8 +148,15 @@ const Settings = () => {
           case "shipping_lead_time":
             setShippingLeadTime(value);
             break;
-          case "order_days":
-            setOrderDays(value);
+          case "shipping_days":
+            try {
+              const days = JSON.parse(value);
+              if (Array.isArray(days)) {
+                setShippingDays(days);
+              }
+            } catch {
+              setShippingDays(["mon", "tue", "wed", "thu", "fri"]);
+            }
             break;
           case "accelerator_up_percentage":
             setAcceleratorUpPercentage((parseFloat(value) * 100).toString());
@@ -244,7 +256,7 @@ const Settings = () => {
       const updates = [
         { key: "production_lead_time_global", value: productionLeadTime },
         { key: "shipping_lead_time", value: shippingLeadTime },
-        { key: "order_days", value: orderDays },
+        { key: "shipping_days", value: JSON.stringify(shippingDays) },
         { key: "accelerator_up_percentage", value: (parseFloat(acceleratorUpPercentage || "0") / 100).toString() },
         { key: "accelerator_down_percentage", value: (parseFloat(acceleratorDownPercentage || "0") / 100).toString() },
         { key: "acceleration_idle_days", value: idleDays },
@@ -501,7 +513,7 @@ const Settings = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="production-lead-time">Production Lead Time (days)</Label>
                       <Input
@@ -524,16 +536,37 @@ const Settings = () => {
                         placeholder="e.g., 3"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="order-days">Order Days</Label>
-                      <Input
-                        id="order-days"
-                        type="number"
-                        min="1"
-                        value={orderDays}
-                        onChange={(e) => setOrderDays(e.target.value)}
-                        placeholder="e.g., 5"
-                      />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Shipping Days ({shippingDays.length} {shippingDays.length === 1 ? 'day' : 'days'} per week)</Label>
+                    <div className="grid grid-cols-7 gap-2">
+                      {[
+                        { value: "mon", label: "Mon" },
+                        { value: "tue", label: "Tue" },
+                        { value: "wed", label: "Wed" },
+                        { value: "thu", label: "Thu" },
+                        { value: "fri", label: "Fri" },
+                        { value: "sat", label: "Sat" },
+                        { value: "sun", label: "Sun" },
+                      ].map((day) => (
+                        <div key={day.value} className="flex items-center space-x-2 p-2 border rounded-md hover:bg-accent">
+                          <Checkbox
+                            id={`day-${day.value}`}
+                            checked={shippingDays.includes(day.value)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setShippingDays([...shippingDays, day.value]);
+                              } else {
+                                setShippingDays(shippingDays.filter(d => d !== day.value));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`day-${day.value}`} className="text-xs font-medium cursor-pointer">
+                            {day.label}
+                          </Label>
+                        </div>
+                      ))}
                     </div>
                   </div>
                   
@@ -548,197 +581,211 @@ const Settings = () => {
                 </CardContent>
               </Card>
 
-              {/* Responsiveness Thresholds */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5" />
-                    Responsiveness Thresholds
-                  </CardTitle>
-                  <CardDescription>
-                    Control how quickly inventory targets adjust to demand changes
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="accelerator-up">UP Percentage (%)</Label>
-                      <Input
-                        id="accelerator-up"
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={acceleratorUpPercentage}
-                        onChange={(e) => setAcceleratorUpPercentage(e.target.value)}
-                        placeholder="e.g., 40"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Increase target when sales reach this threshold
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="accelerator-down">DOWN Percentage (%)</Label>
-                      <Input
-                        id="accelerator-down"
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={acceleratorDownPercentage}
-                        onChange={(e) => setAcceleratorDownPercentage(e.target.value)}
-                        placeholder="e.g., 20"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Decrease target when sales drop below this threshold
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="idle-days">Idle Days</Label>
-                      <Input
-                        id="idle-days"
-                        type="number"
-                        min="0"
-                        value={idleDays}
-                        onChange={(e) => setIdleDays(e.target.value)}
-                        placeholder="e.g., 3"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Days target isn't altered after update
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Other Settings - Advanced Configuration */}
+              <Collapsible open={showOtherSettings} onOpenChange={setShowOtherSettings}>
+                <Card className="border-warning/20 bg-warning/5">
+                  <CardHeader>
+                    <CollapsibleTrigger className="w-full">
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-5 w-5 text-warning" />
+                          <CardTitle>Other Settings</CardTitle>
+                        </div>
+                        <ChevronDown className={cn(
+                          "h-5 w-5 transition-transform",
+                          showOtherSettings && "transform rotate-180"
+                        )} />
+                      </div>
+                    </CollapsibleTrigger>
+                    <CardDescription className="text-left mt-2">
+                      Advanced configuration for data behavior and alerts. These settings control system-level behavior and are not typical admin controls. Modify with caution.
+                    </CardDescription>
+                  </CardHeader>
+                  <CollapsibleContent>
+                    <CardContent className="space-y-6 pt-0">
+                      {/* Responsiveness Thresholds */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 pb-2 border-b">
+                          <Zap className="h-4 w-4" />
+                          <h3 className="font-semibold">Responsiveness Thresholds</h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Control how quickly inventory targets adjust to demand changes
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="accelerator-up">UP Percentage (%)</Label>
+                            <Input
+                              id="accelerator-up"
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={acceleratorUpPercentage}
+                              onChange={(e) => setAcceleratorUpPercentage(e.target.value)}
+                              placeholder="e.g., 40"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Increase target when sales reach this threshold
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="accelerator-down">DOWN Percentage (%)</Label>
+                            <Input
+                              id="accelerator-down"
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={acceleratorDownPercentage}
+                              onChange={(e) => setAcceleratorDownPercentage(e.target.value)}
+                              placeholder="e.g., 20"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Decrease target when sales drop below this threshold
+                            </p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="idle-days">Idle Days</Label>
+                            <Input
+                              id="idle-days"
+                              type="number"
+                              min="0"
+                              value={idleDays}
+                              onChange={(e) => setIdleDays(e.target.value)}
+                              placeholder="e.g., 3"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Days target isn't altered after update
+                            </p>
+                          </div>
+                        </div>
+                      </div>
 
-              {/* Behavior Properties */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Sliders className="h-5 w-5" />
-                    Behavior Properties
-                  </CardTitle>
-                  <CardDescription>
-                    Advanced calculation and display options
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="dynamic-period">Dynamic Period</Label>
+                      {/* Behavior Properties */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 pb-2 border-b">
+                          <Sliders className="h-4 w-4" />
+                          <h3 className="font-semibold">Behavior Properties</h3>
+                        </div>
                         <p className="text-sm text-muted-foreground">
-                          Auto-detect active stock period
+                          Advanced calculation and display options
                         </p>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <Label htmlFor="dynamic-period">Dynamic Period</Label>
+                              <p className="text-sm text-muted-foreground">
+                                Auto-detect active stock period
+                              </p>
+                            </div>
+                            <Switch
+                              id="dynamic-period"
+                              checked={dynamicPeriod}
+                              onCheckedChange={setDynamicPeriod}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <Label htmlFor="start-of-day-stock">Start-of-Day Stock</Label>
+                              <p className="text-sm text-muted-foreground">
+                                Use stock values from start of day
+                              </p>
+                            </div>
+                            <Switch
+                              id="start-of-day-stock"
+                              checked={startOfDayStock}
+                              onCheckedChange={setStartOfDayStock}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <Label htmlFor="dynamic-initial-target">Dynamic Initial Target</Label>
+                              <p className="text-sm text-muted-foreground">
+                                Use calculated targets vs current on-hand
+                              </p>
+                            </div>
+                            <Switch
+                              id="dynamic-initial-target"
+                              checked={dynamicInitialTarget}
+                              onCheckedChange={setDynamicInitialTarget}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <Label htmlFor="unhide-features">Unhide Features</Label>
+                              <p className="text-sm text-muted-foreground">
+                                Show/hide advanced features
+                              </p>
+                            </div>
+                            <Switch
+                              id="unhide-features"
+                              checked={unhideFeatures}
+                              onCheckedChange={setUnhideFeatures}
+                            />
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <Label htmlFor="show-skulocdate">Show SkuLocDate Data</Label>
+                              <p className="text-sm text-muted-foreground">
+                                Display detailed calculation data
+                              </p>
+                            </div>
+                            <Switch
+                              id="show-skulocdate"
+                              checked={showSkuLocdateData}
+                              onCheckedChange={setShowSkuLocdateData}
+                            />
+                          </div>
+                        </div>
                       </div>
-                      <Switch
-                        id="dynamic-period"
-                        checked={dynamicPeriod}
-                        onCheckedChange={setDynamicPeriod}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="start-of-day-stock">Start-of-Day Stock</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Use stock values from start of day
-                        </p>
-                      </div>
-                      <Switch
-                        id="start-of-day-stock"
-                        checked={startOfDayStock}
-                        onCheckedChange={setStartOfDayStock}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="dynamic-initial-target">Dynamic Initial Target</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Use calculated targets vs current on-hand
-                        </p>
-                      </div>
-                      <Switch
-                        id="dynamic-initial-target"
-                        checked={dynamicInitialTarget}
-                        onCheckedChange={setDynamicInitialTarget}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="unhide-features">Unhide Features</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Show/hide advanced features
-                        </p>
-                      </div>
-                      <Switch
-                        id="unhide-features"
-                        checked={unhideFeatures}
-                        onCheckedChange={setUnhideFeatures}
-                      />
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="show-skulocdate">Show SkuLocDate Data</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Display detailed calculation data
-                        </p>
-                      </div>
-                      <Switch
-                        id="show-skulocdate"
-                        checked={showSkuLocdateData}
-                        onCheckedChange={setShowSkuLocdateData}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Alerts */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bell className="h-5 w-5" />
-                    Alerts
-                  </CardTitle>
-                  <CardDescription>
-                    Configure inventory alert thresholds
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="alerts-enabled">Enable Alerts</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive notifications for low stock
-                      </p>
-                    </div>
-                    <Switch
-                      id="alerts-enabled"
-                      checked={alertsEnabled}
-                      onCheckedChange={setAlertsEnabled}
-                    />
-                  </div>
-                  
-                  {alertsEnabled && (
-                    <div className="space-y-2">
-                      <Label htmlFor="minimum-stock">Minimum Stock Threshold (units)</Label>
-                      <Input
-                        id="minimum-stock"
-                        type="number"
-                        min="1"
-                        value={minimumStockThreshold}
-                        onChange={(e) => setMinimumStockThreshold(e.target.value)}
-                        placeholder="e.g., 1"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Alert when inventory falls below this level
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                      {/* Alerts */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2 pb-2 border-b">
+                          <Bell className="h-4 w-4" />
+                          <h3 className="font-semibold">Alerts</h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Configure inventory alert thresholds
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label htmlFor="alerts-enabled">Enable Alerts</Label>
+                            <p className="text-sm text-muted-foreground">
+                              Receive notifications for low stock
+                            </p>
+                          </div>
+                          <Switch
+                            id="alerts-enabled"
+                            checked={alertsEnabled}
+                            onCheckedChange={setAlertsEnabled}
+                          />
+                        </div>
+                        
+                        {alertsEnabled && (
+                          <div className="space-y-2">
+                            <Label htmlFor="minimum-stock">Minimum Stock Threshold (units)</Label>
+                            <Input
+                              id="minimum-stock"
+                              type="number"
+                              min="1"
+                              value={minimumStockThreshold}
+                              onChange={(e) => setMinimumStockThreshold(e.target.value)}
+                              placeholder="e.g., 1"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Alert when inventory falls below this level
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Card>
+              </Collapsible>
 
               <Button onClick={handleSaveSettings} className="w-full" size="lg">
                 Save All Settings
