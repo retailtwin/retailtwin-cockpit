@@ -3,6 +3,7 @@ import { Layout } from "@/components/Layout";
 import { FilterBar } from "@/components/FilterBar";
 import { InventoryGraph } from "@/components/InventoryGraph";
 import { KPITable } from "@/components/KPITable";
+import { KPICard } from "@/components/KPICard";
 import { ConsultativeInsights } from "@/components/ConsultativeInsights";
 import { ArchieChatDock } from "@/components/ArchieChatDock";
 import { ArchieFloatingButton } from "@/components/ArchieFloatingButton";
@@ -547,6 +548,49 @@ const Dashboard = () => {
                 )}
               </CardContent>
             </Card>
+          )}
+
+          {/* Core KPIs */}
+          {kpiData && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Core KPIs</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <KPICard
+                  title="Throughput"
+                  value={formatCurrency(kpiData.tcm)}
+                  tooltip="Total throughput (cash margin) generated from sales"
+                />
+                <KPICard
+                  title="Service Level"
+                  value={`${(kpiData.service_level * 100).toFixed(1)}%`}
+                  delta7d={
+                    kpiData.service_level > 0
+                      ? ((kpiData.service_level_sim / kpiData.service_level - 1) * 100)
+                      : 0
+                  }
+                  tooltip="Percentage of demand met without stockouts"
+                />
+                <KPICard
+                  title="Inventory Turns"
+                  value={formatNumber(kpiData.turns_current, 1)}
+                  delta7d={
+                    kpiData.turns_current && kpiData.turns_sim
+                      ? ((kpiData.turns_sim / kpiData.turns_current - 1) * 100)
+                      : 0
+                  }
+                  tooltip="How many times inventory is sold and replaced over the period"
+                />
+                <KPICard
+                  title="Days to Cash"
+                  value={
+                    kpiData.tcm && kpiData.days_total
+                      ? formatNumber((kpiData.riv || 0) / (kpiData.tcm / kpiData.days_total), 1)
+                      : "—"
+                  }
+                  tooltip="Average number of days inventory takes to convert to cash"
+                />
+              </div>
+            </div>
           )}
 
           {/* Graph and Table Grid */}
