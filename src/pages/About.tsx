@@ -53,45 +53,26 @@ const About = () => {
               <CardTitle>What We Measure</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-semibold mb-2">Core KPIs</h3>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li>
-                      <strong>Throughput Cash Margin:</strong> Revenue minus
-                      truly variable costs
-                    </li>
-                    <li>
-                      <strong>Turns:</strong> How quickly inventory converts to
-                      cash
-                    </li>
-                    <li>
-                      <strong>Days to Cash:</strong> Average days inventory takes
-                      to convert to cash
-                    </li>
-                    <li>
-                      <strong>Missed Throughput Value (MTV):</strong> Revenue
-                      lost to stockouts
-                    </li>
-                  </ul>
-                </div>
-                <div>
-                  <h3 className="font-semibold mb-2">Buffer Health</h3>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li>
-                      <strong>Stockout Days:</strong> Time spent with zero
-                      inventory
-                    </li>
-                    <li>
-                      <strong>Overstock Days:</strong> Excess days beyond buffer
-                      targets
-                    </li>
-                    <li>
-                      <strong>Redundant Inventory Value (RIV):</strong> Capital
-                      tied up unnecessarily
-                    </li>
-                  </ul>
-                </div>
+              <div>
+                <h3 className="font-semibold mb-2">Core KPIs</h3>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>
+                    <strong>Throughput Cash Margin:</strong> Revenue minus
+                    truly variable costs
+                  </li>
+                  <li>
+                    <strong>Turns:</strong> How quickly inventory converts to
+                    cash
+                  </li>
+                  <li>
+                    <strong>Days to Cash:</strong> Average days inventory takes
+                    to convert to cash
+                  </li>
+                  <li>
+                    <strong>Missed Throughput Value (MTV):</strong> Revenue
+                    lost to stockouts
+                  </li>
+                </ul>
               </div>
             </CardContent>
           </Card>
