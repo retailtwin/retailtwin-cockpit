@@ -66,6 +66,10 @@ const About = () => {
                       cash
                     </li>
                     <li>
+                      <strong>Days to Cash:</strong> Average days inventory takes
+                      to convert to cash
+                    </li>
+                    <li>
                       <strong>Missed Throughput Value (MTV):</strong> Revenue
                       lost to stockouts
                     </li>
