@@ -93,11 +93,7 @@ const About = () => {
           </Card>
 
           <Card className="bg-gradient-to-br from-primary/10 to-secondary/10 border-none shadow-xl">
-            <CardContent className="p-8">
-              <h2 className="text-2xl font-bold mb-4">Consultancy</h2>
-              <p className="text-muted-foreground mb-4">I partner with clients on an interim or project basis to implement metrics and workflows that deliver measurable improvements in throughput, turns, and service levels.</p>
-              
-            </CardContent>
+            
           </Card>
         </div>
       </div>
