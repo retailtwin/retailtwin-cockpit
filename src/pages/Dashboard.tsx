@@ -473,7 +473,7 @@ const Dashboard = () => {
           {/* Top Bar with Title and Agent Toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Simulation</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 {selectedLocation === "ALL" && selectedProduct === "ALL"
                   ? "Aggregated view: All Locations & All Products"
@@ -500,26 +500,59 @@ const Dashboard = () => {
             </Button>
           </div>
 
-          {/* Filters */}
-          <FilterBar
-            locations={locations}
-            products={products}
-            selectedLocation={selectedLocation}
-            selectedProduct={selectedProduct}
-            dateRange={dateRange}
-            dataDateRange={dataDateRange}
-            onLocationChange={setSelectedLocation}
-            onProductChange={setSelectedProduct}
-            onDateRangeChange={setDateRange}
-          />
+          {/* Scope Selection */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Scope Selection</h2>
+            <FilterBar
+              locations={locations}
+              products={products}
+              selectedLocation={selectedLocation}
+              selectedProduct={selectedProduct}
+              dateRange={dateRange}
+              dataDateRange={dataDateRange}
+              onLocationChange={setSelectedLocation}
+              onProductChange={setSelectedProduct}
+              onDateRangeChange={setDateRange}
+            />
+          </div>
 
-          {/* DBM Simulation Button */}
-          <div className="flex justify-between items-center">
+          {/* Simulation Settings */}
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <SimulationStatusBar
+                hasSimulation={!!simulationResult}
+                productionLeadTime={productionLeadTime}
+                shippingLeadTime={shippingLeadTime}
+                orderDays={orderDays}
+                onViewSettings={isAdmin ? () => navigate('/settings', { state: { defaultTab: 'config' } }) : undefined}
+              />
+              
+              <div className="flex justify-end gap-2">
+                {isAdmin && (
+                  <Button
+                    onClick={() => navigate('/settings', { state: { defaultTab: 'config' } })}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Settings
+                  </Button>
+                )}
+                <Button onClick={handleExportCSV} variant="outline" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Export CSV
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Run Simulation Button */}
+          <div className="flex justify-center">
             <Button
               onClick={runDBMAnalysis}
               disabled={isRunningDBM}
-              variant="default"
-              className="gap-2"
+              size="lg"
+              className="gap-2 w-full max-w-md"
             >
               {isRunningDBM ? (
                 <>
@@ -533,33 +566,7 @@ const Dashboard = () => {
                 </>
               )}
             </Button>
-
-            <div className="flex gap-2">
-              {isAdmin && (
-                <Button
-                  onClick={() => navigate('/settings')}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Button>
-              )}
-              <Button onClick={handleExportCSV} variant="outline" className="gap-2">
-                <Download className="h-4 w-4" />
-                Export CSV
-              </Button>
-            </div>
           </div>
-
-          {/* Simulation Settings Bar - Always visible */}
-          <SimulationStatusBar
-            hasSimulation={!!simulationResult}
-            productionLeadTime={productionLeadTime}
-            shippingLeadTime={shippingLeadTime}
-            orderDays={orderDays}
-            onViewSettings={isAdmin ? () => navigate('/settings', { state: { defaultTab: 'config' } }) : undefined}
-          />
 
           {/* Simulation Results Display */}
           {simulationResult && (
@@ -619,10 +626,10 @@ const Dashboard = () => {
             </Card>
           )}
 
-          {/* Core KPIs */}
+          {/* Results */}
           {kpiData && (
             <div>
-              <h2 className="text-xl font-semibold mb-4">Core KPIs</h2>
+              <h2 className="text-xl font-semibold mb-4">Results</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <KPICard
                   title="Throughput"
