@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      archie_knowledge: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string | null
+          created_by: string | null
+          embedding: string | null
+          id: string
+          is_active: boolean | null
+          tags: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          embedding?: string | null
+          id?: string
+          is_active?: boolean | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          embedding?: string | null
+          id?: string
+          is_active?: boolean | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       blogs: {
         Row: {
           author: string
@@ -101,6 +140,41 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_usage: {
+        Row: {
+          id: string
+          knowledge_id: string | null
+          question: string
+          similarity_score: number | null
+          used_at: string | null
+          was_helpful: boolean | null
+        }
+        Insert: {
+          id?: string
+          knowledge_id?: string | null
+          question: string
+          similarity_score?: number | null
+          used_at?: string | null
+          was_helpful?: boolean | null
+        }
+        Update: {
+          id?: string
+          knowledge_id?: string | null
+          question?: string
+          similarity_score?: number | null
+          used_at?: string | null
+          was_helpful?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_usage_knowledge_id_fkey"
+            columns: ["knowledge_id"]
+            isOneToOne: false
+            referencedRelation: "archie_knowledge"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           created_at: string | null
@@ -136,6 +210,53 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: []
+      }
+      unanswered_questions: {
+        Row: {
+          context: Json | null
+          first_asked: string | null
+          frequency: number | null
+          id: string
+          knowledge_article_id: string | null
+          last_asked: string | null
+          notes: string | null
+          question: string
+          resolved_by: string | null
+          status: string | null
+        }
+        Insert: {
+          context?: Json | null
+          first_asked?: string | null
+          frequency?: number | null
+          id?: string
+          knowledge_article_id?: string | null
+          last_asked?: string | null
+          notes?: string | null
+          question: string
+          resolved_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          context?: Json | null
+          first_asked?: string | null
+          frequency?: number | null
+          id?: string
+          knowledge_article_id?: string | null
+          last_asked?: string | null
+          notes?: string | null
+          question?: string
+          resolved_by?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unanswered_questions_knowledge_article_id_fkey"
+            columns: ["knowledge_article_id"]
+            isOneToOne: false
+            referencedRelation: "archie_knowledge"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_locations: {
         Row: {
@@ -420,6 +541,33 @@ export type Database = {
         Returns: boolean
       }
       insert_fact_daily_batch: { Args: { records: Json }; Returns: undefined }
+      search_knowledge: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          query_embedding: string
+        }
+        Returns: {
+          category: string
+          content: string
+          id: string
+          similarity: number
+          tags: string[]
+          title: string
+        }[]
+      }
+      track_knowledge_usage: {
+        Args: {
+          p_knowledge_id: string
+          p_question: string
+          p_similarity_score: number
+        }
+        Returns: string
+      }
+      track_unanswered_question: {
+        Args: { p_context?: Json; p_question: string }
+        Returns: string
+      }
       update_fact_daily_batch: { Args: { updates: Json }; Returns: undefined }
       upsert_inventory_batch: { Args: { records: Json }; Returns: undefined }
       upsert_locations_batch: { Args: { records: Json }; Returns: undefined }
