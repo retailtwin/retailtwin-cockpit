@@ -117,8 +117,13 @@ serve(async (req) => {
           });
 
           if (!embeddingResponse.ok) {
-            console.error(`Failed to generate embedding for ${title}`);
-            errors.push(`Embedding failed for: ${title}`);
+            const errorText = await embeddingResponse.text();
+            console.error(`Failed to generate embedding for ${title}:`, {
+              status: embeddingResponse.status,
+              statusText: embeddingResponse.statusText,
+              error: errorText
+            });
+            errors.push(`Embedding failed for: ${title} - ${embeddingResponse.status}: ${errorText}`);
             skipped++;
             continue;
           }
