@@ -19,6 +19,7 @@ import { Loader2, Shield, UserPlus, Trash2, Settings2, Users, Calculator, Calend
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { getDataDateRange } from "@/lib/supabase-helpers";
 
 type UserRole = {
   id: string;
@@ -63,14 +64,34 @@ const Settings = () => {
   const [minimumStockThreshold, setMinimumStockThreshold] = useState("");
   
   // Calculation
-  const [startDate, setStartDate] = useState<Date>(new Date(2023, 0, 1)); // January 2023
-  const [endDate, setEndDate] = useState<Date>(new Date(2023, 11, 31)); // December 2023
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
   const [isCalculating, setIsCalculating] = useState(false);
+  const [dataMinDate, setDataMinDate] = useState<Date | undefined>();
+  const [dataMaxDate, setDataMaxDate] = useState<Date | undefined>();
 
   useEffect(() => {
     checkAdminAccess();
     loadSettings();
+    loadDataDateRange();
   }, []);
+
+  const loadDataDateRange = async () => {
+    try {
+      const dateRange = await getDataDateRange();
+      if (dateRange) {
+        const minDate = new Date(dateRange.min_date);
+        const maxDate = new Date(dateRange.max_date);
+        setDataMinDate(minDate);
+        setDataMaxDate(maxDate);
+        // Initialize with data range if no dates selected
+        if (!startDate) setStartDate(minDate);
+        if (!endDate) setEndDate(maxDate);
+      }
+    } catch (error) {
+      console.error("Error loading data date range:", error);
+    }
+  };
 
   const checkAdminAccess = async () => {
     try {
@@ -325,14 +346,14 @@ const Settings = () => {
       if (error) throw error;
 
       toast({
-        title: "Calculation complete",
+        title: "Simulation complete",
         description: `Processed ${data.summary.processed} records. ${data.summary.increases} increases, ${data.summary.decreases} decreases.`,
       });
     } catch (error: any) {
-      console.error('Calculation error:', error);
+      console.error('Simulation error:', error);
       toast({
-        title: "Calculation failed",
-        description: error.message || "Could not run inventory calculation.",
+        title: "Simulation failed",
+        description: error.message || "Could not run inventory simulation.",
         variant: "destructive",
       });
     } finally {
@@ -383,7 +404,7 @@ const Settings = () => {
               </TabsTrigger>
               <TabsTrigger value="calculate" className="gap-2">
                 <Calculator className="h-4 w-4" />
-                Run Calculation
+                Run Simulation
               </TabsTrigger>
             </TabsList>
 
@@ -792,13 +813,13 @@ const Settings = () => {
               </Button>
             </TabsContent>
 
-            {/* Run Calculation Tab */}
+            {/* Run Simulation Tab */}
             <TabsContent value="calculate" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Run Inventory Calculation</CardTitle>
+                  <CardTitle>Run Simulation</CardTitle>
                   <CardDescription>
-                    Execute inventory target calculations for a specific date range
+                    Execute inventory target simulations for a specific date range
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -823,6 +844,7 @@ const Settings = () => {
                             mode="single"
                             selected={startDate}
                             onSelect={setStartDate}
+                            defaultMonth={startDate || dataMinDate}
                             initialFocus
                             className="pointer-events-auto"
                           />
@@ -850,6 +872,7 @@ const Settings = () => {
                             mode="single"
                             selected={endDate}
                             onSelect={setEndDate}
+                            defaultMonth={endDate || dataMaxDate}
                             initialFocus
                             className="pointer-events-auto"
                           />
@@ -859,7 +882,7 @@ const Settings = () => {
                   </div>
 
                   <div className="space-y-3 p-4 bg-muted rounded-lg">
-                    <p className="text-sm font-medium">Calculation Info:</p>
+                    <p className="text-sm font-medium">Simulation Info:</p>
                     <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                       <li>Processes all SKUs and locations in the selected date range</li>
                       <li>Updates target inventory levels based on current settings</li>
@@ -877,12 +900,12 @@ const Settings = () => {
                     {isCalculating ? (
                       <>
                         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Calculating...
+                        Running Simulation...
                       </>
                     ) : (
                       <>
                         <Calculator className="mr-2 h-5 w-5" />
-                        Run Calculation
+                        Run Simulation
                       </>
                     )}
                   </Button>
