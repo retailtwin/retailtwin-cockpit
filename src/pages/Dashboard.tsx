@@ -19,6 +19,7 @@ import {
   fetchKPIData,
   fetchFactDaily,
   fetchDBMCalculations,
+  fetchLocationOrderDays,
   getDataDateRange,
   formatCurrency,
   formatNumber,
@@ -53,6 +54,7 @@ const Dashboard = () => {
   const [showResultDetails, setShowResultDetails] = useState(false);
   const [productionLeadTime, setProductionLeadTime] = useState<number | undefined>();
   const [shippingLeadTime, setShippingLeadTime] = useState<number | undefined>();
+  const [orderDays, setOrderDays] = useState<string | undefined>();
   const [dataDateRange, setDataDateRange] = useState<{min: Date, max: Date} | null>(null);
 
   // Check admin status and load settings
@@ -183,6 +185,22 @@ const Dashboard = () => {
 
     loadData();
   }, [selectedLocation, selectedProduct, dateRange, toast]);
+
+  // Load order days when location changes
+  useEffect(() => {
+    if (!selectedLocation) return;
+
+    const loadOrderDays = async () => {
+      try {
+        const days = await fetchLocationOrderDays(selectedLocation);
+        setOrderDays(days || undefined);
+      } catch (error) {
+        console.error("Error loading order days:", error);
+      }
+    };
+
+    loadOrderDays();
+  }, [selectedLocation]);
 
   const handleAskArchie = (prompt: string) => {
     setPreloadedPrompt(prompt);
@@ -539,6 +557,7 @@ const Dashboard = () => {
             hasSimulation={!!simulationResult}
             productionLeadTime={productionLeadTime}
             shippingLeadTime={shippingLeadTime}
+            orderDays={orderDays}
             onViewSettings={isAdmin ? () => navigate('/settings') : undefined}
           />
 

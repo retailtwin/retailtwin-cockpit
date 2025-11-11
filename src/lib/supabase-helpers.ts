@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 export interface Location {
   code: string;
   name: string | null;
+  order_days?: string | null;
 }
 
 export interface Product {
@@ -58,6 +59,29 @@ export async function fetchLocations(): Promise<Location[]> {
     return [];
   }
   return (data as any) || [];
+}
+
+export async function fetchLocationOrderDays(locationCode: string): Promise<string | null> {
+  // Use raw query to get order_days from aifo.locations
+  const { data, error } = await supabase
+    .rpc('get_system_setting', {
+      p_setting_key: 'order_days',
+      p_location_code: locationCode === 'ALL' ? null : locationCode
+    } as any);
+  
+  if (error) {
+    console.error("Error fetching order days:", error);
+    // Fallback: default to all days
+    return "mon,tue,wed,thu,fri,sat,sun";
+  }
+  
+  // If we have a result, it's a jsonb, so we need to extract the string value
+  if (data && typeof data === 'string') {
+    // Remove quotes if present
+    return data.replace(/"/g, '');
+  }
+  
+  return "mon,tue,wed,thu,fri,sat,sun";
 }
 
 export async function fetchProducts(): Promise<Product[]> {

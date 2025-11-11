@@ -6,6 +6,7 @@ interface SimulationStatusBarProps {
   hasSimulation: boolean;
   productionLeadTime?: number;
   shippingLeadTime?: number;
+  orderDays?: string;
   onViewSettings?: () => void;
 }
 
@@ -13,8 +14,27 @@ export const SimulationStatusBar = ({
   hasSimulation,
   productionLeadTime,
   shippingLeadTime,
+  orderDays,
   onViewSettings,
 }: SimulationStatusBarProps) => {
+  // Calculate total lead time and format shipping frequency
+  const totalLeadTime = (productionLeadTime || 0) + (shippingLeadTime || 0);
+  
+  // Format order days for display
+  const formatOrderDays = (days?: string) => {
+    if (!days) return "Unknown";
+    const daysList = days.split(',').map(d => d.trim());
+    const dayCount = daysList.length;
+    
+    if (dayCount === 7) return "7 Days per Week";
+    
+    // Capitalize first letter of each day
+    const formattedDays = daysList.map(day => 
+      day.charAt(0).toUpperCase() + day.slice(1)
+    ).join(', ');
+    
+    return `${dayCount} Days per Week (${formattedDays})`;
+  };
   // Show loading state if lead times haven't loaded yet
   if (productionLeadTime === undefined && shippingLeadTime === undefined) {
     return (
@@ -32,14 +52,14 @@ export const SimulationStatusBar = ({
           DBM
         </Badge>
         <div className="flex items-center gap-2">
-          {productionLeadTime !== undefined && (
+          {totalLeadTime > 0 && (
             <Badge variant="secondary" className="font-normal">
-              Lead Time: {productionLeadTime}d
+              Lead Time: {totalLeadTime} days
             </Badge>
           )}
-          {shippingLeadTime !== undefined && (
+          {orderDays && (
             <Badge variant="secondary" className="font-normal">
-              Shipping: {shippingLeadTime}d
+              Shipping Frequency: {formatOrderDays(orderDays)}
             </Badge>
           )}
         </div>
