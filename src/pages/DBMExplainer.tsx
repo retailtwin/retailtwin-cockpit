@@ -809,19 +809,43 @@ export default function DBMExplainer() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-muted p-3 rounded-lg">
                 <div className="text-xs text-muted-foreground">Sales (units)</div>
-                <div className="text-2xl font-bold">{currentState.onHand.toFixed(0)}</div>
+                <div className="text-2xl font-bold">
+                  {simulationData.slice(0, animationDay + 1).reduce((sum, d) => sum + d.sales, 0)}
+                </div>
               </div>
               <div className="bg-muted p-3 rounded-lg">
                 <div className="text-xs text-muted-foreground">Service Level (calculated in weekly: 28/30) (93%)</div>
-                <div className="text-2xl font-bold text-green-500">{currentState.target}</div>
+                <div className="text-2xl font-bold text-green-500">
+                  {(() => {
+                    const dataSlice = simulationData.slice(0, animationDay + 1);
+                    const stockoutDays = dataSlice.filter(d => d.onHand === 0 && d.demand > 0).length;
+                    const serviceLevel = animationDay > 0 ? ((dataSlice.length - stockoutDays) / dataSlice.length * 100) : 100;
+                    return `${serviceLevel.toFixed(0)}%`;
+                  })()}
+                </div>
               </div>
               <div className="bg-muted p-3 rounded-lg">
                 <div className="text-xs text-muted-foreground">Average Inventory (units)</div>
-                <div className="text-2xl font-bold text-amber-500">{currentState.economic.toFixed(0)}</div>
+                <div className="text-2xl font-bold text-amber-500">
+                  {(() => {
+                    const dataSlice = simulationData.slice(0, animationDay + 1);
+                    const avgInv = dataSlice.reduce((sum, d) => sum + d.onHand, 0) / dataSlice.length;
+                    return avgInv.toFixed(1);
+                  })()}
+                </div>
               </div>
               <div className="bg-muted p-3 rounded-lg">
-                <div className="text-xs text-muted-foreground">Turn (sales / Avg Inventory)</div>
-                <div className="text-2xl font-bold text-orange-500">{currentState.sales}</div>
+                <div className="text-xs text-muted-foreground">Turn (annual)</div>
+                <div className="text-2xl font-bold text-orange-500">
+                  {(() => {
+                    const dataSlice = simulationData.slice(0, animationDay + 1);
+                    const totalSales = dataSlice.reduce((sum, d) => sum + d.sales, 0);
+                    const avgInv = dataSlice.reduce((sum, d) => sum + d.onHand, 0) / dataSlice.length;
+                    const days = animationDay > 0 ? animationDay : 1;
+                    const annualizedTurn = avgInv > 0 ? (totalSales / avgInv) * (365 / days) : 0;
+                    return annualizedTurn.toFixed(1);
+                  })()}
+                </div>
               </div>
             </div>
 
