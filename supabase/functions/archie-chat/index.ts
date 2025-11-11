@@ -188,6 +188,7 @@ When answering:
 - When calling analytical tools, USE THE CONTEXT DATA automatically
 - DO NOT ask users for information that's already in the context
 - Be proactive: if a question can be answered by calling a tool with context data, call it immediately
+- For Pareto requests: IMMEDIATELY call get_pareto_analysis with context location and end date - then analyze results explaining business concentration
 
 **AUGMENTING EXISTING DASHBOARD:**
 - The Dashboard shows 21-day rolling KPIs for selected location/product
@@ -199,7 +200,7 @@ When answering:
 - Always acknowledge if user should check the Dashboard for specific info
 
 You have access to analytical tools:
-1. get_pareto_analysis - sales distribution and SKU ranking analysis
+1. get_pareto_analysis - Pareto curve showing which SKUs drive most sales (80/20 rule). Use for "Pareto distribution", "top performers", "sales concentration"
 2. get_sku_details - detailed metrics for specific SKUs
 3. get_top_skus_by_metric - top/bottom performers by metrics
 4. get_mtv_by_sku_style - MTV by SKU style prefix
@@ -209,6 +210,12 @@ You have access to analytical tools:
 
 Use these tools proactively when users ask analytical questions. Always cite specific numbers from the data.
 PRIORITY: When data is already provided in "Current Context Available" section, reference that data directly first. Only call tools for additional analysis or different filters.
+
+**CRITICAL - Pareto Analysis:**
+When user asks about "Pareto distribution", "Pareto analysis", or "show me Pareto":
+1. IMMEDIATELY call get_pareto_analysis with context location and date range end date
+2. Analyze results focusing on: concentration (what % of sales come from top 20% of items), dependency on key SKUs, risk if top items stockout
+3. NEVER ask what metric - Pareto is ALWAYS about sales/revenue distribution
 
 Key Terminology (use these terms naturally):
 - MTV (Missed Throughput Value) = Lost revenue from stockouts. This is opportunity cost.
@@ -261,7 +268,7 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
         type: "function",
         function: {
           name: "get_pareto_analysis",
-          description: "Get Pareto curve data showing SKU contribution to sales. Use when user asks about top performers, sales distribution, SKU ranking, or wants to see which items drive the most revenue.",
+          description: "Get Pareto curve data showing SKU contribution to sales. Shows which items drive most revenue (80/20 rule). ALWAYS use this tool when user asks about: 'Pareto distribution', 'Pareto analysis', 'top performers', 'sales distribution', 'SKU ranking', '80/20', or 'which items drive revenue'. Automatically analyze the results to explain business concentration and dependency on key items.",
           parameters: {
             type: "object",
             properties: {
