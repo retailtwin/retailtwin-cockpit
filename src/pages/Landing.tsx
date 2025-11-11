@@ -22,14 +22,14 @@ const Landing = () => {
         
         <div className="relative container mx-auto px-6 py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
-            <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">AI To Govern, Not Just Automate{" "}
-              <span className="text-primary">Not Just Automate</span>
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
+              AI To Govern, Not Just Automate
             </h1>
             <div className="flex items-start gap-4 max-w-3xl mx-auto">
               <img src={archieLogo} alt="Archie Logo" className="w-16 h-auto mt-1 mb-auto flex-shrink-0" />
               <p className="text-xl text-muted-foreground text-left">Archie knows the rules and metrics that drive your supply chain's performance — for better buying and VMI without the complexity of SaaS.</p>
             </div>
-            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">Many products (NOOS, Always Available, and key seasonal lines) — should run on rules, not forecasts. We learned from SaaS, and merged proven flow logic with AI  — turning rules into rapid, reliable decisions.</p>
+            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">Many products (NOOS, Always Available, and key seasonal lines) — should run on rules, not forecasts. We learned from SaaS, and merged proven flow logic with AI  — turning rules into rapid, reliable decisions.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/login">
                 <Button size="lg" className="text-lg px-10 shadow-lg">
@@ -225,7 +225,7 @@ const Landing = () => {
                   <p>
                     I'm excited to announce that I've joined Zefyr Solutions as Director - Responsive Retail Supply Chains, based in Amsterdam, The Netherlands.
                   </p>
-                  <p>I bring 30+ years of retail leadership across EMEA and a proven record as a SaaS founder. Having led retailing teams at scale and founded technology solutions that enable smarter, faster decisions, I offer a unique combination of strategic insight and operational know-how. Connecting supply flows to retail, helping businesses unlock value and free cash.</p>
+                  <p>I bring 30+ years of retail leadership across EMEA and a proven record as a SaaS founder. Having led retailing teams at scale and founded technology solutions that enable smarter, faster decisions, I offer a unique combination of strategic insight and operational know-how. Connecting supply flows to retail, helping businesses unlock value and free cash.</p>
                   <p>I'm thrilled to join Zefyr as the team extends beyond their already deep expertise in Footwear and Apparel product management, product creation, sourcing, logistics, and innovation with my market-facing, retail-driven perspective.</p>
                   <p>
                     Contact me to learn how I can help strengthen the link between your supply chain and your retail success.
