@@ -602,6 +602,7 @@ const Dashboard = () => {
                       : 0
                   }
                   tooltip="Average number of days inventory takes to convert to cash"
+                  invertColors={true}
                 />
               </div>
             </div>

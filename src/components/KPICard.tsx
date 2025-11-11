@@ -15,6 +15,7 @@ interface KPICardProps {
   sparklineSeries?: { value: number }[];
   tooltip?: string;
   unit?: string;
+  invertColors?: boolean;
 }
 
 export const KPICard = ({
@@ -24,9 +25,14 @@ export const KPICard = ({
   sparklineSeries = [],
   tooltip,
   unit = "",
+  invertColors = false,
 }: KPICardProps) => {
-  const isPositive = delta7d && delta7d > 0;
-  const isNegative = delta7d && delta7d < 0;
+  const isPositive = invertColors 
+    ? delta7d && delta7d < 0 
+    : delta7d && delta7d > 0;
+  const isNegative = invertColors 
+    ? delta7d && delta7d > 0 
+    : delta7d && delta7d < 0;
 
   return (
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-200">
