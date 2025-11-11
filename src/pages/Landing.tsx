@@ -22,15 +22,14 @@ const Landing = () => {
         
         <div className="relative container mx-auto px-6 py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
-            <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
-              AI that Governs Product Flow,{" "}
-              <span className="text-primary">Not Just Automates it</span>
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">AI To Govern, Not Just Automate{" "}
+              <span className="text-primary">Not Just Automates The Ordering</span>
             </h1>
             <div className="flex items-start gap-4 max-w-3xl mx-auto">
               <img src={archieLogo} alt="Archie Logo" className="w-16 h-auto mt-1 mb-auto flex-shrink-0" />
-              <p className="text-xl text-muted-foreground text-left">Deployed in your environment, Archie enforces and improves the rules and metrics that drive supply performance — ensuring better decisions with none of the SaaS complexity.</p>
+              <p className="text-xl text-muted-foreground text-left">Archie knows the rules and metrics that drive your supply chain's performance — for better buying and VMI without the complexity of SaaS.</p>
             </div>
-            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">In Footwear and Apparel, SKUs with multiple cash cycles (NOOS, Always Available and many seasonal items) should run on rules — not forecasts. These items are much better served with a Responsive Supply Chain with dynamic buffers, than with predicted demand. Our AI applies your rules — orders to the buffer, keeps lead times short and reliable, and tracks the 'speed to cash' for every SKU — to sustain high service levels and turns - without the SaaS complexity.</p>
+            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">Many products (NOOS, Always Available, and key seasonal lines) — should run on rules, not forecasts. We learned from SaaS, and merged proven flow logic with AI  — turning rules into rapid, reliable decisions.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/login">
                 <Button size="lg" className="text-lg px-10 shadow-lg">
@@ -114,7 +113,7 @@ const Landing = () => {
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                   <Layers className="h-6 w-6 text-primary" />
                 </div>
-                <CardDescription className="text-base leading-relaxed">At Retail Twin Labs, we combine decades of experience in merchandise planning and distribution for Footwear, Apparel and Sporting Goods with deep SaaS knowledge and AI, to deliver critical insights and simple workflow automation. Your data, your rules, your tools.</CardDescription>
+                <CardDescription className="text-base leading-relaxed">We combine decades of experience in merchandise planning and distribution for Footwear, Apparel and Sporting Goods with deep SaaS knowledge and AI, to deliver critical insights and simple workflow automation. Your data, your rules, your tools.</CardDescription>
               </CardHeader>
             </Card>
 
@@ -167,16 +166,14 @@ const Landing = () => {
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
                 Your Cockpit
               </h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Using your data and your rules, we build intuitive cockpits from where you control the flow. Simple steps guide you toward the goal: increasing sales and turns through better service levels, real insights, and a much quicker supply chain.
-              </p>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">Using your data and your rules, we deliver intuitive cockpits from where you control the flow. Simple steps guide you toward the goal: increasing sales and turns through better service levels, real insights, and a much quicker supply chain.</p>
             </div>
 
             {/* Visual Showcase Section */}
             <div className="grid md:grid-cols-2 gap-8">
               <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50 overflow-hidden">
                 <CardHeader>
-                  <CardTitle className="text-xl mb-4">Dashboard View</CardTitle>
+                  <CardTitle className="text-xl mb-4">Dashboard</CardTitle>
                   <CardDescription className="text-base leading-relaxed mb-6">
                     Monitor your inventory flow with real-time KPIs, analytics, and actionable insights all in one place.
                   </CardDescription>
@@ -190,7 +187,7 @@ const Landing = () => {
 
               <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50 overflow-hidden">
                 <CardHeader>
-                  <CardTitle className="text-xl mb-4">Archie AI Assistant</CardTitle>
+                  <CardTitle className="text-xl mb-4">Archie, your AI Assistant</CardTitle>
                   <CardDescription className="text-base leading-relaxed mb-6">
                     Get intelligent recommendations and explanations about your supply chain directly from Archie.
                   </CardDescription>
