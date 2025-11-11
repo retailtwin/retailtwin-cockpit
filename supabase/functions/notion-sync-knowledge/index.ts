@@ -103,11 +103,11 @@ serve(async (req) => {
           // Create text for embedding (title + short description)
           const embeddingText = `${title} ${shortDescription}`.trim();
 
-          // Generate embedding
-          const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+          // Generate embedding using Lovable AI
+          const embeddingResponse = await fetch('https://ai.gateway.lovable.dev/v1/embeddings', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY') || ''}`,
+              'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY') || ''}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({

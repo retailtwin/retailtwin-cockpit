@@ -563,6 +563,8 @@ export type Database = {
           category: string
           content: string
           id: string
+          notion_page_id: string
+          notion_url: string
           similarity: number
           tags: string[]
           title: string

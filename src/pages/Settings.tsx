@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Shield, UserPlus, Trash2, Settings2, Users, Calculator, CalendarIcon, Clock, Zap, Sliders, Bell, ChevronDown, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Loader2, Shield, UserPlus, Trash2, Settings2, Users, Calculator, CalendarIcon, Clock, Zap, Sliders, Bell, ChevronDown, AlertTriangle, ArrowLeft, BookOpen, RefreshCw } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -72,10 +72,23 @@ const Settings = () => {
   const [dataMinDate, setDataMinDate] = useState<Date | undefined>();
   const [dataMaxDate, setDataMaxDate] = useState<Date | undefined>();
 
+  // Knowledge Base Sync
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStats, setSyncStats] = useState<{
+    lastSync: string | null;
+    totalArticles: number;
+    articlesByCategory: Record<string, number>;
+  }>({
+    lastSync: null,
+    totalArticles: 0,
+    articlesByCategory: {},
+  });
+
   useEffect(() => {
     checkAdminAccess();
     loadSettings();
     loadDataDateRange();
+    loadKnowledgeStats();
   }, []);
 
   const loadDataDateRange = async () => {
@@ -363,6 +376,61 @@ const Settings = () => {
     }
   };
 
+  const loadKnowledgeStats = async () => {
+    try {
+      const { data: articles, error } = await supabase
+        .from('archie_knowledge')
+        .select('category, last_synced, source_type')
+        .eq('is_active', true)
+        .eq('source_type', 'notion');
+
+      if (error) throw error;
+
+      const categoryBreakdown: Record<string, number> = {};
+      let mostRecentSync: string | null = null;
+
+      articles?.forEach((article) => {
+        categoryBreakdown[article.category] = (categoryBreakdown[article.category] || 0) + 1;
+        if (article.last_synced && (!mostRecentSync || article.last_synced > mostRecentSync)) {
+          mostRecentSync = article.last_synced;
+        }
+      });
+
+      setSyncStats({
+        lastSync: mostRecentSync,
+        totalArticles: articles?.length || 0,
+        articlesByCategory: categoryBreakdown,
+      });
+    } catch (error) {
+      console.error('Error loading knowledge stats:', error);
+    }
+  };
+
+  const handleSyncKnowledge = async () => {
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('notion-sync-knowledge');
+
+      if (error) throw error;
+
+      toast({
+        title: "Sync complete",
+        description: `Synced ${data.synced} articles${data.skipped > 0 ? `, skipped ${data.skipped}` : ''}`,
+      });
+
+      await loadKnowledgeStats();
+    } catch (error: any) {
+      console.error('Sync error:', error);
+      toast({
+        title: "Sync failed",
+        description: error.message || "Could not sync knowledge base.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -403,7 +471,7 @@ const Settings = () => {
           </div>
 
           <Tabs defaultValue={defaultTab} className="space-y-6">
-            <TabsList className="grid w-full max-w-2xl grid-cols-3">
+            <TabsList className="grid w-full max-w-3xl grid-cols-4">
               <TabsTrigger value="users" className="gap-2">
                 <Users className="h-4 w-4" />
                 User Roles
@@ -411,6 +479,10 @@ const Settings = () => {
               <TabsTrigger value="config" className="gap-2">
                 <Settings2 className="h-4 w-4" />
                 Configuration
+              </TabsTrigger>
+              <TabsTrigger value="knowledge" className="gap-2">
+                <BookOpen className="h-4 w-4" />
+                Knowledge Base
               </TabsTrigger>
               <TabsTrigger value="calculate" className="gap-2">
                 <Calculator className="h-4 w-4" />
@@ -821,6 +893,119 @@ const Settings = () => {
               <Button onClick={handleSaveSettings} className="w-full" size="lg">
                 Save All Settings
               </Button>
+            </TabsContent>
+
+            {/* Knowledge Base Tab */}
+            <TabsContent value="knowledge" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    Notion Knowledge Base Sync
+                  </CardTitle>
+                  <CardDescription>
+                    Sync knowledge articles from your Notion database to enhance Archie's responses
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Sync Status */}
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="p-4 border rounded-lg space-y-2">
+                      <div className="text-sm text-muted-foreground">Last Sync</div>
+                      <div className="text-2xl font-bold">
+                        {syncStats.lastSync 
+                          ? new Date(syncStats.lastSync).toLocaleDateString()
+                          : 'Never'}
+                      </div>
+                      {syncStats.lastSync && (
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(syncStats.lastSync).toLocaleTimeString()}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-4 border rounded-lg space-y-2">
+                      <div className="text-sm text-muted-foreground">Total Articles</div>
+                      <div className="text-2xl font-bold text-primary">
+                        {syncStats.totalArticles}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        From Notion
+                      </div>
+                    </div>
+
+                    <div className="p-4 border rounded-lg space-y-2">
+                      <div className="text-sm text-muted-foreground">Categories</div>
+                      <div className="text-2xl font-bold">
+                        {Object.keys(syncStats.articlesByCategory).length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Active categories
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Category Breakdown */}
+                  {Object.keys(syncStats.articlesByCategory).length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Articles by Category</Label>
+                      <div className="grid gap-2 md:grid-cols-2">
+                        {Object.entries(syncStats.articlesByCategory).map(([category, count]) => (
+                          <div key={category} className="flex items-center justify-between p-3 border rounded-md">
+                            <span className="font-medium">{category}</span>
+                            <Badge variant="secondary">{count}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sync Button */}
+                  <div className="space-y-4">
+                    <div className="p-4 bg-muted rounded-lg space-y-2">
+                      <div className="flex items-start gap-3">
+                        <RefreshCw className="h-5 w-5 text-primary mt-0.5" />
+                        <div className="flex-1">
+                          <div className="font-medium">Sync from Notion</div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            Fetch all published articles from your Notion database. Only articles with Status = "Published" will be synced.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={handleSyncKnowledge} 
+                      disabled={isSyncing}
+                      className="w-full gap-2"
+                      size="lg"
+                    >
+                      {isSyncing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Syncing from Notion...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4" />
+                          Sync Now
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Info Box */}
+                  <div className="p-4 border-l-4 border-primary bg-primary/5 rounded-r-md space-y-1">
+                    <div className="font-medium text-sm">How it works</div>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Articles are fetched from your configured Notion database</li>
+                      <li>Only "Published" status articles are imported</li>
+                      <li>Archie uses semantic search to find relevant knowledge</li>
+                      <li>Full article content is fetched on-demand when used</li>
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Run Simulation Tab */}
