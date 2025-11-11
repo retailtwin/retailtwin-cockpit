@@ -114,6 +114,7 @@ export const FilterBar = ({
               selected={dateRange}
               onSelect={onDateRangeChange}
               numberOfMonths={2}
+              defaultMonth={dataDateRange?.min || dateRange?.from}
               className="pointer-events-auto"
             />
           </PopoverContent>
