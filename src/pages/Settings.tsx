@@ -148,10 +148,10 @@ const Settings = () => {
           case "shipping_lead_time":
             setShippingLeadTime(value);
             break;
-          case "shipping_days":
+          case "order_days":
             try {
-              const days = JSON.parse(value);
-              if (Array.isArray(days)) {
+              const days = value.split(',').map(d => d.trim());
+              if (days.length > 0) {
                 setShippingDays(days);
               }
             } catch {
@@ -256,7 +256,7 @@ const Settings = () => {
       const updates = [
         { key: "production_lead_time_global", value: productionLeadTime },
         { key: "shipping_lead_time", value: shippingLeadTime },
-        { key: "shipping_days", value: JSON.stringify(shippingDays) },
+        { key: "order_days", value: shippingDays.join(',') },
         { key: "accelerator_up_percentage", value: (parseFloat(acceleratorUpPercentage || "0") / 100).toString() },
         { key: "accelerator_down_percentage", value: (parseFloat(acceleratorDownPercentage || "0") / 100).toString() },
         { key: "acceleration_idle_days", value: idleDays },
