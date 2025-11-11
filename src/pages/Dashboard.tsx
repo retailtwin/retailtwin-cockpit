@@ -534,7 +534,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Simulation Status Bar */}
+          {/* Simulation Settings Bar - Always visible */}
           <SimulationStatusBar
             hasSimulation={!!simulationResult}
             productionLeadTime={productionLeadTime}
