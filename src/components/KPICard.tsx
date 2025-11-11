@@ -27,10 +27,15 @@ export const KPICard = ({
   unit = "",
   invertColors = false,
 }: KPICardProps) => {
-  const isPositive = invertColors 
+  // Arrow direction is based on actual delta sign
+  const showUpArrow = delta7d && delta7d > 0;
+  const showDownArrow = delta7d && delta7d < 0;
+  
+  // Color is based on whether the change is good or bad
+  const isGoodChange = invertColors 
     ? delta7d && delta7d < 0 
     : delta7d && delta7d > 0;
-  const isNegative = invertColors 
+  const isBadChange = invertColors 
     ? delta7d && delta7d > 0 
     : delta7d && delta7d < 0;
 
@@ -65,15 +70,15 @@ export const KPICard = ({
             {delta7d !== undefined && (
               <div
                 className={`flex items-center gap-1 text-sm font-medium ${
-                  isPositive
+                  isGoodChange
                     ? "text-success"
-                    : isNegative
+                    : isBadChange
                     ? "text-destructive"
                     : "text-muted-foreground"
                 }`}
               >
-                {isPositive && <ArrowUp className="h-4 w-4" />}
-                {isNegative && <ArrowDown className="h-4 w-4" />}
+                {showUpArrow && <ArrowUp className="h-4 w-4" />}
+                {showDownArrow && <ArrowDown className="h-4 w-4" />}
                 {Math.abs(delta7d).toFixed(1)}%
               </div>
             )}
