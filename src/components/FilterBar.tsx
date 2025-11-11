@@ -20,6 +20,7 @@ interface FilterBarProps {
   selectedLocation: string;
   selectedProduct: string;
   dateRange?: DateRange;
+  dataDateRange?: {min: Date, max: Date} | null;
   onLocationChange: (value: string) => void;
   onProductChange: (value: string) => void;
   onDateRangeChange: (range: DateRange | undefined) => void;
@@ -31,6 +32,7 @@ export const FilterBar = ({
   selectedLocation,
   selectedProduct,
   dateRange,
+  dataDateRange,
   onLocationChange,
   onProductChange,
   onDateRangeChange,
@@ -97,6 +99,10 @@ export const FilterBar = ({
                 ) : (
                   format(dateRange.from, "MMM d, yyyy")
                 )
+              ) : dataDateRange ? (
+                <span className="text-foreground">
+                  {format(dataDateRange.min, "MMM d, yyyy")} - {format(dataDateRange.max, "MMM d, yyyy")}
+                </span>
               ) : (
                 <span>Select date range</span>
               )}

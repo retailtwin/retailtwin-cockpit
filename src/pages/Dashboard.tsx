@@ -489,6 +489,7 @@ const Dashboard = () => {
             selectedLocation={selectedLocation}
             selectedProduct={selectedProduct}
             dateRange={dateRange}
+            dataDateRange={dataDateRange}
             onLocationChange={setSelectedLocation}
             onProductChange={setSelectedProduct}
             onDateRangeChange={setDateRange}
