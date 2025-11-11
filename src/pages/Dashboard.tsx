@@ -558,7 +558,7 @@ const Dashboard = () => {
             productionLeadTime={productionLeadTime}
             shippingLeadTime={shippingLeadTime}
             orderDays={orderDays}
-            onViewSettings={isAdmin ? () => navigate('/settings') : undefined}
+            onViewSettings={isAdmin ? () => navigate('/settings', { state: { defaultTab: 'config' } }) : undefined}
           />
 
           {/* Simulation Results Display */}

@@ -15,8 +15,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Shield, UserPlus, Trash2, Settings2, Users, Calculator, CalendarIcon, Clock, Zap, Sliders, Bell, ChevronDown, AlertTriangle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Loader2, Shield, UserPlus, Trash2, Settings2, Users, Calculator, CalendarIcon, Clock, Zap, Sliders, Bell, ChevronDown, AlertTriangle, ArrowLeft } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getDataDateRange } from "@/lib/supabase-helpers";
@@ -31,6 +31,8 @@ type UserRole = {
 const Settings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const defaultTab = (location.state as any)?.defaultTab || 'users';
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -383,6 +385,14 @@ const Settings = () => {
       <div className="container mx-auto px-6 py-8 pb-16">
         <div className="space-y-6">
           <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/dashboard')}
+              className="shrink-0"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
             <Shield className="h-8 w-8 text-primary" />
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Admin Settings</h1>
@@ -392,7 +402,7 @@ const Settings = () => {
             </div>
           </div>
 
-          <Tabs defaultValue="users" className="space-y-6">
+          <Tabs defaultValue={defaultTab} className="space-y-6">
             <TabsList className="grid w-full max-w-2xl grid-cols-3">
               <TabsTrigger value="users" className="gap-2">
                 <Users className="h-4 w-4" />
