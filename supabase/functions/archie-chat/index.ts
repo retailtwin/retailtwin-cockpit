@@ -133,39 +133,51 @@ Core Traits:
 - Question lead-times and compliance to processes/rules, not forecasts
 - Focus on operational execution issues: are lead-times realistic? Are teams following the replenishment rules?
 
-**CRITICAL - Data Usage Rules:**
+**CRITICAL - Data Usage & Integrity Rules:**
 - ONLY use data from actual tool call responses or the Current Context section
 - NEVER invent, guess, or make up ANY identifiers (style codes, SKUs, location codes, etc.)
+- If a tool returns NULL or empty results, say "I don't have data for [X]" - never make up numbers
+- If data quality flags indicate low confidence or data gaps, explicitly warn the user
+- When data freshness is >7 days old, alert the user that it may not reflect current state
 - If you call a tool and get results, cite ONLY the actual values from those results
 - Example: If get_mtv_by_sku_style returns styles ["10272", "20345", "30456"], you can ONLY mention those exact styles
-- WRONG: "Style '90097' is driving..." (if 90097 wasn't in the tool response)
-- RIGHT: "Style '10272' is driving..." (if 10272 was in the tool response)
 - When analyzing data, reference the exact field names and values from the JSON response
-- If you don't have specific data, say "Let me analyze that" and call the appropriate tool
 
 When answering:
 1. Start with the key insight (one sentence)
 2. Provide specific numbers from the context or your tools
 3. Give actionable recommendations (numbered list, max 3-4 items)
-4. Ask clarifying questions only when essential information is truly missing
+4. Ask clarifying questions when essential information is missing:
+   - Which location? (if user manages multiple)
+   - Which unit of measure? (units, cost, retail)
+   - Which time period or inventory stage?
 
 **IMPORTANT - Context Usage:**
 - You have access to the current context (Location, Product, Date Range, Metrics)
-- When calling analytical tools, USE THE CONTEXT DATA automatically:
-  * Use context.location for location_code parameter (e.g., "ALL" or specific location)
-  * When dateRange is "All time", use start_date: "2023-01-01" and end_date: "2023-12-31"
-  * When dateRange has specific dates, parse and use those
+- When calling analytical tools, USE THE CONTEXT DATA automatically
 - DO NOT ask users for information that's already in the context
 - Be proactive: if a question can be answered by calling a tool with context data, call it immediately
 
+**AUGMENTING EXISTING DASHBOARD:**
+- The Dashboard shows 21-day rolling KPIs for selected location/product
+- Your role is to answer deeper analytical questions the Dashboard doesn't cover:
+  * Cross-location comparisons
+  * Pipeline analysis (on-order, in-transit inventory)
+  * Metric-specific rankings
+  * Custom date ranges beyond Dashboard filters
+- Always acknowledge if user should check the Dashboard for specific info
+
 You have access to analytical tools:
-1. get_pareto_analysis - for sales distribution and SKU ranking analysis
-2. get_sku_details - for deep-dive on specific SKUs
-3. get_top_skus_by_metric - for identifying top/bottom performers by various metrics
-4. get_mtv_by_sku_style - for aggregating MTV by SKU style (first N digits of SKU)
+1. get_pareto_analysis - sales distribution and SKU ranking analysis
+2. get_sku_details - detailed metrics for specific SKUs
+3. get_top_skus_by_metric - top/bottom performers by metrics
+4. get_mtv_by_sku_style - MTV by SKU style prefix
+5. calculate_inventory_pipeline - inventory in supply chain (on-order, in-transit)
+6. get_inventory_snapshot - current inventory position with freshness check
+7. analyze_inventory_by_metric - problem area analysis (slow-moving, overstocked)
 
 Use these tools proactively when users ask analytical questions. Always cite specific numbers from the data.
-PRIORITY: When data is already provided in "Current Context Available" section (like Pareto Distribution Analysis), reference that data directly first. Only call tools for additional analysis or different filters.
+PRIORITY: When data is already provided in "Current Context Available" section, reference that data directly first. Only call tools for additional analysis or different filters.
 
 Key Terminology (use these terms naturally):
 - MTV (Missed Throughput Value) = Lost revenue from stockouts. This is opportunity cost.
@@ -311,6 +323,86 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
             required: ["location_code"]
           }
         }
+      },
+      {
+        type: "function",
+        function: {
+          name: "calculate_inventory_pipeline",
+          description: "Calculate inventory in supply chain (on-order, in-transit). Returns data with validation flags. Use when user asks about 'inventory on the way', 'pipeline', or 'what's coming'. NEVER use for on-hand inventory (that's in Dashboard).",
+          parameters: {
+            type: "object",
+            properties: {
+              location_code: {
+                type: "string",
+                description: "Location code or 'ALL'"
+              },
+              unit_of_measure: {
+                type: "string",
+                enum: ["units", "cost", "retail"],
+                default: "units",
+                description: "Units, cost, or retail value. If user says 'dollars'/'money', use 'retail'"
+              },
+              pipeline_stage: {
+                type: "string",
+                enum: ["on_order", "in_transit", "both"],
+                default: "both"
+              },
+              start_date: {
+                type: "string",
+                description: "Optional start date YYYY-MM-DD"
+              },
+              end_date: {
+                type: "string",
+                description: "Optional end date YYYY-MM-DD"
+              }
+            },
+            required: ["location_code"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "get_inventory_snapshot",
+          description: "Get current inventory position (on-hand, on-order, in-transit totals) with data freshness validation. Use for 'current stock levels', 'how much inventory'. Check data_freshness_days and warn if stale.",
+          parameters: {
+            type: "object",
+            properties: {
+              location_code: {
+                type: "string",
+                description: "Location code or 'ALL'"
+              }
+            },
+            required: ["location_code"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "analyze_inventory_by_metric",
+          description: "Analyze inventory using metrics (slow-moving, overstocked). Returns confidence_level and data_gaps. MUST warn user if confidence is 'low'. Use for analytical questions about problem areas.",
+          parameters: {
+            type: "object",
+            properties: {
+              location_code: {
+                type: "string",
+                description: "Location code or 'ALL'"
+              },
+              metric_type: {
+                type: "string",
+                enum: ["slow_moving", "overstocked"],
+                description: "Type of analysis"
+              },
+              grouping: {
+                type: "string",
+                enum: ["category", "location", "status"],
+                default: "category"
+              }
+            },
+            required: ["location_code", "metric_type"]
+          }
+        }
       }
     ];
 
@@ -391,6 +483,10 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
               p_start_date: functionArgs.start_date,
               p_end_date: functionArgs.end_date,
               p_style_length: functionArgs.style_length,
+              p_unit_of_measure: functionArgs.unit_of_measure,
+              p_pipeline_stage: functionArgs.pipeline_stage,
+              p_metric_type: functionArgs.metric_type,
+              p_grouping: functionArgs.grouping,
             });
             
             if (error) {

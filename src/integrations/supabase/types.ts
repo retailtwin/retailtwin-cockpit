@@ -184,6 +184,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_inventory_metric: {
+        Args: {
+          p_date_range?: string
+          p_grouping?: string
+          p_location_code: string
+          p_metric_type: string
+        }
+        Returns: {
+          confidence_level: string
+          data_gaps: string[]
+          group_name: string
+          metric_value: number
+          sku_count: number
+        }[]
+      }
       calculate_riv: {
         Args: {
           p_end_date?: string
@@ -230,6 +245,25 @@ export type Database = {
           units_sold: number
         }[]
       }
+      get_inventory_pipeline: {
+        Args: {
+          p_end_date?: string
+          p_location_code?: string
+          p_pipeline_stage?: string
+          p_start_date?: string
+          p_unit_of_measure?: string
+        }
+        Returns: {
+          data_points: number
+          data_quality_note: string
+          has_sufficient_data: boolean
+          in_transit_value: number
+          new_assignment_value: number
+          on_order_value: number
+          replenishment_value: number
+          total_value: number
+        }[]
+      }
       get_inventory_zones_report: {
         Args: {
           p_end_date?: string
@@ -270,6 +304,19 @@ export type Database = {
           tcm: number
           turns_current: number
           turns_sim: number
+        }[]
+      }
+      get_latest_inventory_snapshot: {
+        Args: { p_location_code?: string }
+        Returns: {
+          cost_value: number
+          data_freshness_days: number
+          missing_locations: string[]
+          retail_value: number
+          snapshot_date: string
+          total_in_transit: number
+          total_on_hand: number
+          total_on_order: number
         }[]
       }
       get_locations: {
