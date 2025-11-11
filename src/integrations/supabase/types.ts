@@ -208,6 +208,13 @@ export type Database = {
         }
         Returns: number
       }
+      get_data_date_range: {
+        Args: never
+        Returns: {
+          max_date: string
+          min_date: string
+        }[]
+      }
       get_fact_daily_aggregated: {
         Args: {
           p_end_date?: string

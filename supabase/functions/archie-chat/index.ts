@@ -60,6 +60,27 @@ function sanitizeError(error: unknown, operation: string, supportId: string): ob
   };
 }
 
+// Helper to infer date range from database
+async function inferDateRange(supabaseClient: any): Promise<{start_date: string, end_date: string}> {
+  console.log('🗓️ Inferring date range from database...');
+  
+  const { data, error } = await supabaseClient.rpc('get_data_date_range');
+  
+  if (error || !data || data.length === 0) {
+    console.error('⚠️ Could not infer date range, using defaults:', error);
+    return {
+      start_date: '2023-01-01',
+      end_date: '2023-12-31'
+    };
+  }
+  
+  console.log('✅ Inferred date range:', data[0]);
+  return {
+    start_date: data[0].min_date,
+    end_date: data[0].max_date
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -120,6 +141,10 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Infer date range from database
+    const inferredDates = await inferDateRange(supabase);
+    console.log('📅 Using date range:', inferredDates);
+
     const systemPrompt = `You are Archie, a calm and precise inventory optimization assistant for retail supply chains.
 
 Core Traits:
@@ -142,6 +167,12 @@ Core Traits:
 - If you call a tool and get results, cite ONLY the actual values from those results
 - Example: If get_mtv_by_sku_style returns styles ["10272", "20345", "30456"], you can ONLY mention those exact styles
 - When analyzing data, reference the exact field names and values from the JSON response
+
+**Data Freshness & Date Handling:**
+- The current data spans from ${inferredDates.start_date} to ${inferredDates.end_date}
+- When using tools without explicit dates, this full range is automatically used
+- Always reference this date range when discussing trends or patterns
+- If tool calls return no results, mention the data timeframe to user
 
 When answering:
 1. Start with the key insight (one sentence)
@@ -279,16 +310,22 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
               location_code: { type: "string" },
               metric: { 
                 type: "string",
-                enum: ["sales", "stockout_days", "turns"],
-                description: "Metric to rank by: 'sales' for top sellers, 'stockout_days' for items with most stockouts, 'turns' for inventory turnover"
+                enum: ["sales", "stockout_days", "turns", "mtv"],
+                description: "Metric to rank by: 'sales' for top sellers, 'stockout_days' for items with most stockouts, 'turns' for inventory turnover, 'mtv' for missed revenue opportunities"
               },
               limit: { 
                 type: "number",
                 default: 10,
                 description: "Number of SKUs to return (default 10)"
               },
-              start_date: { type: "string" },
-              end_date: { type: "string" }
+              start_date: { 
+                type: "string",
+                description: "Start date (optional - defaults to earliest data)" 
+              },
+              end_date: { 
+                type: "string",
+                description: "End date (optional - defaults to latest data)" 
+              }
             },
             required: ["location_code", "metric"]
           }
@@ -470,6 +507,14 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
         toolCalls.map(async (toolCall: any) => {
           const functionName = toolCall.function.name;
           const functionArgs = JSON.parse(toolCall.function.arguments);
+          
+          // Auto-inject dates if not provided and function supports them
+          if (!functionArgs.start_date && functionName !== 'get_pareto_analysis' && functionName !== 'get_inventory_snapshot') {
+            functionArgs.start_date = inferredDates.start_date;
+          }
+          if (!functionArgs.end_date && functionName !== 'get_pareto_analysis' && functionName !== 'get_inventory_snapshot') {
+            functionArgs.end_date = inferredDates.end_date;
+          }
           
           console.info(`📊 Executing ${functionName} with args:`, functionArgs);
           

@@ -19,6 +19,7 @@ interface ArchieChatDockProps {
     location: string;
     product: string;
     dateRange?: string;
+    dataDateRange?: {min: Date, max: Date};
     metrics?: {
       tcm: number;
       mtv: number;

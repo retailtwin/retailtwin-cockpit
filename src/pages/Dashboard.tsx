@@ -18,6 +18,8 @@ import {
   fetchProducts,
   fetchKPIData,
   fetchFactDaily,
+  fetchDBMCalculations,
+  getDataDateRange,
   formatCurrency,
   formatNumber,
   Location,
@@ -51,11 +53,13 @@ const Dashboard = () => {
   const [showResultDetails, setShowResultDetails] = useState(false);
   const [productionLeadTime, setProductionLeadTime] = useState<number | undefined>();
   const [shippingLeadTime, setShippingLeadTime] = useState<number | undefined>();
+  const [dataDateRange, setDataDateRange] = useState<{min: Date, max: Date} | null>(null);
 
   // Check admin status and load settings
   useEffect(() => {
     checkAdminStatus();
     loadSettings();
+    fetchDataDateRange();
   }, []);
 
   const checkAdminStatus = async () => {
@@ -96,6 +100,16 @@ const Dashboard = () => {
       });
     } catch (error) {
       console.error("Error loading settings:", error);
+    }
+  };
+
+  const fetchDataDateRange = async () => {
+    const { data, error } = await supabase.rpc('get_data_date_range');
+    if (data && data.length > 0) {
+      setDataDateRange({
+        min: new Date(data[0].min_date),
+        max: new Date(data[0].max_date)
+      });
     }
   };
 
@@ -218,10 +232,10 @@ const Dashboard = () => {
     try {
       const startDate = dateRange?.from
         ? format(dateRange.from, "yyyy-MM-dd")
-        : "2023-01-01";
+        : (dataDateRange ? format(dataDateRange.min, "yyyy-MM-dd") : "2023-01-01");
       const endDate = dateRange?.to
         ? format(dateRange.to, "yyyy-MM-dd")
-        : "2023-12-31";
+        : (dataDateRange ? format(dataDateRange.max, "yyyy-MM-dd") : "2023-12-31");
 
       // Fetch raw fact_daily data
       const { data: rawData, error: fetchError } = await supabase.rpc('get_fact_daily_raw', {
@@ -698,7 +712,13 @@ const Dashboard = () => {
                           dateRange.to,
                           "MMM d, yyyy"
                         )}`
-                      : "All time",
+                      : dataDateRange 
+                        ? `${format(dataDateRange.min, "MMM d, yyyy")} - ${format(
+                            dataDateRange.max,
+                            "MMM d, yyyy"
+                          )}`
+                        : "All time",
+                  dataDateRange: dataDateRange || undefined,
                   metrics: {
                     tcm: kpiData.tcm,
                     mtv: kpiData.mtv,

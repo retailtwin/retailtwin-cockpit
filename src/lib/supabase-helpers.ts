@@ -77,6 +77,18 @@ export async function fetchKPIData(
   startDate?: string,
   endDate?: string
 ): Promise<KPIData | null> {
+  let finalStartDate = startDate;
+  let finalEndDate = endDate;
+  
+  // If dates not provided, use actual data range
+  if (!startDate || !endDate) {
+    const dateRange = await getDataDateRange();
+    if (dateRange) {
+      finalStartDate = finalStartDate || dateRange.min_date;
+      finalEndDate = finalEndDate || dateRange.max_date;
+    }
+  }
+
   // Use aggregated function if either parameter is 'ALL'
   const rpcName =
     locationCode === "ALL" || sku === "ALL"
@@ -86,8 +98,8 @@ export async function fetchKPIData(
   const { data, error } = await supabase.rpc(rpcName as any, {
     p_location_code: locationCode,
     p_sku: sku,
-    p_start_date: startDate || null,
-    p_end_date: endDate || null,
+    p_start_date: finalStartDate || null,
+    p_end_date: finalEndDate || null,
   });
 
   if (error) {
@@ -112,6 +124,18 @@ export async function fetchFactDaily(
   startDate?: string,
   endDate?: string
 ): Promise<FactDaily[]> {
+  let finalStartDate = startDate;
+  let finalEndDate = endDate;
+  
+  // If dates not provided, use actual data range
+  if (!startDate || !endDate) {
+    const dateRange = await getDataDateRange();
+    if (dateRange) {
+      finalStartDate = finalStartDate || dateRange.min_date;
+      finalEndDate = finalEndDate || dateRange.max_date;
+    }
+  }
+
   // Use aggregated function if either parameter is 'ALL'
   const rpcName =
     locationCode === "ALL" || sku === "ALL"
@@ -121,8 +145,8 @@ export async function fetchFactDaily(
   const { data, error } = await supabase.rpc(rpcName as any, {
     p_location_code: locationCode,
     p_sku: sku,
-    p_start_date: startDate || null,
-    p_end_date: endDate || null,
+    p_start_date: finalStartDate || null,
+    p_end_date: finalEndDate || null,
   });
 
   if (error) {
@@ -202,4 +226,13 @@ export function formatNumber(
 export function formatPercentage(value: number | null): string {
   if (value === null || value === undefined) return "—";
   return `${(Number(value) * 100).toFixed(1)}%`;
+}
+
+export async function getDataDateRange(): Promise<{min_date: string, max_date: string} | null> {
+  const { data, error } = await supabase.rpc('get_data_date_range');
+  if (error) {
+    console.error("Error fetching data date range:", error);
+    return null;
+  }
+  return data && data.length > 0 ? data[0] : null;
 }
