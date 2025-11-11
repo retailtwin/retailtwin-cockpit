@@ -72,6 +72,18 @@ const About = () => {
                     <strong>Missed Throughput Value (MTV):</strong> Revenue
                     lost to stockouts
                   </li>
+                  <li>
+                    <strong>Stockout Days:</strong> Time spent with zero
+                    inventory
+                  </li>
+                  <li>
+                    <strong>Overstock Days:</strong> Excess days beyond buffer
+                    targets
+                  </li>
+                  <li>
+                    <strong>Redundant Inventory Value (RIV):</strong> Capital
+                    tied up unnecessarily
+                  </li>
                 </ul>
               </div>
             </CardContent>
