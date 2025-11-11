@@ -3,6 +3,15 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.0';
 import { z } from 'https://deno.land/x/zod@v3.21.4/mod.ts';
 
+interface KnowledgeResult {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+  tags: string[];
+  similarity: number;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -79,6 +88,104 @@ async function inferDateRange(supabaseClient: any): Promise<{start_date: string,
     start_date: data[0].min_date,
     end_date: data[0].max_date
   };
+}
+
+// Generate text embeddings for semantic search
+async function generateEmbedding(text: string): Promise<number[]> {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  if (!LOVABLE_API_KEY) {
+    throw new Error('LOVABLE_API_KEY not configured');
+  }
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        input: text,
+        model: 'text-embedding-3-small',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Embedding API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data[0].embedding;
+  } catch (error) {
+    console.error('⚠️ Error generating embedding:', error);
+    throw error;
+  }
+}
+
+// Search knowledge base with semantic similarity
+async function searchKnowledgeBase(
+  supabaseAdmin: any,
+  question: string,
+  threshold = 0.75,
+  limit = 3
+): Promise<KnowledgeResult[]> {
+  try {
+    console.log('🔍 Searching knowledge base for:', question.substring(0, 100));
+    const embedding = await generateEmbedding(question);
+    
+    const { data, error } = await supabaseAdmin.rpc('search_knowledge', {
+      query_embedding: JSON.stringify(embedding),
+      match_threshold: threshold,
+      match_count: limit
+    });
+
+    if (error) {
+      console.error('⚠️ Knowledge search error:', error);
+      return [];
+    }
+
+    console.log(`✅ Found ${data?.length || 0} relevant knowledge articles`);
+    return data || [];
+  } catch (error) {
+    console.error('⚠️ Error searching knowledge base:', error);
+    return [];
+  }
+}
+
+// Track unanswered questions for knowledge base curation
+async function trackUnansweredQuestion(
+  supabaseAdmin: any,
+  question: string,
+  context: any
+): Promise<void> {
+  try {
+    console.log('📝 Tracking unanswered question:', question.substring(0, 100));
+    await supabaseAdmin.rpc('track_unanswered_question', {
+      p_question: question,
+      p_context: context
+    });
+    console.log('✅ Unanswered question tracked');
+  } catch (error) {
+    console.error('⚠️ Error tracking unanswered question:', error);
+  }
+}
+
+// Track knowledge base usage
+async function trackKnowledgeUsage(
+  supabaseAdmin: any,
+  knowledgeId: string,
+  question: string,
+  similarity: number
+): Promise<void> {
+  try {
+    await supabaseAdmin.rpc('track_knowledge_usage', {
+      p_knowledge_id: knowledgeId,
+      p_question: question,
+      p_similarity_score: similarity
+    });
+  } catch (error) {
+    console.error('⚠️ Error tracking knowledge usage:', error);
+  }
 }
 
 serve(async (req) => {
@@ -216,6 +323,13 @@ When user asks about "Pareto distribution", "Pareto analysis", or "show me Paret
 1. IMMEDIATELY call get_pareto_analysis with context location and date range end date
 2. Analyze results focusing on: concentration (what % of sales come from top 20% of items), dependency on key SKUs, risk if top items stockout
 3. NEVER ask what metric - Pareto is ALWAYS about sales/revenue distribution
+
+**KNOWLEDGE BASE:**
+You have access to a curated knowledge base of inventory management best practices, DBM methodology, and company-specific processes.
+- After checking analytical tools, search the knowledge base for relevant information
+- If you find relevant knowledge (similarity > 0.75), use it to enhance your response
+- If you cannot answer with confidence, acknowledge the gap and note the question for review
+- The knowledge base is your second source after analytical data
 
 Key Terminology (use these terms naturally):
 - MTV (Missed Throughput Value) = Lost revenue from stockouts. This is opportunity cost.
@@ -452,6 +566,32 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
 
     console.info(`🤖 Archie processing request with context:`, JSON.stringify(context, null, 2));
 
+    // Search knowledge base for relevant context
+    const userQuestion = messages[messages.length - 1]?.content || '';
+    let knowledgeContext = '';
+    const knowledgeResults = await searchKnowledgeBase(supabase, userQuestion);
+    
+    if (knowledgeResults.length > 0) {
+      console.log(`📚 Found ${knowledgeResults.length} relevant knowledge articles`);
+      knowledgeContext = '\n\n**KNOWLEDGE BASE CONTEXT:**\n' + 
+        knowledgeResults.map((k, i) => 
+          `${i + 1}. ${k.title} (${k.category}, relevance: ${(k.similarity * 100).toFixed(0)}%)\n${k.content}`
+        ).join('\n\n');
+      
+      // Track usage of top result if highly relevant
+      if (knowledgeResults[0].similarity > 0.75) {
+        await trackKnowledgeUsage(
+          supabase,
+          knowledgeResults[0].id,
+          userQuestion,
+          knowledgeResults[0].similarity
+        );
+      }
+    }
+
+    // Enhance system prompt with knowledge base context
+    const enhancedSystemPrompt = systemPrompt + knowledgeContext;
+
     // Initial API call with function calling enabled
     let response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -463,7 +603,7 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
         model: "google/gemini-2.5-flash",
         max_tokens: 4096,
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: enhancedSystemPrompt },
           ...messages
         ],
         tools: tools,
@@ -592,7 +732,7 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
           model: "google/gemini-2.5-flash",
           max_tokens: 4096,
           messages: [
-            { role: "system", content: systemPrompt },
+            { role: "system", content: enhancedSystemPrompt },
             ...messages,
             firstResponse.choices[0].message,
             ...toolResults
@@ -641,6 +781,13 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
     // No tool calls - stream direct response
     console.info('✅ Archie response without tools, streaming...');
     
+    // Check if we should track as unanswered
+    // If no knowledge was found with high confidence, consider tracking
+    if (knowledgeResults.length === 0 || knowledgeResults[0].similarity < 0.7) {
+      console.log('📝 Low confidence response - tracking as potentially unanswered');
+      await trackUnansweredQuestion(supabase, userQuestion, context);
+    }
+    
     const directStreamResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -651,7 +798,7 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
         model: "google/gemini-2.5-flash",
         max_tokens: 4096,
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: enhancedSystemPrompt },
           ...messages
         ],
         stream: true,
