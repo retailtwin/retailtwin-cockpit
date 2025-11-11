@@ -27,9 +27,9 @@ const Landing = () => {
             </h1>
             <div className="flex items-start gap-4 max-w-3xl mx-auto">
               <img src={archieLogo} alt="Archie Logo" className="w-16 h-auto mt-1 mb-auto flex-shrink-0" />
-              <p className="text-xl text-muted-foreground text-left">Archie knows the rules and metrics that drive your supply chain's performance — for better buying and VMI without the complexity of SaaS.</p>
+              <p className="text-xl text-muted-foreground text-left">Archie knows the rules and metrics that drive your supply chain's performance — for better buying and VMI, without the complexity of SaaS.</p>
             </div>
-            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">Many products (NOOS, Always Available, and key seasonal lines) — should run on rules, not forecasts. We learned from SaaS, and merged proven flow logic with AI  — turning rules into rapid, reliable decisions.</p>
+            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">Many consumer goods products (NOOS, Always Available, and key seasonal lines in Footwear and Apparel) — should run on rules, not forecasts. We learned from SaaS, and merged proven supply logic with AI — turning rules into reliable decisions.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/login">
                 <Button size="lg" className="text-lg px-10 shadow-lg">
@@ -56,7 +56,7 @@ const Landing = () => {
                 <Target className="h-7 w-7 text-primary" />
               </div>
               <CardTitle className="text-2xl">Rule-driven workflows for allocation & replenishment</CardTitle>
-              <CardDescription className="text-base pt-2">Good rules enhance throughput with better service levels and higher turns.</CardDescription>
+              <CardDescription className="text-base pt-2">Control the rules (e.g., lead-times, minimums) and enhance throughput and profits from better service levels and higher turns.</CardDescription>
             </CardHeader>
           </Card>
 
@@ -66,10 +66,7 @@ const Landing = () => {
                 <Zap className="h-7 w-7 text-accent" />
               </div>
               <CardTitle className="text-2xl">Free Cash</CardTitle>
-              <CardDescription className="text-base pt-2">
-                Run scenarios with different rules to find excess inventory and extra sales. 
-                Get automated insights that release capital and improve flow.
-              </CardDescription>
+              <CardDescription className="text-base pt-2">Run 'what-if'scenarios with different rules to find free cash from excess inventory and extra sales. Get automated insights that release capital and improve flow.</CardDescription>
             </CardHeader>
           </Card>
 
@@ -166,7 +163,7 @@ const Landing = () => {
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
                 Your Cockpit
               </h2>
-              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">Using your data and your rules, we deliver intuitive cockpits from where you control the flow. Simple steps guide you toward the goal: increasing sales and turns through better service levels, real insights, and a much quicker supply chain.</p>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">Using your data and your rules, we build intuitive cockpits from where you control the flow. Simple steps guide you toward the goal: increasing sales and turns through better service levels, human insights in natural language, and a much quicker supply chain.</p>
             </div>
 
             {/* Visual Showcase Section */}
@@ -225,7 +222,7 @@ const Landing = () => {
                   <p>
                     I'm excited to announce that I've joined Zefyr Solutions as Director - Responsive Retail Supply Chains, based in Amsterdam, The Netherlands.
                   </p>
-                  <p>I bring 30+ years of retail leadership across EMEA and a proven record as a SaaS founder. Having led retailing teams at scale and founded technology solutions that enable smarter, faster decisions, I offer a unique combination of strategic insight and operational know-how. Connecting supply flows to retail, helping businesses unlock value and free cash.</p>
+                  <p>I bring 30+ years of retail leadership across EMEA and a proven record as a SaaS founder. Having led retailing teams at scale and founded technology solutions that enable smarter, faster decisions, I offer a unique combination of strategic insight and domain experience. Connecting supply flows to retail, helping businesses unlock value and free cash.</p>
                   <p>I'm thrilled to join Zefyr as the team extends beyond their already deep expertise in Footwear and Apparel product management, product creation, sourcing, logistics, and innovation with my market-facing, retail-driven perspective.</p>
                   <p>
                     Contact me to learn how I can help strengthen the link between your supply chain and your retail success.
