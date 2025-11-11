@@ -57,8 +57,7 @@ const About = () => {
                 <div>
                   <h3 className="font-semibold mb-2">Core KPIs</h3>
                   <ul className="space-y-2 text-muted-foreground">
-                    <li>
-                      <strong>Throughput Cash Margin:</strong> Revenue minus
+                    <li>Throughput: Cash Margin, revenue minus truly variable costs<strong>Throughput Cash Margin:</strong> Revenue minus
                       truly variable costs
                     </li>
                     <li>
