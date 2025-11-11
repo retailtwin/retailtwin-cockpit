@@ -92,51 +92,18 @@ async function inferDateRange(supabaseClient: any): Promise<{start_date: string,
   };
 }
 
-// Generate text embeddings for semantic search
-async function generateEmbedding(text: string): Promise<number[]> {
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-  if (!LOVABLE_API_KEY) {
-    throw new Error('LOVABLE_API_KEY not configured');
-  }
-
-  try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        input: text,
-        model: 'text-embedding-3-small',
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Embedding API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.data[0].embedding;
-  } catch (error) {
-    console.error('⚠️ Error generating embedding:', error);
-    throw error;
-  }
-}
-
-// Search knowledge base with semantic similarity
+// Search knowledge base using full-text search (no embeddings needed)
 async function searchKnowledgeBase(
   supabaseAdmin: any,
   question: string,
-  threshold = 0.75,
+  threshold = 0.1,
   limit = 3
 ): Promise<KnowledgeResult[]> {
   try {
     console.log('🔍 Searching knowledge base for:', question.substring(0, 100));
-    const embedding = await generateEmbedding(question);
     
     const { data, error } = await supabaseAdmin.rpc('search_knowledge', {
-      query_embedding: JSON.stringify(embedding),
+      query_text: question,
       match_threshold: threshold,
       match_count: limit
     });

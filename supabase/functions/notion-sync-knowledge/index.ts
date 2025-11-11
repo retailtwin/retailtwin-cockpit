@@ -100,38 +100,7 @@ serve(async (req) => {
             continue;
           }
 
-          // Create text for embedding (title + short description)
-          const embeddingText = `${title} ${shortDescription}`.trim();
-
-          // Generate embedding using Lovable AI
-          const embeddingResponse = await fetch('https://ai.gateway.lovable.dev/v1/embeddings', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${Deno.env.get('LOVABLE_API_KEY') || ''}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              input: embeddingText,
-              model: 'text-embedding-3-small',
-            }),
-          });
-
-          if (!embeddingResponse.ok) {
-            const errorText = await embeddingResponse.text();
-            console.error(`Failed to generate embedding for ${title}:`, {
-              status: embeddingResponse.status,
-              statusText: embeddingResponse.statusText,
-              error: errorText
-            });
-            errors.push(`Embedding failed for: ${title} - ${embeddingResponse.status}: ${errorText}`);
-            skipped++;
-            continue;
-          }
-
-          const embeddingData = await embeddingResponse.json();
-          const embedding = embeddingData.data[0].embedding;
-
-          // Upsert into archie_knowledge
+          // Upsert into archie_knowledge (no embedding needed - using full-text search)
           const { error: upsertError } = await supabase
             .from('archie_knowledge')
             .upsert({
@@ -141,7 +110,6 @@ serve(async (req) => {
               content_snippet: shortDescription,
               category,
               tags,
-              embedding,
               source_type: 'notion',
               is_active: true,
               last_synced: new Date().toISOString(),

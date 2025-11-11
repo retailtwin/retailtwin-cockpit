@@ -20,12 +20,12 @@ export type Database = {
           content_snippet: string
           created_at: string | null
           created_by: string | null
-          embedding: string | null
           id: string
           is_active: boolean | null
           last_synced: string | null
           notion_page_id: string | null
           notion_url: string | null
+          search_vector: unknown
           source_type: string | null
           tags: string[] | null
           title: string
@@ -36,12 +36,12 @@ export type Database = {
           content_snippet: string
           created_at?: string | null
           created_by?: string | null
-          embedding?: string | null
           id?: string
           is_active?: boolean | null
           last_synced?: string | null
           notion_page_id?: string | null
           notion_url?: string | null
+          search_vector?: unknown
           source_type?: string | null
           tags?: string[] | null
           title: string
@@ -52,12 +52,12 @@ export type Database = {
           content_snippet?: string
           created_at?: string | null
           created_by?: string | null
-          embedding?: string | null
           id?: string
           is_active?: boolean | null
           last_synced?: string | null
           notion_page_id?: string | null
           notion_url?: string | null
+          search_vector?: unknown
           source_type?: string | null
           tags?: string[] | null
           title?: string
@@ -553,23 +553,40 @@ export type Database = {
         Returns: boolean
       }
       insert_fact_daily_batch: { Args: { records: Json }; Returns: undefined }
-      search_knowledge: {
-        Args: {
-          match_count?: number
-          match_threshold?: number
-          query_embedding: string
-        }
-        Returns: {
-          category: string
-          content: string
-          id: string
-          notion_page_id: string
-          notion_url: string
-          similarity: number
-          tags: string[]
-          title: string
-        }[]
-      }
+      search_knowledge:
+        | {
+            Args: {
+              match_count?: number
+              match_threshold?: number
+              query_text: string
+            }
+            Returns: {
+              category: string
+              content_snippet: string
+              id: string
+              notion_url: string
+              similarity: number
+              tags: string[]
+              title: string
+            }[]
+          }
+        | {
+            Args: {
+              match_count?: number
+              match_threshold?: number
+              query_embedding: string
+            }
+            Returns: {
+              category: string
+              content: string
+              id: string
+              notion_page_id: string
+              notion_url: string
+              similarity: number
+              tags: string[]
+              title: string
+            }[]
+          }
       track_knowledge_usage: {
         Args: {
           p_knowledge_id: string
