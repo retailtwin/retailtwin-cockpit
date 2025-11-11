@@ -8,6 +8,7 @@ import { ConsultativeInsights } from "@/components/ConsultativeInsights";
 import { ArchieChatDock } from "@/components/ArchieChatDock";
 import { ArchieFloatingButton } from "@/components/ArchieFloatingButton";
 import { ParetoReportModal } from "@/components/ParetoReportModal";
+import { SimulationStatusBar } from "@/components/SimulationStatusBar";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, Play, Settings, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,10 +49,13 @@ const Dashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [showResultDetails, setShowResultDetails] = useState(false);
+  const [productionLeadTime, setProductionLeadTime] = useState<number | undefined>();
+  const [shippingLeadTime, setShippingLeadTime] = useState<number | undefined>();
 
-  // Check admin status
+  // Check admin status and load settings
   useEffect(() => {
     checkAdminStatus();
+    loadSettings();
   }, []);
 
   const checkAdminStatus = async () => {
@@ -69,6 +73,29 @@ const Dashboard = () => {
       setIsAdmin(!!roles);
     } catch (error) {
       console.error('Error checking admin status:', error);
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("system_settings")
+        .select("*")
+        .eq("scope", "global")
+        .in("setting_key", ["production_lead_time_global", "shipping_lead_time"]);
+
+      if (error) throw error;
+
+      data?.forEach((setting) => {
+        const value = parseInt(String(setting.setting_value));
+        if (setting.setting_key === "production_lead_time_global") {
+          setProductionLeadTime(value);
+        } else if (setting.setting_key === "shipping_lead_time") {
+          setShippingLeadTime(value);
+        }
+      });
+    } catch (error) {
+      console.error("Error loading settings:", error);
     }
   };
 
@@ -491,6 +518,14 @@ const Dashboard = () => {
               </Button>
             </div>
           </div>
+
+          {/* Simulation Status Bar */}
+          <SimulationStatusBar
+            hasSimulation={!!simulationResult}
+            productionLeadTime={productionLeadTime}
+            shippingLeadTime={shippingLeadTime}
+            onViewSettings={isAdmin ? () => navigate('/settings') : undefined}
+          />
 
           {/* Simulation Results Display */}
           {simulationResult && (
