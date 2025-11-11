@@ -10,6 +10,8 @@ interface KnowledgeResult {
   category: string;
   tags: string[];
   similarity: number;
+  notion_page_id?: string;
+  notion_url?: string;
 }
 
 const corsHeaders = {
@@ -185,6 +187,61 @@ async function trackKnowledgeUsage(
     });
   } catch (error) {
     console.error('⚠️ Error tracking knowledge usage:', error);
+  }
+}
+
+// Fetch full content from Notion API
+async function fetchNotionContent(pageId: string): Promise<string> {
+  const NOTION_API_KEY = Deno.env.get('NOTION_API_KEY');
+  if (!NOTION_API_KEY) {
+    console.error('⚠️ NOTION_API_KEY not configured');
+    return '';
+  }
+
+  try {
+    // Fetch page blocks
+    const response = await fetch(
+      `https://api.notion.com/v1/blocks/${pageId}/children`,
+      {
+        headers: {
+          'Authorization': `Bearer ${NOTION_API_KEY}`,
+          'Notion-Version': '2022-06-28',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`⚠️ Notion API error: ${response.status}`);
+      return '';
+    }
+
+    const data = await response.json();
+    
+    // Extract text from blocks
+    const textContent: string[] = [];
+    for (const block of data.results) {
+      if (block.type === 'paragraph' && block.paragraph?.rich_text) {
+        const text = block.paragraph.rich_text.map((t: any) => t.plain_text).join('');
+        if (text) textContent.push(text);
+      } else if (block.type === 'heading_1' && block.heading_1?.rich_text) {
+        const text = block.heading_1.rich_text.map((t: any) => t.plain_text).join('');
+        if (text) textContent.push(`\n## ${text}\n`);
+      } else if (block.type === 'heading_2' && block.heading_2?.rich_text) {
+        const text = block.heading_2.rich_text.map((t: any) => t.plain_text).join('');
+        if (text) textContent.push(`\n### ${text}\n`);
+      } else if (block.type === 'bulleted_list_item' && block.bulleted_list_item?.rich_text) {
+        const text = block.bulleted_list_item.rich_text.map((t: any) => t.plain_text).join('');
+        if (text) textContent.push(`• ${text}`);
+      } else if (block.type === 'numbered_list_item' && block.numbered_list_item?.rich_text) {
+        const text = block.numbered_list_item.rich_text.map((t: any) => t.plain_text).join('');
+        if (text) textContent.push(`${text}`);
+      }
+    }
+
+    return textContent.join('\n');
+  } catch (error) {
+    console.error('⚠️ Error fetching Notion content:', error);
+    return '';
   }
 }
 
@@ -573,10 +630,27 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
     
     if (knowledgeResults.length > 0) {
       console.log(`📚 Found ${knowledgeResults.length} relevant knowledge articles`);
+      
+      // Fetch full content from Notion for relevant articles
+      const enrichedResults = await Promise.all(
+        knowledgeResults.map(async (k) => {
+          if (k.notion_page_id && k.similarity > 0.75) {
+            console.log(`🔍 Fetching full Notion content for: ${k.title}`);
+            const fullContent = await fetchNotionContent(k.notion_page_id);
+            return {
+              ...k,
+              fullContent: fullContent || k.content,
+            };
+          }
+          return { ...k, fullContent: k.content };
+        })
+      );
+      
       knowledgeContext = '\n\n**KNOWLEDGE BASE CONTEXT:**\n' + 
-        knowledgeResults.map((k, i) => 
-          `${i + 1}. ${k.title} (${k.category}, relevance: ${(k.similarity * 100).toFixed(0)}%)\n${k.content}`
-        ).join('\n\n');
+        enrichedResults.map((k, i) => {
+          const source = k.notion_url ? `\n📚 *Source: [${k.title}](${k.notion_url})*` : '';
+          return `${i + 1}. ${k.title} (${k.category}, relevance: ${(k.similarity * 100).toFixed(0)}%)\n${k.fullContent}${source}`;
+        }).join('\n\n');
       
       // Track usage of top result if highly relevant
       if (knowledgeResults[0].similarity > 0.75) {

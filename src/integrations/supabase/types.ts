@@ -17,36 +17,48 @@ export type Database = {
       archie_knowledge: {
         Row: {
           category: string | null
-          content: string
+          content_snippet: string
           created_at: string | null
           created_by: string | null
           embedding: string | null
           id: string
           is_active: boolean | null
+          last_synced: string | null
+          notion_page_id: string | null
+          notion_url: string | null
+          source_type: string | null
           tags: string[] | null
           title: string
           updated_at: string | null
         }
         Insert: {
           category?: string | null
-          content: string
+          content_snippet: string
           created_at?: string | null
           created_by?: string | null
           embedding?: string | null
           id?: string
           is_active?: boolean | null
+          last_synced?: string | null
+          notion_page_id?: string | null
+          notion_url?: string | null
+          source_type?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string | null
         }
         Update: {
           category?: string | null
-          content?: string
+          content_snippet?: string
           created_at?: string | null
           created_by?: string | null
           embedding?: string | null
           id?: string
           is_active?: boolean | null
+          last_synced?: string | null
+          notion_page_id?: string | null
+          notion_url?: string | null
+          source_type?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string | null
