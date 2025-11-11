@@ -210,7 +210,7 @@ const Landing = () => {
                 <img src={zefyrLogo} alt="Zefyr Solutions" className="h-24 w-auto" />
               </div>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-                Consultancy Partnership
+                Consultancy
               </h2>
             </div>
 
@@ -242,6 +242,51 @@ const Landing = () => {
                 <Button size="lg" variant="secondary" className="text-lg px-10 shadow-lg">
                   <Mail className="mr-2 h-5 w-5" />
                   Talk to Us
+                </Button>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Partnership Section */}
+      <section className="relative overflow-hidden py-20">
+        <div className="container mx-auto px-6">
+          <div className="max-w-5xl mx-auto space-y-12">
+            {/* Section Header */}
+            <div className="text-center space-y-6">
+              <div className="flex justify-center mb-4">
+                <img src={retailTwinIcon} alt="Retail Twin Ventures" className="h-20 w-20" />
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+                Partnership
+              </h2>
+            </div>
+
+            {/* Partnership Card */}
+            <Card className="shadow-xl border-none bg-gradient-to-br from-card to-card/50">
+              <CardHeader>
+                <CardTitle className="text-2xl mb-6">Retail Twin Ventures</CardTitle>
+                <CardDescription className="text-base leading-relaxed space-y-4">
+                  <p>
+                    Beyond consultancy, I partner directly with select businesses that share our vision for transforming retail supply chains.
+                  </p>
+                  <p>
+                    Through Retail Twin Ventures, I offer strategic partnerships as a stakeholder or advisor, bringing deep operational expertise in assortment optimization and replenishment strategies. This model aligns incentives—your growth is our growth.
+                  </p>
+                  <p>
+                    I work alongside forward-thinking brands and retailers ready to unlock hidden value in their supply chain, combining proven methodologies with skin in the game. If you're building something exceptional and looking for a partner who understands both the strategic and tactical dimensions of retail flow, let's explore what we can achieve together.
+                  </p>
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            {/* CTA Button */}
+            <div className="flex justify-center pt-4">
+              <a href="mailto:hello@retailtwin.com">
+                <Button size="lg" className="text-lg px-10 shadow-lg">
+                  <Mail className="mr-2 h-5 w-5" />
+                  Explore Partnership
                 </Button>
               </a>
             </div>
