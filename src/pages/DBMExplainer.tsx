@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlayCircle, PauseCircle, RotateCcw } from "lucide-react";
+import dbmZonesImage from "@/assets/dbm-zones.png";
 export default function DBMExplainer() {
   const [animationDay, setAnimationDay] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -551,41 +552,54 @@ export default function DBMExplainer() {
             <CardTitle>The Four Zone System</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <p className="text-sm text-muted-foreground">
-              DBM divides inventory into four distinct zones, each triggering different operational management actions:
+            <p className="text-sm text-muted-foreground mb-6">
+              DBM divides inventory into four distinct zones, each triggering different operational management actions. The colored bars below represent <strong>On-Hand Inventory</strong> levels, and orders are placed to reach the top of the <strong className="text-green-600">Green Zone</strong>.
             </p>
             
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className={`p-4 rounded-lg border-2 ${getZoneColor("overstock")}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge className="bg-blue-500">Overstock</Badge>
-                  <span className="text-sm font-mono">On-hand &gt; Green</span>
+            <div className="relative w-full">
+              <img src={dbmZonesImage} alt="DBM Four Zones Visualization" className="w-full h-auto rounded-lg" />
+              
+              {/* Zone labels overlaid on image */}
+              <div className="absolute inset-0 flex flex-col justify-between py-4 px-6 pointer-events-none">
+                {/* Green Zone - Top third */}
+                <div className="flex items-start justify-between">
+                  <div className="bg-green-500/90 text-white px-3 py-2 rounded-lg shadow-lg max-w-xs">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className="bg-green-700 text-white">Green Zone</Badge>
+                      <span className="text-xs font-mono">Yellow &lt; On-hand ≤ Green</span>
+                    </div>
+                    <p className="text-xs">Safe zone. Adequate stock. Consecutive days here can trigger buffer decreases.</p>
+                  </div>
+                  <div className="bg-blue-500/90 text-white px-3 py-2 rounded-lg shadow-lg max-w-xs ml-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className="bg-blue-700 text-white">Overstock</Badge>
+                      <span className="text-xs font-mono">On-hand &gt; Green</span>
+                    </div>
+                    <p className="text-xs">Inventory exceeds target. Buffer decreases to reduce excess.</p>
+                  </div>
                 </div>
-                <p className="text-sm">Inventory exceeds target. System counts consecutive days in overstock. Buffer then decreases to get On Hand inventory out of overstock. </p>
-              </div>
 
-              <div className={`p-4 rounded-lg border-2 ${getZoneColor("green")}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge className="bg-green-500">Green Zone</Badge>
-                  <span className="text-sm font-mono">Yellow &lt; On-hand ≤ Green</span>
+                {/* Yellow Zone - Middle */}
+                <div className="flex justify-start mt-8">
+                  <div className="bg-yellow-500/90 text-white px-3 py-2 rounded-lg shadow-lg max-w-xs">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className="bg-yellow-700 text-white">Yellow Zone</Badge>
+                      <span className="text-xs font-mono">Red &lt; On-hand ≤ Yellow</span>
+                    </div>
+                    <p className="text-xs">Warning zone. Not critical yet, but requires attention.</p>
+                  </div>
                 </div>
-                <p className="text-sm">Safe zone. Adequate stock. Green zone represents 2/3 of the buffer. Consecutive days here can also trigger buffer decreases.</p>
-              </div>
 
-              <div className={`p-4 rounded-lg border-2 ${getZoneColor("yellow")}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge className="bg-yellow-500">Yellow Zone</Badge>
-                  <span className="text-sm font-mono">Red &lt; On-hand ≤ Yellow</span>
+                {/* Red Zone - Bottom */}
+                <div className="flex justify-start">
+                  <div className="bg-red-500/90 text-white px-3 py-2 rounded-lg shadow-lg max-w-xs">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className="bg-red-700 text-white">Red Zone</Badge>
+                      <span className="text-xs font-mono">On-hand ≤ Red</span>
+                    </div>
+                    <p className="text-xs">Critical zone. Buffer increases to get inventory into safe zone.</p>
+                  </div>
                 </div>
-                <p className="text-sm">Warning zone. Between Red and Green. Not critical yet, but requires attention.</p>
-              </div>
-
-              <div className={`p-4 rounded-lg border-2 ${getZoneColor("red")}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge className="bg-red-500">Red Zone</Badge>
-                  <span className="text-sm font-mono">On-hand ≤ Red</span>
-                </div>
-                <p className="text-sm">Critical zone. System counts consecutive days in Red. Buffer then increases to get On Hand inventory into the safe zone. </p>
               </div>
             </div>
 
