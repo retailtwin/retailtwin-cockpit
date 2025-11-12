@@ -611,44 +611,18 @@ export default function DBMExplainer() {
           </CardContent>
         </Card>
 
-        {/* Buffer Adjustment Logic */}
+        {/* Buffer Safety Mechanisms */}
         <Card>
           <CardHeader>
-            <CardTitle>Buffer Adjustment Triggers</CardTitle>
+            <CardTitle>Buffer Safety Mechanisms</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <div className="border-l-4 border-red-500 pl-4">
-                <h4 className="font-semibold text-lg mb-2">Increase from Red Zone</h4>
-                <p className="text-sm mb-2">Buffer is too small - demand exceeded expectations</p>
-                <div className="space-y-1 text-sm">
-                  <div><strong>Trigger:</strong> Consecutive days in red &gt; Lead Time</div>
-                  <div><strong>Action:</strong> New Buffer = Green + ⌈(Green - Safety Level) ÷ 3⌉</div>
-                  <div><strong>Wait Period:</strong> Must be out of red for &lt; Lead Time days</div>
-                  <div className="text-muted-foreground">This prevents the buffer from being too conservative</div>
-                </div>
-              </div>
-
-              <div className="border-l-4 border-green-500 pl-4">
-                <h4 className="font-semibold text-lg mb-2">Decrease from Green/Overstock</h4>
-                <p className="text-sm mb-2">Buffer is too large - consistently oversupplied</p>
-                <div className="space-y-1 text-sm">
-                  <div><strong>Trigger:</strong> Consecutive days in green/overstock &gt; Lead Time</div>
-                  <div><strong>Action:</strong> New Buffer = Green - ⌈(Green - Safety Level) ÷ 3⌉</div>
-                  <div><strong>Wait Periods:</strong> Must be out of overstock &lt; Lead Time days AND last decrease &gt; Lead Time days ago</div>
-                  <div className="text-muted-foreground">This frees up working capital while maintaining service levels</div>
-                </div>
-              </div>
-
-            </div>
-
+          <CardContent>
             <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">🔒 Safety Mechanisms</h4>
               <ul className="text-sm space-y-1">
-                <li>• <strong>Minimum Target:</strong> Buffer never drops below 1 unit</li>
-                <li>• <strong>Safety Level Protection:</strong> Buffer adjustments respect configured safety stock levels</li>
-                <li>• <strong>Lead Time Governed:</strong> All changes require consecutive days = lead time to prevent over-reaction</li>
-                <li>• <strong>Manual Override Protection:</strong> 3-day freeze after manual changes</li>
+                <li>• <strong>Minimum Target:</strong> Buffer never drops below 1 unit or a set safety level</li>
+                <li>• Buffer adjustments respect configured safety stock levels</li>
+                <li>• <strong>Lead Time Governed:</strong> All changes require consecutive days freeze = lead time to prevent over-reaction</li>
+                <li>• <strong>Manual Override Protection:</strong> Same 3-day freeze after manual changes</li>
               </ul>
             </div>
           </CardContent>
@@ -697,11 +671,11 @@ export default function DBMExplainer() {
                 <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 p-4 rounded-lg">
                   <h5 className="font-semibold mb-2">MTV (Missed Throughput Value)</h5>
                   <div className="text-sm space-y-2">
-                    <div className="font-mono">MTV = Unit Sales × Service Level % × Cash Margin</div>
+                    <div className="font-mono">MTV = ((Unit Sales ÷ Service Level %) - Unit Sales) × Cash Margin</div>
                     <p className="text-muted-foreground">
-                      The cost of missed sales opportunities. Calculated as unit sales multiplied by the service level 
-                      (availability percentage) for the time window, multiplied by the cash margin on sales excluding VAT. 
-                      This metric quantifies the revenue impact of stockouts.
+                      The cost of missed sales opportunities per SKU. Calculated as the difference between potential sales 
+                      (unit sales divided by service level percentage) and actual unit sales, multiplied by the cash margin. 
+                      Sum across all SKUs to quantify total revenue impact of stockouts.
                     </p>
                   </div>
                 </div>
@@ -717,11 +691,6 @@ export default function DBMExplainer() {
                   </div>
                 </div>
 
-                <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg text-sm">
-                  <strong>Note:</strong> Unlike traditional min-max systems with static reorder points, DBM calculates 
-                  replenishment needs <strong>daily</strong>, making the "min" obsolete. The Green target acts as the 
-                  only reference point needed.
-                </div>
               </div>
             </div>
           </CardContent>
@@ -1084,11 +1053,10 @@ export default function DBMExplainer() {
             </p>
             <p>
               <strong>Capital Efficient:</strong> By automatically reducing buffers when demand decreases, DBM frees up working 
-              capital that can be deployed elsewhere, while the accelerator mechanisms ensure rapid response to demand spikes.
+              capital that can be deployed elsewhere while maintaining service levels.
             </p>
             <p>
-              <strong>No Forecasting Required:</strong> Unlike traditional methods that rely on demand forecasting, DBM reacts 
-              to actual consumption. This makes it particularly effective in volatile or unpredictable demand environments.
+              <strong>Self-Learning:</strong> Unlike most demand forecasting methods, DBM learns from how well buffers respond to changing supply and consumption, measured in Throughput and Turns, making it particularly effective in volatile or unpredictable demand environments as Footwear, Apparel and Sporting Goods.
             </p>
           </CardContent>
         </Card>
