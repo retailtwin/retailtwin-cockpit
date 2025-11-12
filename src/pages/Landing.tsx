@@ -11,18 +11,14 @@ import archieChatPreview from "@/assets/archie-chat-preview.png";
 import archieLogo from "@/assets/archie-logo.png";
 import zefyrLogo from "@/assets/zefyr-logo.jpeg";
 const Landing = () => {
-  return (
-    <Layout>
+  return <Layout>
       <FloatingContactButton />
       {/* Hero Section with Background */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
-        <div
-          className="absolute inset-0 opacity-10 bg-center bg-no-repeat bg-cover"
-          style={{
-            backgroundImage: `url(${retailCycleImage})`,
-          }}
-        />
+        <div className="absolute inset-0 opacity-10 bg-center bg-no-repeat bg-cover" style={{
+        backgroundImage: `url(${retailCycleImage})`
+      }} />
 
         <div className="relative container mx-auto px-6 py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
@@ -31,10 +27,7 @@ const Landing = () => {
             </h1>
             <div className="flex items-start gap-4 max-w-3xl mx-auto">
               <img src={archieLogo} alt="Archie Logo" className="w-16 h-auto mt-1 mb-auto flex-shrink-0" />
-              <p className="text-xl text-muted-foreground text-left">
-                At Retail Twin Labs, we use the same TOC-based logic that transformed global retail distribution and VMI
-                operations — now enhanced with AI for real-time insights, education, and transparency.
-              </p>
+              <p className="text-xl text-muted-foreground text-left">At Retail Twin Labs, we use the same TOC-based logic that transformed global retail distribution and VMI operations — now enhanced with AI for real-time insights, education, and transparency. Without the complexity of SaaS.</p>
             </div>
             <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">
               Many consumer goods products (NOOS, Always Available, and key seasonal lines in Footwear and Apparel) —
@@ -104,12 +97,9 @@ const Landing = () => {
 
       {/* About Retail Twin Labs Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-20">
-        <div
-          className="absolute inset-0 opacity-5 bg-center bg-no-repeat bg-cover"
-          style={{
-            backgroundImage: `url(${retailCycleImage})`,
-          }}
-        />
+        <div className="absolute inset-0 opacity-5 bg-center bg-no-repeat bg-cover" style={{
+        backgroundImage: `url(${retailCycleImage})`
+      }} />
         <div className="relative container mx-auto px-6">
           <div className="max-w-5xl mx-auto space-y-12">
             {/* Section Header */}
@@ -127,11 +117,7 @@ const Landing = () => {
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                   <Layers className="h-6 w-6 text-primary" />
                 </div>
-                <CardDescription className="text-base leading-relaxed">
-                  We combine decades of experience in merchandise planning and distribution for Footwear, Apparel and
-                  Sporting Goods with deep SaaS knowledge and AI, to deliver critical insights and simple workflow
-                  automation. Your data, your rules, your tools.
-                </CardDescription>
+                <CardDescription className="text-base leading-relaxed">Critical insights and simple workflow automation from your data, your rules, your tools. Built on decades of experience in merchandise planning and distribution for Footwear, Apparel and Sporting Goods and deep SaaS knowledge. </CardDescription>
               </CardHeader>
             </Card>
 
@@ -143,11 +129,7 @@ const Landing = () => {
                     <TrendingUp className="h-6 w-6 text-accent" />
                   </div>
                   <CardTitle className="text-xl mb-4">From the founder: Jasper Zeelenberg</CardTitle>
-                  <CardDescription className="text-base leading-relaxed">
-                    Order automation is only as effective as the internal rules and metrics that govern flow. At Retail
-                    Twin Labs, we help you focus on these rules and metrics for good automation, and use AI agents to
-                    explain how lead-times and minimum order quantities impact flow.
-                  </CardDescription>
+                  <CardDescription className="text-base leading-relaxed">Order automation is only as effective when internal rules and metrics govern flow. At Retail Twin Labs, we deliver good automation, and added Archie to explain how lead-times and minimum order quantities impact flow.</CardDescription>
                 </CardHeader>
               </Card>
 
@@ -209,11 +191,7 @@ const Landing = () => {
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
                   <div className="relative w-full aspect-video overflow-hidden rounded-t-lg">
-                    <img
-                      src={dashboardPreview}
-                      alt="Dashboard interface showing inventory analytics and KPIs"
-                      className="w-full h-full object-cover object-top shadow-lg"
-                    />
+                    <img src={dashboardPreview} alt="Dashboard interface showing inventory analytics and KPIs" className="w-full h-full object-cover object-top shadow-lg" />
                   </div>
                 </CardContent>
               </Card>
@@ -227,11 +205,7 @@ const Landing = () => {
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
                   <div className="relative w-full aspect-video overflow-hidden rounded-t-lg">
-                    <img
-                      src={archieChatPreview}
-                      alt="Archie AI chat interface providing supply chain insights"
-                      className="w-full h-full object-cover object-top shadow-lg"
-                    />
+                    <img src={archieChatPreview} alt="Archie AI chat interface providing supply chain insights" className="w-full h-full object-cover object-top shadow-lg" />
                   </div>
                 </CardContent>
               </Card>
@@ -374,41 +348,25 @@ const Landing = () => {
               <p className="text-sm text-muted-foreground">© 2025 RetailTwin Labs. All rights reserved.</p>
             </div>
             <div className="flex items-center gap-8">
-              <Link
-                to="/about"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-              >
+              <Link to="/about" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 About
               </Link>
-              <Link
-                to="/blogs"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-              >
+              <Link to="/blogs" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Blog
               </Link>
-              <Link
-                to="/impressum"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-              >
+              <Link to="/impressum" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Impressum
               </Link>
-              <Link
-                to="/privacy-policy"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-              >
+              <Link to="/privacy-policy" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Privacy Policy
               </Link>
-              <Link
-                to="/login"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-              >
+              <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                 Login
               </Link>
             </div>
           </div>
         </div>
       </footer>
-    </Layout>
-  );
+    </Layout>;
 };
 export default Landing;
