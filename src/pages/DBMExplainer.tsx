@@ -559,18 +559,11 @@ export default function DBMExplainer() {
             <div className="relative w-full">
               <img src={dbmZonesImage} alt="DBM Four Zones Visualization" className="w-full h-auto rounded-lg" />
               
-              {/* Zone labels overlaid on image */}
-              <div className="absolute inset-0 flex flex-col justify-between py-4 px-6 pointer-events-none">
-                {/* Green Zone - Top third */}
-                <div className="flex items-start justify-between">
-                  <div className="bg-green-500/90 text-white px-3 py-2 rounded-lg shadow-lg max-w-xs">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge className="bg-green-700 text-white">Green Zone</Badge>
-                      <span className="text-xs font-mono">Yellow &lt; On-hand ≤ Green</span>
-                    </div>
-                    <p className="text-xs">Safe zone. Adequate stock. Consecutive days here can trigger buffer decreases.</p>
-                  </div>
-                  <div className="bg-blue-500/90 text-white px-3 py-2 rounded-lg shadow-lg max-w-xs ml-4">
+              {/* Zone labels overlaid on image - positioned at their respective color zones */}
+              <div className="absolute inset-0 pointer-events-none">
+                {/* Overstock Zone - Top ~5% */}
+                <div className="absolute top-[5%] left-6">
+                  <div className="bg-blue-500/90 text-white px-3 py-2 rounded-lg shadow-lg max-w-xs">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge className="bg-blue-700 text-white">Overstock</Badge>
                       <span className="text-xs font-mono">On-hand &gt; Green</span>
@@ -579,8 +572,19 @@ export default function DBMExplainer() {
                   </div>
                 </div>
 
-                {/* Yellow Zone - Middle */}
-                <div className="flex justify-start mt-8">
+                {/* Green Zone - ~30% from top (middle of green zone) */}
+                <div className="absolute top-[30%] left-6">
+                  <div className="bg-green-500/90 text-white px-3 py-2 rounded-lg shadow-lg max-w-xs">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge className="bg-green-700 text-white">Green Zone</Badge>
+                      <span className="text-xs font-mono">Yellow &lt; On-hand ≤ Green</span>
+                    </div>
+                    <p className="text-xs">Safe zone. Adequate stock. Consecutive days here can trigger buffer decreases.</p>
+                  </div>
+                </div>
+
+                {/* Yellow Zone - ~55% from top (middle of yellow zone) */}
+                <div className="absolute top-[55%] left-6">
                   <div className="bg-yellow-500/90 text-white px-3 py-2 rounded-lg shadow-lg max-w-xs">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge className="bg-yellow-700 text-white">Yellow Zone</Badge>
@@ -590,8 +594,8 @@ export default function DBMExplainer() {
                   </div>
                 </div>
 
-                {/* Red Zone - Bottom */}
-                <div className="flex justify-start">
+                {/* Red Zone - ~80% from top (middle of red zone) */}
+                <div className="absolute top-[80%] left-6">
                   <div className="bg-red-500/90 text-white px-3 py-2 rounded-lg shadow-lg max-w-xs">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge className="bg-red-700 text-white">Red Zone</Badge>
