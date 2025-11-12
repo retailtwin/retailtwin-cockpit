@@ -140,8 +140,8 @@ const Landing = () => {
                   </div>
                   <CardTitle className="text-xl mb-4">AI That Understands Your Business</CardTitle>
                   <CardDescription className="text-base leading-relaxed">
-                    Our AI agents don't just process data—they understand the nuances of your supply chain down to the
-                    level of SKU and Location. Order frequency, pack sizes—we model the real-world factors that impact
+                    Archie doesn't just process data—but also understands the nuances of your supply chain down to the
+                    level of SKU and Location. Order frequency, pack sizes—to model the real-world factors that impact
                     flow, so you can automate decisions with confidence.
                   </CardDescription>
                 </CardHeader>
