@@ -462,7 +462,7 @@ export default function DBMExplainer() {
             <CardTitle>What is DBM?</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p>Dynamic Buffer Management is a simple, yet powerful inventory control methodology that automatically adjusts inventory targets (buffers) based on actual consumption patterns and lead times. Unlike traditional min-max systems, DBM uses only a maximum (the top of the "green" zone) without a minimum, as replenishment decisions are calculated daily.<strong>only a maximum value</strong> 
+            <p>Dynamic Buffer Management is a simple, yet powerful inventory control methodology that automatically adjusts inventory targets (for buffers), in response to actual consumption patterns (data), as wel as lead times, batch sizes and other rules (input). Unlike traditional min-max systems, DBM uses a dynamic maximum (the top of the "green" zone) without a minimum, made possible by frequent, at least daily order-decisions.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          <strong>only a maximum value</strong> 
               (the "green" zone) without a minimum, as replenishment decisions are calculated daily.
             </p>
           </CardContent>
@@ -477,19 +477,19 @@ export default function DBMExplainer() {
             <ul className="space-y-2 text-sm">
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                <span><strong>Economic Stock Base:</strong> Buffers are calculated for economic inventory levels (on-hand + on-order + in-transit)</span>
+                <span><strong>Economic Stock Base:</strong>Economic Stock Base: Buffers are calculated for economic inventory levels (= on-hand + on-order + in-transit)</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                <span><strong>Daily Calculation:</strong>Continuous Calculation: Orders are calculated at least daily, reducing batching typical for traditional "min-max" rules</span>
+                <span><strong>Daily Calculation:</strong>Daily Calculation: Orders are calculated at least daily, reducing batching caused by "min-max" rules</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                <span><strong>Lead Time Driven:</strong>Lead Time Driven: Buffer adjustments are governed by lead times to prevent bull-whip effects</span>
+                <span><strong>Lead Time Driven:</strong>Lead Time Driven: Buffer adjustments are governed by lead times to prevent bull-whip effects</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                <span><strong>Zone-Based Logic:</strong>Zone-Based Logic: Inventory 'zone' (red, yellow, green) determines appropriate response triggers</span>
+                <span><strong>Zone-Based Logic:</strong>Zone-Based Logic: On-Hand Inventory 'zone' (red, yellow, green) determines the response (to increase -r decrease buffers)</span>
               </li>
             </ul>
           </CardContent>
@@ -538,7 +538,7 @@ export default function DBMExplainer() {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-primary">•</span>
-                  <span><strong>High Volume Seasonal:</strong> Popular seasonal items with predictable demand patterns</span>
+                  <span><strong>High Volume Seasonal:</strong>High Volume Seasonal: Popular seasonal items with predictable overall demand.</span>
                 </li>
               </ul>
             </CardContent>
@@ -552,7 +552,7 @@ export default function DBMExplainer() {
           </CardHeader>
           <CardContent className="space-y-6">
             <p className="text-sm text-muted-foreground">
-              DBM divides inventory into four distinct zones, each triggering different management actions:
+              DBM divides inventory into four distinct zones, each triggering different operational management actions:
             </p>
             
             <div className="grid md:grid-cols-2 gap-4">
@@ -817,34 +817,34 @@ export default function DBMExplainer() {
                 <div className="text-xs text-muted-foreground">Service Level (calculated in weekly: 28/30) (93%)</div>
                 <div className="text-2xl font-bold text-green-500">
                   {(() => {
-                    const dataSlice = simulationData.slice(0, animationDay + 1);
-                    const stockoutDays = dataSlice.filter(d => d.onHand === 0 && d.demand > 0).length;
-                    const serviceLevel = animationDay > 0 ? ((dataSlice.length - stockoutDays) / dataSlice.length * 100) : 100;
-                    return `${serviceLevel.toFixed(0)}%`;
-                  })()}
+                  const dataSlice = simulationData.slice(0, animationDay + 1);
+                  const stockoutDays = dataSlice.filter(d => d.onHand === 0 && d.demand > 0).length;
+                  const serviceLevel = animationDay > 0 ? (dataSlice.length - stockoutDays) / dataSlice.length * 100 : 100;
+                  return `${serviceLevel.toFixed(0)}%`;
+                })()}
                 </div>
               </div>
               <div className="bg-muted p-3 rounded-lg">
                 <div className="text-xs text-muted-foreground">Average Inventory (units)</div>
                 <div className="text-2xl font-bold text-amber-500">
                   {(() => {
-                    const dataSlice = simulationData.slice(0, animationDay + 1);
-                    const avgInv = dataSlice.reduce((sum, d) => sum + d.onHand, 0) / dataSlice.length;
-                    return avgInv.toFixed(1);
-                  })()}
+                  const dataSlice = simulationData.slice(0, animationDay + 1);
+                  const avgInv = dataSlice.reduce((sum, d) => sum + d.onHand, 0) / dataSlice.length;
+                  return avgInv.toFixed(1);
+                })()}
                 </div>
               </div>
               <div className="bg-muted p-3 rounded-lg">
                 <div className="text-xs text-muted-foreground">Turn (annual)</div>
                 <div className="text-2xl font-bold text-orange-500">
                   {(() => {
-                    const dataSlice = simulationData.slice(0, animationDay + 1);
-                    const totalSales = dataSlice.reduce((sum, d) => sum + d.sales, 0);
-                    const avgInv = dataSlice.reduce((sum, d) => sum + d.onHand, 0) / dataSlice.length;
-                    const days = animationDay > 0 ? animationDay : 1;
-                    const annualizedTurn = avgInv > 0 ? (totalSales / avgInv) * (365 / days) : 0;
-                    return annualizedTurn.toFixed(1);
-                  })()}
+                  const dataSlice = simulationData.slice(0, animationDay + 1);
+                  const totalSales = dataSlice.reduce((sum, d) => sum + d.sales, 0);
+                  const avgInv = dataSlice.reduce((sum, d) => sum + d.onHand, 0) / dataSlice.length;
+                  const days = animationDay > 0 ? animationDay : 1;
+                  const annualizedTurn = avgInv > 0 ? totalSales / avgInv * (365 / days) : 0;
+                  return annualizedTurn.toFixed(1);
+                })()}
                 </div>
               </div>
             </div>
