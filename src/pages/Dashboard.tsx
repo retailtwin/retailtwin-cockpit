@@ -11,6 +11,7 @@ import { ParetoReportModal } from "@/components/ParetoReportModal";
 import { SimulationStatusBar } from "@/components/SimulationStatusBar";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, Play, Settings, ChevronDown, ChevronUp } from "lucide-react";
+import archieLogo from "@/assets/archie-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import {
@@ -473,7 +474,7 @@ const Dashboard = () => {
           {/* Top Bar with Title and Agent Toggle */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Simulation</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Simulation Dashboard</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 {selectedLocation === "ALL" && selectedProduct === "ALL"
                   ? "Aggregated view: All Locations & All Products"
@@ -491,12 +492,13 @@ const Dashboard = () => {
               </p>
             </div>
             <Button
-              variant="outline"
-              size="sm"
               onClick={() => setAgentDockOpen(!agentDockOpen)}
-              className="gap-2"
+              className="h-11 px-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 bg-primary hover:bg-primary/90"
             >
-              AI Assistant
+              <div className="flex items-center gap-2">
+                <img src={archieLogo} alt="Archie" className="h-5 w-5 rounded-full object-cover" />
+                <span className="font-medium">AI Assistant</span>
+              </div>
             </Button>
           </div>
 
@@ -524,7 +526,6 @@ const Dashboard = () => {
                 productionLeadTime={productionLeadTime}
                 shippingLeadTime={shippingLeadTime}
                 orderDays={orderDays}
-                onViewSettings={isAdmin ? () => navigate('/settings', { state: { defaultTab: 'config' } }) : undefined}
               />
               
               <div className="flex justify-end gap-2">
