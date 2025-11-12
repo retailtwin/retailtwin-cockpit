@@ -22,12 +22,11 @@ const Landing = () => {
         
         <div className="relative container mx-auto px-6 py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
-            <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
-              AI To Govern, <span className="text-primary">Not Just Automate</span>
+            <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">Proven Logic, Supercharged<span className="text-primary">Not Just Automate</span>
             </h1>
             <div className="flex items-start gap-4 max-w-3xl mx-auto">
               <img src={archieLogo} alt="Archie Logo" className="w-16 h-auto mt-1 mb-auto flex-shrink-0" />
-              <p className="text-xl text-muted-foreground text-left">Archie knows the rules and metrics that drive your supply chain's performance — for better buying and VMI, without the complexity of SaaS.</p>
+              <p className="text-xl text-muted-foreground text-left">At Retail Twin Labs, we use the same TOC-based logic that transformed global retail distribution and VMI operations — now enhanced with AI for real-time insights, education, and transparency.</p>
             </div>
             <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">Many consumer goods products (NOOS, Always Available, and key seasonal lines in Footwear and Apparel) — should run on rules, not forecasts. We learned from SaaS, and merged proven supply logic with AI — turning rules into reliable decisions.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
