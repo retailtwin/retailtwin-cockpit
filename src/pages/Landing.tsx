@@ -107,7 +107,7 @@ const Landing = () => {
               <div className="flex justify-center mb-4">
                 <img src={retailTwinIcon} alt="Retail Twin Labs" className="h-20 w-20" />
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight">About Retail Twin Labs</h2>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Workflows and workflow management for retail distribution and Vendor Managed Inventory (VMI). Built on deep SaaS knowledge and decades of experience in merchandise planning and distribution for Footwear, Apparel and Sporting Goods. </h2>
               <p className="text-2xl text-primary font-semibold">Flow. Sustained by Simplicity</p>
             </div>
 
