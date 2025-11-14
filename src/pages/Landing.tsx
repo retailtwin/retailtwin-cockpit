@@ -23,7 +23,7 @@ const Landing = () => {
         <div className="relative container mx-auto px-6 py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
-              Replenishment, Supercharged <span className="text-primary">Remastered</span>
+              Replenishment, <span className="text-primary">Remastered</span>
             </h1>
             <div className="flex items-start gap-4 max-w-3xl mx-auto">
               <img src={archieLogo} alt="Archie Logo" className="w-16 h-auto mt-1 mb-auto flex-shrink-0" />
