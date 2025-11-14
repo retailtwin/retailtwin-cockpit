@@ -478,7 +478,7 @@ export default function DBMExplainer() {
             <ul className="space-y-2 text-sm">
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
-                <span><strong>Economic Stock Base:</strong>Economic Stock Base: Buffers are calculated for economic inventory levels (= on-hand + on-order + in-transit)</span>
+                <span><strong>Economic Stock Base:</strong> Buffers are calculated for economic inventory levels (= on-hand + on-order + in-transit)</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary">•</span>
