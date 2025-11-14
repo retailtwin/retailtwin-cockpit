@@ -23,11 +23,11 @@ const Landing = () => {
         <div className="relative container mx-auto px-6 py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
-              Proven Logic, <span className="text-primary">Supercharged</span>
+              Replenishment, Supercharged <span className="text-primary">Remastered</span>
             </h1>
             <div className="flex items-start gap-4 max-w-3xl mx-auto">
               <img src={archieLogo} alt="Archie Logo" className="w-16 h-auto mt-1 mb-auto flex-shrink-0" />
-              <p className="text-xl text-muted-foreground text-left">The same <strong>order management logic</strong> that already transformed global retail distribution and VMI operations — now <strong>enhanced with AI</strong> for human insights, education, and transparency — and <strong>without the complexity of SaaS</strong>.</p>
+              <p className="text-xl text-muted-foreground text-left">replenishment logic <strong>order management logic</strong> that already transformed global retail distribution and VMI operations — now <strong>enhanced with AI</strong> for human insights, education, and transparency — and <strong>without the complexity of SaaS</strong>.</p>
             </div>
             <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">Many consumer goods supply chains (NOOS, Always Available, and even key seasonal lines in Footwear and Apparel) should run on rules, not forecasts. Founded on TOC, we learned from SaaS, and merged proven supply logic with AI — turning your rules into reliable, transparent supply chain automation, and maximum throughput.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
