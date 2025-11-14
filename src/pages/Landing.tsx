@@ -57,8 +57,7 @@ const Landing = () => {
               </div>
               <CardTitle className="text-2xl">Rule-driven workflows for allocation & replenishment</CardTitle>
               <CardDescription className="text-base pt-2">
-                Control the rules (e.g., lead-times, minimums) and enhance throughput and profits from better service
-                levels and higher turns.
+                Enhance throughput and profits from better service levels and higher turns.
               </CardDescription>
             </CardHeader>
           </Card>
