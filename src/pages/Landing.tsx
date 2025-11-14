@@ -69,8 +69,7 @@ const Landing = () => {
               </div>
               <CardTitle className="text-2xl">Free Cash</CardTitle>
               <CardDescription className="text-base pt-2">
-                Run 'what-if'scenarios with different rules to find free cash from excess inventory and extra sales. Get
-                automated insights that release capital and improve flow.
+                Simulate different rules to find free cash from excess inventory and extra sales. Automated insights that release capital and improve flow.
               </CardDescription>
             </CardHeader>
           </Card>
