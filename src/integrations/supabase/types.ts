@@ -187,6 +187,42 @@ export type Database = {
           },
         ]
       }
+      landing_content: {
+        Row: {
+          body_text: string | null
+          created_at: string | null
+          heading: string | null
+          id: string
+          image_url: string | null
+          section_key: string
+          subheading: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          body_text?: string | null
+          created_at?: string | null
+          heading?: string | null
+          id?: string
+          image_url?: string | null
+          section_key: string
+          subheading?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          body_text?: string | null
+          created_at?: string | null
+          heading?: string | null
+          id?: string
+          image_url?: string | null
+          section_key?: string
+          subheading?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       system_settings: {
         Row: {
           created_at: string | null
