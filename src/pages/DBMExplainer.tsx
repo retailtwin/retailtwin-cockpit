@@ -13,6 +13,11 @@ export default function DBMExplainer() {
 
   // Weekly replenishment simulation: 7-day lead time, weekly ordering
   // Track demand separately to calculate lost sales from stockouts
+  // Product economics: unit_cost = $10, unit_price = $15, cash_margin = $5
+  const unitCost = 10;
+  const unitPrice = 15;
+  const cashMargin = unitPrice - unitCost;
+  
   const weeklySimulationData = [
   // Week 1 - Starting with target buffer of 21
   {
@@ -378,21 +383,30 @@ export default function DBMExplainer() {
   });
   const simulationData = replenishmentMode === "weekly" ? weeklySimulationData : dailySimulationData;
 
-  // Calculate metrics for comparison
+  // Calculate metrics for comparison (using Dashboard formulas)
   const calculateMetrics = (data: typeof weeklySimulationData) => {
     const totalSales = data.reduce((sum, d) => sum + d.sales, 0);
     const totalDemand = data.reduce((sum, d) => sum + d.demand, 0);
-    const avgInventory = data.reduce((sum, d) => sum + d.onHand, 0) / data.length;
     const stockoutDays = data.filter(d => d.onHand === 0 && d.demand > 0).length;
     const daysInStock = data.length - stockoutDays;
-    const availability = stockoutDays > 0 ? daysInStock / data.length : 1;
-    const potentialSales = availability > 0 ? totalDemand : totalSales;
-    const daysToCash = totalSales > 0 ? avgInventory / (totalSales / data.length) : 0;
+    const availability = daysInStock / data.length;
+    
+    // Value-based calculations (matching Dashboard)
+    const totalSalesValue = totalSales * unitCost; // COGS
+    const throughput = totalSales * cashMargin; // Cash Margin
+    const avgInventoryUnits = data.reduce((sum, d) => sum + d.onHand, 0) / data.length;
+    const avgInventoryValue = avgInventoryUnits * unitCost;
+    const turns = avgInventoryValue > 0 ? totalSalesValue / avgInventoryValue : 0;
+    const daysToCash = totalSales > 0 ? avgInventoryUnits / (totalSales / data.length) : 0;
+    
     return {
       totalSales,
       totalDemand,
-      potentialSales,
-      avgInventory,
+      avgInventoryUnits,
+      avgInventoryValue,
+      totalSalesValue,
+      throughput,
+      turns,
       stockoutDays,
       availability,
       daysToCash
@@ -401,18 +415,18 @@ export default function DBMExplainer() {
   const weeklyMetrics = calculateMetrics(weeklySimulationData);
   const dailyMetrics = calculateMetrics(dailySimulationData);
 
-  // Calculate indices and ROI improvement
-  const salesIndex = {
+  // Calculate indices and ROI improvement (value-based)
+  const throughputIndex = {
     weekly: 100,
-    daily: dailyMetrics.totalSales / weeklyMetrics.totalSales * 100
+    daily: dailyMetrics.throughput / weeklyMetrics.throughput * 100
   };
   const inventoryIndex = {
     weekly: 100,
-    daily: dailyMetrics.avgInventory / weeklyMetrics.avgInventory * 100
+    daily: dailyMetrics.avgInventoryValue / weeklyMetrics.avgInventoryValue * 100
   };
   const roiDelta = {
-    weekly: salesIndex.weekly / inventoryIndex.weekly,
-    daily: salesIndex.daily / inventoryIndex.daily
+    weekly: throughputIndex.weekly / inventoryIndex.weekly,
+    daily: throughputIndex.daily / inventoryIndex.daily
   };
   const roiImprovement = (roiDelta.daily - roiDelta.weekly) / roiDelta.weekly * 100;
   useEffect(() => {
@@ -455,6 +469,12 @@ export default function DBMExplainer() {
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Understanding how intelligent inventory buffers automatically adapt to demand variability
           </p>
+          <div className="bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-lg inline-block">
+            <p className="text-sm text-muted-foreground">
+              <strong>Note:</strong> This simulation uses the same value-based calculations as the Dashboard 
+              (Cost: $10, Price: $15, Margin: $5 per unit)
+            </p>
+          </div>
         </div>
 
         {/* What is DBM */}
@@ -636,7 +656,44 @@ export default function DBMExplainer() {
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <h4 className="font-semibold">Economic Units Calculation</h4>
+                <h4 className="font-semibold">Operational Metrics (Dashboard Formulas)</h4>
+                
+                <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 p-4 rounded-lg">
+                  <h5 className="font-semibold mb-2">Service Level</h5>
+                  <div className="text-sm space-y-2">
+                    <div className="font-mono">Service Level = (Days In Stock / Total Days) × 100%</div>
+                    <p className="text-muted-foreground">
+                      For multi-SKU aggregation: Weighted average of per-SKU service levels, weighted by days with data.
+                      Single SKU: Simple ratio of days without stockouts to total days.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/10 border border-amber-500/20 p-4 rounded-lg">
+                  <h5 className="font-semibold mb-2">Average Inventory (Value)</h5>
+                  <div className="text-sm space-y-2">
+                    <div className="font-mono">Avg Inventory = (Σ Daily On-Hand Units / Days) × Unit Cost</div>
+                    <p className="text-muted-foreground">
+                      Value-based inventory calculation. Sum of daily on-hand units divided by number of days, 
+                      then multiplied by unit cost (COGS) to get dollar value of average inventory.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border border-orange-500/20 p-4 rounded-lg">
+                  <h5 className="font-semibold mb-2">Turns</h5>
+                  <div className="text-sm space-y-2">
+                    <div className="font-mono">Turns = Total Sales Value (COGS) / Avg Inventory Value</div>
+                    <p className="text-muted-foreground">
+                      How many times inventory is sold and replaced. Higher turns mean better capital efficiency. 
+                      Both numerator and denominator use cost-based (COGS) values for accurate comparison.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="font-semibold">Economic Units & Inventory Position</h4>
                 <div className="bg-muted p-4 rounded-lg space-y-2 text-sm">
                   <div className="font-mono">
                     <strong>Economic Units</strong> = On-Hand + On-Order + In-Transit
@@ -664,11 +721,24 @@ export default function DBMExplainer() {
                   </p>
                 </div>
               </div>
-
-              <div className="space-y-3">
-                <h4 className="font-semibold">Value Metrics</h4>
-                
+            </div>
+            
+            <div className="space-y-3 mt-6">
+              <h4 className="font-semibold">Value Metrics</h4>
+              <div className="grid md:grid-cols-3 gap-4">
                 <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 p-4 rounded-lg">
+                  <h5 className="font-semibold mb-2">Throughput (T)</h5>
+                  <div className="text-sm space-y-2">
+                    <div className="font-mono">Throughput = Unit Sales × Cash Margin</div>
+                    <p className="text-muted-foreground">
+                      Cash margin generated from sales. This is the actual money made from selling products, 
+                      calculated as units sold multiplied by the cash margin per unit (sales price minus cost). 
+                      Higher throughput indicates better revenue generation.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 p-4 rounded-lg">
                   <h5 className="font-semibold mb-2">MTV (Missed Throughput Value)</h5>
                   <div className="text-sm space-y-2">
                     <div className="font-mono">MTV = ((Unit Sales ÷ Service Level %) - Unit Sales) × Cash Margin</div>
@@ -690,7 +760,6 @@ export default function DBMExplainer() {
                     </p>
                   </div>
                 </div>
-
               </div>
             </div>
           </CardContent>
@@ -735,47 +804,49 @@ export default function DBMExplainer() {
                 <h4 className="font-semibold mb-3">ROI Comparison: Weekly vs Daily Replenishment</h4>
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                   <div className="bg-background/50 p-3 rounded-lg">
-                    <div className="text-muted-foreground mb-1">Availability & Sales</div>
+                    <div className="text-muted-foreground mb-1">Service Level</div>
                     <div className="text-sm">
                       <div className="mb-2">
                         <span className="font-semibold">Weekly:</span> {(weeklyMetrics.availability * 100).toFixed(1)}% ({weeklyMetrics.stockoutDays} stockout days)
                       </div>
                       <div className="mb-2">
-                        <span className="font-semibold">Daily:</span> 100% (0 stockouts)
+                        <span className="font-semibold">Daily:</span> {(dailyMetrics.availability * 100).toFixed(1)}% ({dailyMetrics.stockoutDays} stockout days)
                       </div>
                     </div>
                     <div className="border-t border-border/50 pt-2 mt-2">
-                      <div>Weekly: {weeklyMetrics.totalSales} units sold</div>
-                      <div className="text-primary font-bold">Daily: {dailyMetrics.totalSales} units sold</div>
-                      <div className="text-xs mt-1 text-green-500">+{((dailyMetrics.totalSales - weeklyMetrics.totalSales) / weeklyMetrics.totalSales * 100).toFixed(1)}% more sales</div>
+                      <div className="text-xs text-muted-foreground">Throughput (Cash Margin)</div>
+                      <div>Weekly: ${weeklyMetrics.throughput.toFixed(0)}</div>
+                      <div className="text-primary font-bold">Daily: ${dailyMetrics.throughput.toFixed(0)}</div>
+                      <div className="text-xs mt-1 text-green-500">+{((dailyMetrics.throughput - weeklyMetrics.throughput) / weeklyMetrics.throughput * 100).toFixed(1)}% more profit</div>
                     </div>
                   </div>
                   <div className="bg-background/50 p-3 rounded-lg">
-                    <div className="text-muted-foreground mb-1">Avg Inventory</div>
-                    <div className="text-lg font-bold mb-1">Weekly: {weeklyMetrics.avgInventory.toFixed(1)} units</div>
-                    <div className="text-lg font-bold text-primary mb-2">Daily: {dailyMetrics.avgInventory.toFixed(1)} units</div>
+                    <div className="text-muted-foreground mb-1">Avg Inventory (Value)</div>
+                    <div className="text-lg font-bold mb-1">Weekly: ${weeklyMetrics.avgInventoryValue.toFixed(0)}</div>
+                    <div className="text-lg font-bold text-primary mb-2">Daily: ${dailyMetrics.avgInventoryValue.toFixed(0)}</div>
                     <div className="text-xs text-green-500 font-semibold">
-                      {((1 - dailyMetrics.avgInventory / weeklyMetrics.avgInventory) * 100).toFixed(1)}% less inventory
+                      {((1 - dailyMetrics.avgInventoryValue / weeklyMetrics.avgInventoryValue) * 100).toFixed(1)}% less inventory
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">Inventory Index: {inventoryIndex.daily.toFixed(1)}</div>
+                    <div className="text-xs text-muted-foreground mt-1">({weeklyMetrics.avgInventoryUnits.toFixed(1)} → {dailyMetrics.avgInventoryUnits.toFixed(1)} units)</div>
                   </div>
                   <div className="bg-background/50 p-3 rounded-lg">
-                    <div className="text-muted-foreground mb-1">Days to Cash</div>
-                    <div className="text-lg font-bold mb-1">Weekly: {weeklyMetrics.daysToCash.toFixed(1)} days</div>
-                    <div className="text-lg font-bold text-primary mb-2">Daily: {dailyMetrics.daysToCash.toFixed(1)} days</div>
+                    <div className="text-muted-foreground mb-1">Turns (Annual)</div>
+                    <div className="text-lg font-bold mb-1">Weekly: {weeklyMetrics.turns.toFixed(1)}x</div>
+                    <div className="text-lg font-bold text-primary mb-2">Daily: {dailyMetrics.turns.toFixed(1)}x</div>
                     <div className="text-xs text-green-500 font-semibold">
-                      {((weeklyMetrics.daysToCash - dailyMetrics.daysToCash) / weeklyMetrics.daysToCash * 100).toFixed(1)}% faster cash conversion
+                      {((dailyMetrics.turns - weeklyMetrics.turns) / weeklyMetrics.turns * 100).toFixed(1)}% faster turns
                     </div>
+                    <div className="text-xs text-muted-foreground mt-1">COGS / Avg Inventory Value</div>
                   </div>
                   <div className="bg-background/50 p-3 rounded-lg">
                     <div className="text-muted-foreground mb-1">ROI Improvement</div>
                     <div className="text-lg font-bold mb-1">Weekly: {roiDelta.weekly.toFixed(2)}</div>
                     <div className="text-lg font-bold text-primary mb-2">Daily: {roiDelta.daily.toFixed(2)}</div>
                     <div className="text-xs text-green-500 font-semibold">
-                      +{roiImprovement.toFixed(1)}% profit improvement
+                      +{roiImprovement.toFixed(1)}% ROI improvement
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Sales ↑{(salesIndex.daily - 100).toFixed(1)}% / Inv ↓{(100 - inventoryIndex.daily).toFixed(0)}%
+                      Throughput ↑{(throughputIndex.daily - 100).toFixed(1)}% / Inv ↓{(100 - inventoryIndex.daily).toFixed(0)}%
                     </div>
                   </div>
                 </div>
@@ -795,13 +866,20 @@ export default function DBMExplainer() {
             {/* Current State Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-muted p-3 rounded-lg">
-                <div className="text-xs text-muted-foreground">Sales (units)</div>
+                <div className="text-xs text-muted-foreground">Throughput (Cash Margin)</div>
                 <div className="text-2xl font-bold">
-                  {simulationData.slice(0, animationDay + 1).reduce((sum, d) => sum + d.sales, 0)}
+                  ${(() => {
+                    const dataSlice = simulationData.slice(0, animationDay + 1);
+                    const totalSales = dataSlice.reduce((sum, d) => sum + d.sales, 0);
+                    return (totalSales * cashMargin).toFixed(0);
+                  })()}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {simulationData.slice(0, animationDay + 1).reduce((sum, d) => sum + d.sales, 0)} units sold
                 </div>
               </div>
               <div className="bg-muted p-3 rounded-lg">
-                <div className="text-xs text-muted-foreground">Service Level (calculated in weekly: 28/30) (93%)</div>
+                <div className="text-xs text-muted-foreground">Service Level</div>
                 <div className="text-2xl font-bold text-green-500">
                   {(() => {
                   const dataSlice = simulationData.slice(0, animationDay + 1);
@@ -810,29 +888,45 @@ export default function DBMExplainer() {
                   return `${serviceLevel.toFixed(0)}%`;
                 })()}
                 </div>
-              </div>
-              <div className="bg-muted p-3 rounded-lg">
-                <div className="text-xs text-muted-foreground">Average Inventory (units)</div>
-                <div className="text-2xl font-bold text-amber-500">
+                <div className="text-xs text-muted-foreground mt-1">
                   {(() => {
-                  const dataSlice = simulationData.slice(0, animationDay + 1);
-                  const avgInv = dataSlice.reduce((sum, d) => sum + d.onHand, 0) / dataSlice.length;
-                  return avgInv.toFixed(1);
-                })()}
+                    const dataSlice = simulationData.slice(0, animationDay + 1);
+                    const stockoutDays = dataSlice.filter(d => d.onHand === 0 && d.demand > 0).length;
+                    return `${dataSlice.length - stockoutDays}/${dataSlice.length} days`;
+                  })()}
                 </div>
               </div>
               <div className="bg-muted p-3 rounded-lg">
-                <div className="text-xs text-muted-foreground">Turn (annual)</div>
+                <div className="text-xs text-muted-foreground">Average Inventory (Value)</div>
+                <div className="text-2xl font-bold text-amber-500">
+                  ${(() => {
+                  const dataSlice = simulationData.slice(0, animationDay + 1);
+                  const avgInv = dataSlice.reduce((sum, d) => sum + d.onHand, 0) / dataSlice.length;
+                  return (avgInv * unitCost).toFixed(0);
+                })()}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {(() => {
+                    const dataSlice = simulationData.slice(0, animationDay + 1);
+                    const avgInv = dataSlice.reduce((sum, d) => sum + d.onHand, 0) / dataSlice.length;
+                    return avgInv.toFixed(1);
+                  })()} units avg
+                </div>
+              </div>
+              <div className="bg-muted p-3 rounded-lg">
+                <div className="text-xs text-muted-foreground">Turns</div>
                 <div className="text-2xl font-bold text-orange-500">
                   {(() => {
                   const dataSlice = simulationData.slice(0, animationDay + 1);
                   const totalSales = dataSlice.reduce((sum, d) => sum + d.sales, 0);
                   const avgInv = dataSlice.reduce((sum, d) => sum + d.onHand, 0) / dataSlice.length;
-                  const days = animationDay > 0 ? animationDay : 1;
-                  const annualizedTurn = avgInv > 0 ? totalSales / avgInv * (365 / days) : 0;
-                  return annualizedTurn.toFixed(1);
-                })()}
+                  const salesValue = totalSales * unitCost;
+                  const avgInvValue = avgInv * unitCost;
+                  const turns = avgInvValue > 0 ? salesValue / avgInvValue : 0;
+                  return turns.toFixed(1);
+                })()}x
                 </div>
+                <div className="text-xs text-muted-foreground mt-1">COGS / Avg Inv Value</div>
               </div>
             </div>
 
