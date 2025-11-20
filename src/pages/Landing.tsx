@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, Target, Zap, Mail, Layers, TrendingUp, Brain, Gauge } from "lucide-react";
+import { BadgeStatus } from "@/components/ui/badge-status";
+import { AlertTriangle, Target, Zap, Mail, Layers, TrendingUp, Brain, Gauge, CheckCircle2, Package, Unlock, Eye, Bot, Award } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { FloatingContactButton } from "@/components/FloatingContactButton";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,152 +58,231 @@ const Landing = () => {
 
   return <Layout>
       <FloatingContactButton />
-      {/* Hero Section with Background */}
+      {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5" />
-        <div className="absolute inset-0 opacity-10 bg-center bg-no-repeat bg-cover" style={{
-        backgroundImage: `url(${retailCycleImage})`
-      }} />
 
         <div className="relative container mx-auto px-6 py-24 md:py-32">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
+          <div className="max-w-5xl mx-auto text-center space-y-8">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
-              {getContent("hero_title", "heading", "Replenishment,")} <span className="text-primary">Remastered</span>
+              {getContent("hero_new", "heading", "Supply Chain Intelligence That Actually Executes")}
             </h1>
-            <div className="flex items-start gap-4 max-w-3xl mx-auto">
-              <img src={archieLogo} alt="Archie Logo" className="w-16 h-auto mt-1 mb-auto flex-shrink-0" />
-              <p className="text-xl text-muted-foreground text-left">
-                {getContent("hero_subtitle", "body_text", "The same replenishment logic that already transformed global retail distribution and VMI operations — enhanced with AI for human insights, education, and transparency.")}
-              </p>
-            </div>
-            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">
-              {getContent("hero_description", "body_text", "Many consumer goods supply chains (NOOS, Always Available, and even key seasonal lines in Footwear and Apparel) should run on rules, not forecasts. Founded on TOC, we learned from SaaS, and merged proven supply logic with AI — turning your rules into reliable, transparent replenishment automation, and maximum throughput.")}
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              {getContent("hero_new", "subheading", "20+ years of enterprise retail operations, now accessible to growing brands through AI agents. No complex software. No spreadsheets. Just disciplined execution.")}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/login">
                 <Button size="lg" className="text-lg px-10 shadow-lg">
-                  Login
+                  Start with Replenishment
                 </Button>
               </Link>
-              <a href="mailto:hello@retailtwin.com">
-                <Button size="lg" variant="secondary" className="text-lg px-10 shadow-lg">
-                  <Mail className="mr-2 h-5 w-5" />
-                  Talk to Us
+              <a href="mailto:hello@retailtwin.com?subject=Demo Request">
+                <Button size="lg" variant="outline" className="text-lg px-10 shadow-lg">
+                  Book a Demo
                 </Button>
               </a>
+            </div>
+            <p className="text-sm text-muted-foreground italic max-w-2xl mx-auto">
+              {getContent("hero_new", "body_text", "Proven at Foot Locker, adidas, and leading retailers. Now available to brands ready to scale.")}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Three-Pillar Section */}
+      <section className="container mx-auto px-6 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold mb-4">
+            {getContent("pillars_intro", "heading", "Complete Supply Chain Operations in Three Parts")}
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-4xl mx-auto">
+            {getContent("pillars_intro", "body_text", "Replace spreadsheets and guesswork with AI agents that handle your operational, tactical, and strategic decisions.")}
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Pillar 1 - Replenishment */}
+          <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-l-green-500">
+            <CardHeader>
+              <BadgeStatus variant="available" className="mb-4">AVAILABLE NOW</BadgeStatus>
+              <Zap className="w-12 h-12 text-green-600 mb-4" />
+              <CardTitle className="text-2xl mb-2">
+                {getContent("pillar1_main", "heading", "Replenishment Remastered")}
+              </CardTitle>
+              <CardDescription className="text-sm font-medium mb-3">
+                {getContent("pillar1_main", "subheading", "Operational Excellence - Short-term decisions")}
+              </CardDescription>
+              <p className="text-muted-foreground text-base mb-6">
+                {getContent("pillar1_main", "body_text", "AI-driven order suggestions that maximize cash flow through higher inventory turns and better service levels.")}
+              </p>
+              <ul className="space-y-3 mb-6">
+                {getContent("pillar1_benefits", "body_text", "Discipline that sticks to the rules|Real-time validation|Natural language interface|Focus on your core")
+                  .split("|")
+                  .map((benefit, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
+                      <span>{benefit}</span>
+                    </li>
+                  ))}
+              </ul>
+            </CardHeader>
+            <CardContent>
+              <Link to="/login" className="block">
+                <Button className="w-full">Get Started</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Pillar 2 - Assortment */}
+          <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-l-amber-500">
+            <CardHeader>
+              <BadgeStatus variant="development" className="mb-4">IN DEVELOPMENT</BadgeStatus>
+              <Package className="w-12 h-12 text-amber-600 mb-4" />
+              <CardTitle className="text-2xl mb-2">
+                {getContent("pillar2_main", "heading", "Assortment Management")}
+              </CardTitle>
+              <CardDescription className="text-sm font-medium mb-3">
+                {getContent("pillar2_main", "subheading", "Tactical Planning - Mid-term decisions")}
+              </CardDescription>
+              <p className="text-muted-foreground text-base mb-6">
+                {getContent("pillar2_main", "body_text", "AI agents that optimize your product mix based on performance data and strategic goals.")}
+              </p>
+              <ul className="space-y-3 mb-6">
+                {getContent("pillar2_benefits", "body_text", "Data-driven decisions|Planning automation|Performance optimization|Seamless integration")
+                  .split("|")
+                  .map((benefit, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                      <span>{benefit}</span>
+                    </li>
+                  ))}
+              </ul>
+            </CardHeader>
+            <CardContent>
+              <a href="mailto:hello@retailtwin.com?subject=Assortment Management Waitlist">
+                <Button variant="outline" className="w-full">Join Waitlist</Button>
+              </a>
+            </CardContent>
+          </Card>
+
+          {/* Pillar 3 - Planning & OTB */}
+          <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-l-gray-400">
+            <CardHeader>
+              <BadgeStatus variant="coming-soon" className="mb-4">COMING 2025/2026</BadgeStatus>
+              <TrendingUp className="w-12 h-12 text-gray-600 mb-4" />
+              <CardTitle className="text-2xl mb-2">
+                {getContent("pillar3_main", "heading", "Planning & Open to Buy")}
+              </CardTitle>
+              <CardDescription className="text-sm font-medium mb-3">
+                {getContent("pillar3_main", "subheading", "Strategic Planning - Long-term decisions")}
+              </CardDescription>
+              <p className="text-muted-foreground text-base mb-6">
+                {getContent("pillar3_main", "body_text", "Financial planning and Open to Buy management powered by AI.")}
+              </p>
+              <ul className="space-y-3 mb-6">
+                {getContent("pillar3_benefits", "body_text", "Strategic planning|OTB automation|Scenario simulation|End-to-end visibility")
+                  .split("|")
+                  .map((benefit, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="w-5 h-5 text-gray-600 shrink-0 mt-0.5" />
+                      <span>{benefit}</span>
+                    </li>
+                  ))}
+              </ul>
+            </CardHeader>
+            <CardContent>
+              <a href="mailto:hello@retailtwin.com?subject=Planning Advisory Board">
+                <Button variant="secondary" className="w-full">Join Advisory Board</Button>
+              </a>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Why AI Agents Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-20">
+        <div className="container mx-auto px-6">
+          <div className="max-w-5xl mx-auto text-center space-y-8">
+            <div className="flex justify-center mb-4">
+              <img src={archieLogo} alt="Archie AI" className="h-24 w-24 object-contain opacity-90" />
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+              {getContent("why_agents", "heading", "Why Agents Change Everything")}
+            </h2>
+            <div className="prose prose-lg mx-auto text-left">
+              <p className="text-muted-foreground text-lg leading-relaxed whitespace-pre-line">
+                {getContent("why_agents", "body_text", "After 15 years running Retailisation, I learned that even the best technology doesn't guarantee execution...")}
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Benefits Section */}
+      {/* Credibility Section */}
       <section className="container mx-auto px-6 py-20">
-        <div className="grid md:grid-cols-3 gap-8">
-          <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50">
-            <CardHeader>
-              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                <Target className="h-7 w-7 text-primary" />
-              </div>
-              <CardTitle className="text-2xl">
-                {getContent("benefit_1_title", "heading", "Rule-driven workflows for allocation & replenishment")}
-              </CardTitle>
-              <CardDescription className="text-base pt-2">
-                {getContent("benefit_1_title", "body_text", "Enhance throughput and profits from better service levels and higher turns.")}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50">
-            <CardHeader>
-              <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-6">
-                <Zap className="h-7 w-7 text-accent" />
-              </div>
-              <CardTitle className="text-2xl">
-                {getContent("benefit_2_title", "heading", "Free Cash")}
-              </CardTitle>
-              <CardDescription className="text-base pt-2">
-                {getContent("benefit_2_title", "body_text", "Reduce inventory levels without sacrificing sales. Focus capital where it matters most.")}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50">
-            <CardHeader>
-              <div className="h-14 w-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
-                <AlertTriangle className="h-7 w-7 text-destructive" />
-              </div>
-              <CardTitle className="text-2xl">
-                {getContent("benefit_3_title", "heading", "Scale Confidently")}
-              </CardTitle>
-              <CardDescription className="text-base pt-2">
-                {getContent("benefit_3_title", "body_text", "From 10 to 10,000 SKUs. From one location to a global network. Our system grows with you.")}
-              </CardDescription>
-            </CardHeader>
-          </Card>
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold mb-4">
+            {getContent("credibility", "heading", "Built on 20+ Years of Enterprise Experience")}
+          </h2>
+        </div>
+        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {getContent("credibility_timeline", "body_text", "Enterprise experience|SaaS operations|First principles|Now accessible")
+            .split("|")
+            .map((item, idx) => (
+              <Card key={idx} className="shadow-xl hover:shadow-2xl transition-all duration-300">
+                <CardHeader>
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <Award className="w-6 h-6 text-primary" />
+                    </div>
+                    <p className="text-muted-foreground text-base">{item}</p>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
         </div>
       </section>
 
-      {/* About Retail Twin Labs Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-20">
-        <div className="absolute inset-0 opacity-5 bg-center bg-no-repeat bg-cover" style={{
-        backgroundImage: `url(${retailCycleImage})`
-      }} />
-        <div className="relative container mx-auto px-6">
-          <div className="max-w-5xl mx-auto space-y-12">
-            {/* Section Header */}
-            <div className="text-center space-y-6">
-              <div className="flex justify-center mb-4">
-                <img src={retailTwinIcon} alt="Retail Twin Labs" className="h-20 w-20" />
-              </div>
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Workflows and workflow management for retail distribution and Vendor Managed Inventory (VMI). Built on deep SaaS knowledge and decades of experience in merchandise planning and distribution for Footwear, Apparel and Sporting Goods. </h2>
-              <p className="text-2xl text-primary font-semibold">Flow. Sustained by Simplicity</p>
-            </div>
-
-            {/* Company Introduction */}
-            <Card className="shadow-xl border-none bg-gradient-to-br from-card to-card/50">
+      {/* Value Proposition Section */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-secondary/5 via-background to-accent/5 py-20">
+        <div className="container mx-auto px-6">
+          <h2 className="text-4xl font-bold text-center mb-16">
+            {getContent("value_prop", "heading", "Buy Capability, Not Infrastructure")}
+          </h2>
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <Card className="shadow-xl hover:shadow-2xl transition-all duration-300">
               <CardHeader>
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                  <Layers className="h-6 w-6 text-primary" />
-                </div>
-                <CardDescription className="text-base leading-relaxed">Critical insights and simple workflow automation from your data, your rules, your tools. Built on decades of experience in merchandise planning and distribution for Footwear, Apparel and Sporting Goods and deep SaaS knowledge. </CardDescription>
+                <Bot className="w-12 h-12 text-primary mb-4" />
+                <CardTitle className="text-xl mb-3">
+                  {getContent("value_prop1", "heading", "No Complex Software")}
+                </CardTitle>
+                <p className="text-muted-foreground text-base">
+                  {getContent("value_prop1", "body_text", "Skip the expensive implementation. Our agents understand your business through conversation.")}
+                </p>
               </CardHeader>
             </Card>
-
-            {/* Two Column Cards */}
-            <div className="grid md:grid-cols-2 gap-8">
-              <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50">
-                <CardHeader>
-                  <div className="h-12 w-12 rounded-2xl bg-accent/10 flex items-center justify-center mb-6">
-                    <TrendingUp className="h-6 w-6 text-accent" />
-                  </div>
-                  <CardTitle className="text-xl mb-4">From the founder: Jasper Zeelenberg</CardTitle>
-                  <CardDescription className="text-base leading-relaxed">Order automation is only as effective when internal rules and metrics govern flow. At Retail Twin Labs, we deliver good automation, and added Archie to explain how lead-times and minimum order quantities impact flow.</CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-none bg-gradient-to-br from-card to-card/50">
-                <CardHeader>
-                  <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-                    <Brain className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle className="text-xl mb-4">AI That Understands Your Business</CardTitle>
-                  <CardDescription className="text-base leading-relaxed">
-                    Archie doesn't just process data—but also understands the nuances of your supply chain down to the
-                    level of SKU and Location. Order frequency, pack sizes—to model the real-world factors that impact
-                    flow, so you can automate decisions with confidence.
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </div>
-
-            {/* Learn More Button */}
-            <div className="flex justify-center mt-12">
-              <Link to="/about">
-                <Button size="lg" className="text-lg px-10 shadow-lg">
-                  Learn More
-                </Button>
-              </Link>
-            </div>
+            <Card className="shadow-xl hover:shadow-2xl transition-all duration-300">
+              <CardHeader>
+                <Unlock className="w-12 h-12 text-primary mb-4" />
+                <CardTitle className="text-xl mb-3">
+                  {getContent("value_prop2", "heading", "No Long-term Lock-in")}
+                </CardTitle>
+                <p className="text-muted-foreground text-base">
+                  {getContent("value_prop2", "body_text", "Month-to-month engagement. Success is measured in cash generated and time saved.")}
+                </p>
+              </CardHeader>
+            </Card>
+            <Card className="shadow-xl hover:shadow-2xl transition-all duration-300">
+              <CardHeader>
+                <Eye className="w-12 h-12 text-primary mb-4" />
+                <CardTitle className="text-xl mb-3">
+                  {getContent("value_prop3", "heading", "Transparency, Not Black Boxes")}
+                </CardTitle>
+                <p className="text-muted-foreground text-base">
+                  {getContent("value_prop3", "body_text", "Understand every decision. Set the rules for flow. Archie executes with discipline.")}
+                </p>
+              </CardHeader>
+            </Card>
           </div>
         </div>
       </section>
