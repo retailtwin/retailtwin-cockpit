@@ -19,14 +19,36 @@ type ContentSection = {
 };
 
 const SECTION_LABELS: Record<string, string> = {
-  hero_title: "Hero Title",
-  hero_subtitle: "Hero Subtitle",
-  hero_description: "Hero Description",
-  benefit_1_title: "Benefit 1 Title",
-  benefit_2_title: "Benefit 2 Title",
-  benefit_3_title: "Benefit 3 Title",
-  about_heading: "About Section Heading",
-  about_body: "About Section Body",
+  // Platform Positioning
+  'hero_new': '🎯 Hero Section (Platform Positioning)',
+  'pillars_intro': '🏛️ Three-Pillar Introduction',
+  
+  // Three Pillars
+  'pillar1_main': '✅ Pillar 1: Replenishment (Available)',
+  'pillar1_benefits': '   └─ Benefits',
+  'pillar2_main': '🔶 Pillar 2: Assortment (In Development)',
+  'pillar2_benefits': '   └─ Benefits',
+  'pillar3_main': '⏳ Pillar 3: Planning & OTB (Coming Soon)',
+  'pillar3_benefits': '   └─ Benefits',
+  
+  // Supporting Sections
+  'why_agents': '🤖 Why AI Agents Section',
+  'credibility': '🏆 Credibility Section',
+  'credibility_timeline': '   └─ Timeline Points',
+  'value_prop': '💎 Value Proposition Header',
+  'value_prop1': '   └─ No Complex Software',
+  'value_prop2': '   └─ No Long-term Lock-in',
+  'value_prop3': '   └─ Transparency',
+  
+  // Legacy sections (from old landing page)
+  'hero_title': '📜 [Legacy] Hero Title',
+  'hero_subtitle': '📜 [Legacy] Hero Subtitle',
+  'hero_description': '📜 [Legacy] Hero Description',
+  'benefit_1_title': '📜 [Legacy] Benefit 1',
+  'benefit_2_title': '📜 [Legacy] Benefit 2',
+  'benefit_3_title': '📜 [Legacy] Benefit 3',
+  'about_heading': '📜 [Legacy] About Heading',
+  'about_body': '📜 [Legacy] About Body',
 };
 
 export const LandingContentManager = () => {
