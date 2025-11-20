@@ -1,16 +1,60 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, Target, Zap, Mail, Layers, TrendingUp, Brain, Gauge } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { FloatingContactButton } from "@/components/FloatingContactButton";
+import { supabase } from "@/integrations/supabase/client";
 import retailCycleImage from "@/assets/retail-cycle.png";
 import retailTwinIcon from "@/assets/retail-twin-icon.png";
 import dashboardPreview from "@/assets/dashboard-preview.png";
 import archieChatPreview from "@/assets/archie-chat-preview.png";
 import archieLogo from "@/assets/archie-logo.png";
 import zefyrLogo from "@/assets/zefyr-logo.jpeg";
+
+type ContentData = Record<string, { heading?: string; subheading?: string; body_text?: string }>;
+
 const Landing = () => {
+  const [content, setContent] = useState<ContentData>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadContent();
+  }, []);
+
+  const loadContent = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("landing_content")
+        .select("*");
+
+      if (error) throw error;
+
+      const contentMap: ContentData = {};
+      data?.forEach((item) => {
+        contentMap[item.section_key] = {
+          heading: item.heading,
+          subheading: item.subheading,
+          body_text: item.body_text,
+        };
+      });
+      setContent(contentMap);
+    } catch (error) {
+      console.error("Error loading landing content:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getContent = (key: string, field: "heading" | "subheading" | "body_text", fallback: string) => {
+    return content[key]?.[field] || fallback;
+  };
+
+  if (loading) {
+    return <Layout><div className="flex items-center justify-center min-h-screen">Loading...</div></Layout>;
+  }
+
   return <Layout>
       <FloatingContactButton />
       {/* Hero Section with Background */}
@@ -23,13 +67,17 @@ const Landing = () => {
         <div className="relative container mx-auto px-6 py-24 md:py-32">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight leading-tight">
-              Replenishment, <span className="text-primary">Remastered</span>
+              {getContent("hero_title", "heading", "Replenishment,")} <span className="text-primary">Remastered</span>
             </h1>
             <div className="flex items-start gap-4 max-w-3xl mx-auto">
               <img src={archieLogo} alt="Archie Logo" className="w-16 h-auto mt-1 mb-auto flex-shrink-0" />
-              <p className="text-xl text-muted-foreground text-left">The same <strong>replenishment logic</strong> that already transformed global retail distribution and VMI operations — <strong>enhanced with AI</strong> for human insights, education, and transparency.</p>
+              <p className="text-xl text-muted-foreground text-left">
+                {getContent("hero_subtitle", "body_text", "The same replenishment logic that already transformed global retail distribution and VMI operations — enhanced with AI for human insights, education, and transparency.")}
+              </p>
             </div>
-            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">Many consumer goods supply chains (NOOS, Always Available, and even key seasonal lines in Footwear and Apparel) should run on rules, not forecasts. Founded on TOC, we learned from SaaS, and merged proven supply logic with AI — turning your rules into reliable, transparent replenishment automation, and maximum throughput.</p>
+            <p className="text-base text-muted-foreground max-w-4xl mx-auto leading-relaxed mt-6">
+              {getContent("hero_description", "body_text", "Many consumer goods supply chains (NOOS, Always Available, and even key seasonal lines in Footwear and Apparel) should run on rules, not forecasts. Founded on TOC, we learned from SaaS, and merged proven supply logic with AI — turning your rules into reliable, transparent replenishment automation, and maximum throughput.")}
+            </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/login">
                 <Button size="lg" className="text-lg px-10 shadow-lg">
@@ -55,9 +103,11 @@ const Landing = () => {
               <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
                 <Target className="h-7 w-7 text-primary" />
               </div>
-              <CardTitle className="text-2xl">Rule-driven workflows for allocation & replenishment</CardTitle>
+              <CardTitle className="text-2xl">
+                {getContent("benefit_1_title", "heading", "Rule-driven workflows for allocation & replenishment")}
+              </CardTitle>
               <CardDescription className="text-base pt-2">
-                Enhance throughput and profits from better service levels and higher turns.
+                {getContent("benefit_1_title", "body_text", "Enhance throughput and profits from better service levels and higher turns.")}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -67,9 +117,11 @@ const Landing = () => {
               <div className="h-14 w-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-6">
                 <Zap className="h-7 w-7 text-accent" />
               </div>
-              <CardTitle className="text-2xl">Free Cash</CardTitle>
+              <CardTitle className="text-2xl">
+                {getContent("benefit_2_title", "heading", "Free Cash")}
+              </CardTitle>
               <CardDescription className="text-base pt-2">
-                Simulate different rules to find free cash from excess inventory and extra sales. Automated insights that release capital and improve flow.
+                {getContent("benefit_2_title", "body_text", "Reduce inventory levels without sacrificing sales. Focus capital where it matters most.")}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -79,10 +131,11 @@ const Landing = () => {
               <div className="h-14 w-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
                 <AlertTriangle className="h-7 w-7 text-destructive" />
               </div>
-              <CardTitle className="text-2xl">Scale across your network</CardTitle>
+              <CardTitle className="text-2xl">
+                {getContent("benefit_3_title", "heading", "Scale Confidently")}
+              </CardTitle>
               <CardDescription className="text-base pt-2">
-                From single warehouse to retail networks and Vendor Managed Inventory (VMI). Works where your customers
-                come to buy, when there is data.
+                {getContent("benefit_3_title", "body_text", "From 10 to 10,000 SKUs. From one location to a global network. Our system grows with you.")}
               </CardDescription>
             </CardHeader>
           </Card>

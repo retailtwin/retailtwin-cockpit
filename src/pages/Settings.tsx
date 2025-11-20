@@ -15,7 +15,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Shield, UserPlus, Trash2, Settings2, Users, Calculator, CalendarIcon, Clock, Zap, Sliders, Bell, ChevronDown, AlertTriangle, ArrowLeft, BookOpen, RefreshCw } from "lucide-react";
+import { Loader2, Shield, UserPlus, Trash2, Settings2, Users, Calculator, CalendarIcon, Clock, Zap, Sliders, Bell, ChevronDown, AlertTriangle, ArrowLeft, BookOpen, RefreshCw, FileText } from "lucide-react";
+import { LandingContentManager } from "@/components/LandingContentManager";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -471,7 +472,7 @@ const Settings = () => {
           </div>
 
           <Tabs defaultValue={defaultTab} className="space-y-6">
-            <TabsList className="grid w-full max-w-3xl grid-cols-4">
+            <TabsList className="grid w-full max-w-4xl grid-cols-5">
               <TabsTrigger value="users" className="gap-2">
                 <Users className="h-4 w-4" />
                 User Roles
@@ -487,6 +488,10 @@ const Settings = () => {
               <TabsTrigger value="calculate" className="gap-2">
                 <Calculator className="h-4 w-4" />
                 Run Simulation
+              </TabsTrigger>
+              <TabsTrigger value="landing" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Landing Page
               </TabsTrigger>
             </TabsList>
 
@@ -1106,6 +1111,11 @@ const Settings = () => {
                   </Button>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Landing Page Content Tab */}
+            <TabsContent value="landing">
+              <LandingContentManager />
             </TabsContent>
           </Tabs>
         </div>
