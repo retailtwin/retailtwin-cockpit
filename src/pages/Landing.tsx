@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BadgeStatus } from "@/components/ui/badge-status";
-import { AlertTriangle, Target, Zap, Mail, Layers, TrendingUp, Brain, Gauge, CheckCircle2, Package, Unlock, Eye, Bot, Award } from "lucide-react";
+import { AlertTriangle, Target, Zap, Mail, Layers, TrendingUp, Brain, Gauge, CheckCircle2, Package, Unlock, Eye, Bot, Award, ExternalLink } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { FloatingContactButton } from "@/components/FloatingContactButton";
 import { supabase } from "@/integrations/supabase/client";
@@ -226,20 +226,63 @@ const Landing = () => {
           </h2>
         </div>
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {getContent("credibility_timeline", "body_text", "Enterprise experience|SaaS operations|First principles|Now accessible")
-            .split("|")
-            .map((item, idx) => (
-              <Card key={idx} className="shadow-xl hover:shadow-2xl transition-all duration-300">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Award className="w-6 h-6 text-primary" />
-                    </div>
-                    <p className="text-muted-foreground text-base">{item}</p>
-                  </div>
-                </CardHeader>
-              </Card>
-            ))}
+          <Card className="shadow-xl hover:shadow-2xl transition-all duration-300">
+            <CardHeader>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Award className="w-6 h-6 text-primary" />
+                </div>
+                <p className="text-muted-foreground text-base">
+                  Designed and ran retail systems for Foot Locker, adidas and others
+                </p>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Card className="shadow-xl hover:shadow-2xl transition-all duration-300">
+            <CardHeader>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Award className="w-6 h-6 text-primary" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-muted-foreground text-base">
+                    15 years operating Retailisation SaaS for replenishment, increasing sales and turns for global clients
+                  </p>
+                  <Link to="/case-study/dk-company" className="text-sm text-primary hover:underline flex items-center gap-1">
+                    <ExternalLink className="w-4 h-4" />
+                    View DK Company Case Study
+                  </Link>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Card className="shadow-xl hover:shadow-2xl transition-all duration-300">
+            <CardHeader>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Award className="w-6 h-6 text-primary" />
+                </div>
+                <p className="text-muted-foreground text-base">
+                  First principles thinking, proven best practices (e.g., DBM for replenishment), configurable (e.g., lead-times), self-learning, executable output, metrics-driven
+                </p>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Card className="shadow-xl hover:shadow-2xl transition-all duration-300">
+            <CardHeader>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Award className="w-6 h-6 text-primary" />
+                </div>
+                <p className="text-muted-foreground text-base">
+                  Now: Making enterprise-level supply chain intelligence accessible to growing brands through AI agents that use sound logic to improve service levels, throughput and turns
+                </p>
+              </div>
+            </CardHeader>
+          </Card>
         </div>
       </section>
 
@@ -263,23 +306,23 @@ const Landing = () => {
             </Card>
             <Card className="shadow-xl hover:shadow-2xl transition-all duration-300">
               <CardHeader>
-                <Unlock className="w-12 h-12 text-primary mb-4" />
+                <Zap className="w-12 h-12 text-primary mb-4" />
                 <CardTitle className="text-xl mb-3">
-                  {getContent("value_prop2", "heading", "No Long-term Lock-in")}
+                  {getContent("value_prop2", "heading", "Speed to Cash")}
                 </CardTitle>
                 <p className="text-muted-foreground text-base">
-                  {getContent("value_prop2", "body_text", "Month-to-month engagement. Success is measured in cash generated and time saved.")}
+                  {getContent("value_prop2", "body_text", "Insights and recommendations within weeks.")}
                 </p>
               </CardHeader>
             </Card>
             <Card className="shadow-xl hover:shadow-2xl transition-all duration-300">
               <CardHeader>
-                <Eye className="w-12 h-12 text-primary mb-4" />
+                <Gauge className="w-12 h-12 text-primary mb-4" />
                 <CardTitle className="text-xl mb-3">
-                  {getContent("value_prop3", "heading", "Transparency, Not Black Boxes")}
+                  {getContent("value_prop3", "heading", "Simulate → Automate")}
                 </CardTitle>
                 <p className="text-muted-foreground text-base">
-                  {getContent("value_prop3", "body_text", "Understand every decision. Set the rules for flow. Archie executes with discipline.")}
+                  {getContent("value_prop3", "body_text", "Understand each decision. Set the rules for flow. Archie executes with discipline.")}
                 </p>
               </CardHeader>
             </Card>
@@ -298,11 +341,9 @@ const Landing = () => {
                   <Gauge className="h-10 w-10 text-primary" />
                 </div>
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tight">Your Cockpit</h2>
+              <h2 className="text-4xl md:text-5xl font-bold tracking-tight">What You Get</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Using your data and your rules, we build intuitive cockpits from where you control the flow. Simple
-                steps guide you toward the goal: increasing sales and turns through better service levels, human
-                insights in natural language, and a much quicker supply chain.
+                Using your data and your rules, we launch an intuitive cockpit from where you monitor the flow. Watch as you move toward your goal: increasing sales and turns through better service levels, with human insights in simple language.
               </p>
             </div>
 
@@ -365,7 +406,7 @@ const Landing = () => {
                   <p>
                     I bring 30+ years of retail leadership across EMEA and a proven record as a SaaS founder. Having led
                     retailing teams at scale and founded technology solutions that enable smarter, faster decisions, I
-                    offer a unique combination of strategic insight and domain experience. Connecting supply flows to
+                    offer strategic and operational domain experience, connecting supply flows to
                     retail, helping businesses unlock value and free cash.
                   </p>
                   <p>
