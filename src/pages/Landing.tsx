@@ -251,7 +251,7 @@ const Landing = () => {
                   </p>
                   <Link to="/case-study/dk-company" className="text-sm text-primary hover:underline flex items-center gap-1">
                     <ExternalLink className="w-4 h-4" />
-                    View DK Company Case Study
+                    View Case Study
                   </Link>
                 </div>
               </div>
