@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BadgeStatus } from "@/components/ui/badge-status";
-import { AlertTriangle, Target, Zap, Mail, Layers, TrendingUp, Brain, Gauge, CheckCircle2, Package, Unlock, Eye, Bot, Award, ExternalLink } from "lucide-react";
+import { AlertTriangle, Target, Zap, Mail, Layers, TrendingUp, Brain, Gauge, CheckCircle2, Package, Unlock, Eye, Bot, Award, ExternalLink, Box } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { FloatingContactButton } from "@/components/FloatingContactButton";
 import { supabase } from "@/integrations/supabase/client";
@@ -105,13 +105,10 @@ const Landing = () => {
           <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-l-green-500">
             <CardHeader>
               <BadgeStatus variant="available" className="mb-4">AVAILABLE NOW</BadgeStatus>
-              <Zap className="w-12 h-12 text-green-600 mb-4" />
+              <Box className="w-12 h-12 text-green-600 mb-4 opacity-40" strokeWidth={3} />
               <CardTitle className="text-2xl mb-2">
-                {getContent("pillar1_main", "heading", "Replenishment Remastered")}
+                {getContent("pillar1_main", "heading", "Replenishment")}
               </CardTitle>
-              <CardDescription className="text-sm font-medium mb-3">
-                {getContent("pillar1_main", "subheading", "Operational Excellence - Short-term decisions")}
-              </CardDescription>
               <p className="text-muted-foreground text-base mb-6">
                 {getContent("pillar1_main", "body_text", "AI-driven order suggestions that maximize cash flow through higher inventory turns and better service levels.")}
               </p>
@@ -137,13 +134,10 @@ const Landing = () => {
           <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-l-amber-500">
             <CardHeader>
               <BadgeStatus variant="development" className="mb-4">IN DEVELOPMENT</BadgeStatus>
-              <Package className="w-12 h-12 text-amber-600 mb-4" />
+              <Box className="w-12 h-12 text-amber-600 mb-4 opacity-70" strokeWidth={2.5} />
               <CardTitle className="text-2xl mb-2">
                 {getContent("pillar2_main", "heading", "Assortment Management")}
               </CardTitle>
-              <CardDescription className="text-sm font-medium mb-3">
-                {getContent("pillar2_main", "subheading", "Tactical Planning - Mid-term decisions")}
-              </CardDescription>
               <p className="text-muted-foreground text-base mb-6">
                 {getContent("pillar2_main", "body_text", "AI agents that optimize your product mix based on performance data and strategic goals.")}
               </p>
@@ -169,13 +163,10 @@ const Landing = () => {
           <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-l-gray-400">
             <CardHeader>
               <BadgeStatus variant="coming-soon" className="mb-4">COMING 2025/2026</BadgeStatus>
-              <TrendingUp className="w-12 h-12 text-gray-600 mb-4" />
+              <Box className="w-12 h-12 text-gray-600 mb-4" strokeWidth={2} />
               <CardTitle className="text-2xl mb-2">
                 {getContent("pillar3_main", "heading", "Planning & Open to Buy")}
               </CardTitle>
-              <CardDescription className="text-sm font-medium mb-3">
-                {getContent("pillar3_main", "subheading", "Strategic Planning - Long-term decisions")}
-              </CardDescription>
               <p className="text-muted-foreground text-base mb-6">
                 {getContent("pillar3_main", "body_text", "Financial planning and Open to Buy management powered by AI.")}
               </p>
