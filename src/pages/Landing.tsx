@@ -3,7 +3,24 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BadgeStatus } from "@/components/ui/badge-status";
-import { AlertTriangle, Target, Zap, Mail, Layers, TrendingUp, Brain, Gauge, CheckCircle2, Package, Unlock, Eye, Bot, Award, ExternalLink, Box } from "lucide-react";
+import {
+  AlertTriangle,
+  Target,
+  Zap,
+  Mail,
+  Layers,
+  TrendingUp,
+  Brain,
+  Gauge,
+  CheckCircle2,
+  Package,
+  Unlock,
+  Eye,
+  Bot,
+  Award,
+  ExternalLink,
+  Box,
+} from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { FloatingContactButton } from "@/components/FloatingContactButton";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,9 +43,7 @@ const Landing = () => {
 
   const loadContent = async () => {
     try {
-      const { data, error } = await supabase
-        .from("landing_content")
-        .select("*");
+      const { data, error } = await supabase.from("landing_content").select("*");
 
       if (error) throw error;
 
@@ -53,10 +68,15 @@ const Landing = () => {
   };
 
   if (loading) {
-    return <Layout><div className="flex items-center justify-center min-h-screen">Loading...</div></Layout>;
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-screen">Loading...</div>
+      </Layout>
+    );
   }
 
-  return <Layout>
+  return (
+    <Layout>
       <FloatingContactButton />
       {/* Hero Section */}
       <section className="relative overflow-hidden">
@@ -68,7 +88,11 @@ const Landing = () => {
               {getContent("hero_new", "heading", "Supply Chain Intelligence That Actually Executes")}
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              {getContent("hero_new", "subheading", "20+ years of enterprise retail operations, now accessible to growing brands through AI agents. No complex software. No spreadsheets. Just disciplined execution.")}
+              {getContent(
+                "hero_new",
+                "subheading",
+                "20+ years of enterprise retail operations, now accessible to growing brands through AI agents. No complex software. No spreadsheets. Just disciplined execution.",
+              )}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link to="/login">
@@ -83,7 +107,11 @@ const Landing = () => {
               </a>
             </div>
             <p className="text-sm text-muted-foreground italic max-w-2xl mx-auto">
-              {getContent("hero_new", "body_text", "Proven at Foot Locker, adidas, and leading retailers. Now available to brands ready to scale.")}
+              {getContent(
+                "hero_new",
+                "body_text",
+                "Proven at Foot Locker, adidas, and leading retailers. Now available to brands ready to scale.",
+              )}
             </p>
           </div>
         </div>
@@ -96,7 +124,11 @@ const Landing = () => {
             {getContent("pillars_intro", "heading", "Complete Supply Chain Operations in Three Parts")}
           </h2>
           <p className="text-xl text-muted-foreground max-w-4xl mx-auto">
-            {getContent("pillars_intro", "body_text", "Replace spreadsheets and guesswork with AI agents that handle your operational, tactical, and strategic decisions.")}
+            {getContent(
+              "pillars_intro",
+              "body_text",
+              "Replace spreadsheets and guesswork with AI agents that handle your operational, tactical, and strategic decisions.",
+            )}
           </p>
         </div>
 
@@ -104,16 +136,24 @@ const Landing = () => {
           {/* Pillar 1 - Replenishment */}
           <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-l-green-500">
             <CardHeader>
-              <BadgeStatus variant="available" className="mb-4">AVAILABLE NOW</BadgeStatus>
+              <BadgeStatus variant="available" className="mb-4">
+                AVAILABLE NOW
+              </BadgeStatus>
               <Box className="w-12 h-12 text-green-600 mb-4 opacity-40" strokeWidth={3} />
-              <CardTitle className="text-2xl mb-2">
-                {getContent("pillar1_main", "heading", "Replenishment")}
-              </CardTitle>
+              <CardTitle className="text-2xl mb-2">{getContent("pillar1_main", "heading", "Replenishment")}</CardTitle>
               <p className="text-muted-foreground text-base mb-6">
-                {getContent("pillar1_main", "body_text", "AI-driven order suggestions that maximize cash flow through higher inventory turns and better service levels.")}
+                {getContent(
+                  "pillar1_main",
+                  "body_text",
+                  "AI-driven order suggestions for higher turns and better service levels.",
+                )}
               </p>
               <ul className="space-y-3 mb-6">
-                {getContent("pillar1_benefits", "body_text", "Discipline that sticks to the rules|Real-time validation|Natural language interface|Focus on your core")
+                {getContent(
+                  "pillar1_benefits",
+                  "body_text",
+                  "Discipline that sticks to the rules|Real-time validation|Natural language interface|Focus on your core",
+                )
                   .split("|")
                   .map((benefit, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-sm">
@@ -133,16 +173,26 @@ const Landing = () => {
           {/* Pillar 2 - Assortment */}
           <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-l-amber-500">
             <CardHeader>
-              <BadgeStatus variant="development" className="mb-4">IN DEVELOPMENT</BadgeStatus>
+              <BadgeStatus variant="development" className="mb-4">
+                IN DEVELOPMENT
+              </BadgeStatus>
               <Box className="w-12 h-12 text-amber-600 mb-4 opacity-70" strokeWidth={2.5} />
               <CardTitle className="text-2xl mb-2">
                 {getContent("pillar2_main", "heading", "Assortment Management")}
               </CardTitle>
               <p className="text-muted-foreground text-base mb-6">
-                {getContent("pillar2_main", "body_text", "AI agents that optimize your product mix based on performance data and strategic goals.")}
+                {getContent(
+                  "pillar2_main",
+                  "body_text",
+                  "AI agents that optimize your product mix based on performance data and strategic goals.",
+                )}
               </p>
               <ul className="space-y-3 mb-6">
-                {getContent("pillar2_benefits", "body_text", "Data-driven decisions|Planning automation|Performance optimization|Seamless integration")
+                {getContent(
+                  "pillar2_benefits",
+                  "body_text",
+                  "Data-driven decisions|Planning automation|Performance optimization|Seamless integration",
+                )
                   .split("|")
                   .map((benefit, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-sm">
@@ -154,7 +204,9 @@ const Landing = () => {
             </CardHeader>
             <CardContent>
               <a href="mailto:hello@retailtwin.com?subject=Assortment Management Waitlist">
-                <Button variant="outline" className="w-full">Join Waitlist</Button>
+                <Button variant="outline" className="w-full">
+                  Join Waitlist
+                </Button>
               </a>
             </CardContent>
           </Card>
@@ -162,16 +214,26 @@ const Landing = () => {
           {/* Pillar 3 - Planning & OTB */}
           <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-l-gray-400">
             <CardHeader>
-              <BadgeStatus variant="coming-soon" className="mb-4">COMING 2025/2026</BadgeStatus>
+              <BadgeStatus variant="coming-soon" className="mb-4">
+                COMING 2025/2026
+              </BadgeStatus>
               <Box className="w-12 h-12 text-gray-600 mb-4" strokeWidth={2} />
               <CardTitle className="text-2xl mb-2">
                 {getContent("pillar3_main", "heading", "Planning & Open to Buy")}
               </CardTitle>
               <p className="text-muted-foreground text-base mb-6">
-                {getContent("pillar3_main", "body_text", "Financial planning and Open to Buy management powered by AI.")}
+                {getContent(
+                  "pillar3_main",
+                  "body_text",
+                  "Financial planning and Open to Buy management powered by AI.",
+                )}
               </p>
               <ul className="space-y-3 mb-6">
-                {getContent("pillar3_benefits", "body_text", "Strategic planning|OTB automation|Scenario simulation|End-to-end visibility")
+                {getContent(
+                  "pillar3_benefits",
+                  "body_text",
+                  "Strategic planning|OTB automation|Scenario simulation|End-to-end visibility",
+                )
                   .split("|")
                   .map((benefit, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-sm">
@@ -183,7 +245,9 @@ const Landing = () => {
             </CardHeader>
             <CardContent>
               <a href="mailto:hello@retailtwin.com?subject=Planning Advisory Board">
-                <Button variant="secondary" className="w-full">Join Advisory Board</Button>
+                <Button variant="secondary" className="w-full">
+                  Join Advisory Board
+                </Button>
               </a>
             </CardContent>
           </Card>
@@ -202,7 +266,11 @@ const Landing = () => {
             </h2>
             <div className="prose prose-lg mx-auto text-left">
               <p className="text-muted-foreground text-lg leading-relaxed whitespace-pre-line">
-                {getContent("why_agents", "body_text", "After 15 years running Retailisation, I learned that even the best technology doesn't guarantee execution...")}
+                {getContent(
+                  "why_agents",
+                  "body_text",
+                  "After 15 years running Retailisation, I learned that even the best technology doesn't guarantee execution...",
+                )}
               </p>
             </div>
           </div>
@@ -238,9 +306,13 @@ const Landing = () => {
                 </div>
                 <div className="space-y-2">
                   <p className="text-muted-foreground text-base">
-                    15 years operating Retailisation SaaS for replenishment, increasing sales and turns for global clients
+                    15 years operating Retailisation SaaS for replenishment, increasing sales and turns for global
+                    clients
                   </p>
-                  <Link to="/case-study/dk-company" className="text-sm text-primary hover:underline flex items-center gap-1">
+                  <Link
+                    to="/case-study/dk-company"
+                    className="text-sm text-primary hover:underline flex items-center gap-1"
+                  >
                     <ExternalLink className="w-4 h-4" />
                     View Case Study
                   </Link>
@@ -256,7 +328,8 @@ const Landing = () => {
                   <Award className="w-6 h-6 text-primary" />
                 </div>
                 <p className="text-muted-foreground text-base">
-                  First principles thinking, proven best practices (e.g., DBM for replenishment), configurable (e.g., lead-times), self-learning, executable output, metrics-driven
+                  First principles thinking, proven best practices (e.g., DBM for replenishment), configurable (e.g.,
+                  lead-times), self-learning, executable output, metrics-driven
                 </p>
               </div>
             </CardHeader>
@@ -269,7 +342,8 @@ const Landing = () => {
                   <Award className="w-6 h-6 text-primary" />
                 </div>
                 <p className="text-muted-foreground text-base">
-                  Now: Making enterprise-level supply chain intelligence accessible to growing brands through AI agents that use sound logic to improve service levels, throughput and turns
+                  Now: Making enterprise-level supply chain intelligence accessible to growing brands through AI agents
+                  that use sound logic to improve service levels, throughput and turns
                 </p>
               </div>
             </CardHeader>
@@ -291,16 +365,18 @@ const Landing = () => {
                   {getContent("value_prop1", "heading", "No Complex Software")}
                 </CardTitle>
                 <p className="text-muted-foreground text-base">
-                  {getContent("value_prop1", "body_text", "Skip the expensive implementation. Our agents understand your business through conversation.")}
+                  {getContent(
+                    "value_prop1",
+                    "body_text",
+                    "Skip the expensive implementation. Our agents understand your business through conversation.",
+                  )}
                 </p>
               </CardHeader>
             </Card>
             <Card className="shadow-xl hover:shadow-2xl transition-all duration-300">
               <CardHeader>
                 <Zap className="w-12 h-12 text-primary mb-4" />
-                <CardTitle className="text-xl mb-3">
-                  {getContent("value_prop2", "heading", "Speed to Cash")}
-                </CardTitle>
+                <CardTitle className="text-xl mb-3">{getContent("value_prop2", "heading", "Speed to Cash")}</CardTitle>
                 <p className="text-muted-foreground text-base">
                   {getContent("value_prop2", "body_text", "Insights and recommendations within weeks.")}
                 </p>
@@ -313,7 +389,11 @@ const Landing = () => {
                   {getContent("value_prop3", "heading", "Simulate → Automate")}
                 </CardTitle>
                 <p className="text-muted-foreground text-base">
-                  {getContent("value_prop3", "body_text", "Understand each decision. Set the rules for flow. Archie executes with discipline.")}
+                  {getContent(
+                    "value_prop3",
+                    "body_text",
+                    "Understand each decision. Set the rules for flow. Archie executes with discipline.",
+                  )}
                 </p>
               </CardHeader>
             </Card>
@@ -334,7 +414,9 @@ const Landing = () => {
               </div>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight">What You Get</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Using your data and your rules, we launch an intuitive cockpit from where you monitor the flow. Watch as you move toward your goal: increasing sales and turns through better service levels, with human insights in simple language.
+                Using your data and your rules, we launch an intuitive cockpit from where you monitor the flow. Watch as
+                you move toward your goal: increasing sales and turns through better service levels, with human insights
+                in simple language.
               </p>
             </div>
 
@@ -350,7 +432,11 @@ const Landing = () => {
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
                   <div className="relative w-full aspect-video overflow-hidden rounded-t-lg">
-                    <img src={dashboardPreview} alt="Dashboard interface showing inventory analytics and KPIs" className="w-full h-full object-cover object-top shadow-lg" />
+                    <img
+                      src={dashboardPreview}
+                      alt="Dashboard interface showing inventory analytics and KPIs"
+                      className="w-full h-full object-cover object-top shadow-lg"
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -364,7 +450,11 @@ const Landing = () => {
                 </CardHeader>
                 <CardContent className="px-0 pb-0">
                   <div className="relative w-full aspect-video overflow-hidden rounded-t-lg">
-                    <img src={archieChatPreview} alt="Archie AI chat interface providing supply chain insights" className="w-full h-full object-cover object-top shadow-lg" />
+                    <img
+                      src={archieChatPreview}
+                      alt="Archie AI chat interface providing supply chain insights"
+                      className="w-full h-full object-cover object-top shadow-lg"
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -397,8 +487,8 @@ const Landing = () => {
                   <p>
                     I bring 30+ years of retail leadership across EMEA and a proven record as a SaaS founder. Having led
                     retailing teams at scale and founded technology solutions that enable smarter, faster decisions, I
-                    offer strategic and operational domain experience, connecting supply flows to
-                    retail, helping businesses unlock value and free cash.
+                    offer strategic and operational domain experience, connecting supply flows to retail, helping
+                    businesses unlock value and free cash.
                   </p>
                   <p>
                     I'm thrilled to join Zefyr as the team extends beyond their already deep expertise in Footwear and
@@ -507,25 +597,41 @@ const Landing = () => {
               <p className="text-sm text-muted-foreground">© 2025 RetailTwin Labs. All rights reserved.</p>
             </div>
             <div className="flex items-center gap-8">
-              <Link to="/about" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              <Link
+                to="/about"
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
                 About
               </Link>
-              <Link to="/blogs" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              <Link
+                to="/blogs"
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
                 Blog
               </Link>
-              <Link to="/impressum" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              <Link
+                to="/impressum"
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
                 Impressum
               </Link>
-              <Link to="/privacy-policy" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              <Link
+                to="/privacy-policy"
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
                 Privacy Policy
               </Link>
-              <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+              <Link
+                to="/login"
+                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
+              >
                 Login
               </Link>
             </div>
           </div>
         </div>
       </footer>
-    </Layout>;
+    </Layout>
+  );
 };
 export default Landing;
