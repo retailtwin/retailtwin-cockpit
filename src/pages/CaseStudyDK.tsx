@@ -1,6 +1,8 @@
 import { Layout } from "@/components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExternalLink, TrendingUp, TrendingDown, Target, CheckCircle2 } from "lucide-react";
+import dkCaseStudyScreenshot from "@/assets/dk-case-study-screenshot.png";
+import dkCaseStudyOriginal from "@/assets/dk-case-study-original.png";
 
 const CaseStudyDK = () => {
   return (
@@ -34,6 +36,26 @@ const CaseStudyDK = () => {
                 </p>
               </div>
             </div>
+
+            {/* Original Article Preview */}
+            <Card className="overflow-hidden shadow-2xl border-2 border-primary/10">
+              <div className="bg-gradient-to-br from-secondary/30 to-accent/30 p-4 border-b-2 border-primary/20">
+                <p className="text-sm font-semibold text-center flex items-center justify-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  Original Marketing Material from Retailisation.com (2023)
+                </p>
+              </div>
+              <CardContent className="p-0">
+                <div className="relative">
+                  <img 
+                    src={dkCaseStudyOriginal} 
+                    alt="Original DK Company case study article from Retailisation website"
+                    className="w-full h-auto"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent pointer-events-none"></div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* TL;DR Summary */}
             <Card className="border-2 border-primary/20 shadow-xl">
