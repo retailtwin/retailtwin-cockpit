@@ -414,7 +414,7 @@ const Landing = () => {
               </div>
               <h2 className="text-4xl md:text-5xl font-bold tracking-tight">What You Get</h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Using your data and your rules, we launch an intuitive cockpit from where you monitor the flow. Watch as
+                Using your data and your rules, we launch an intuitive cockpit from where you monitor performance and manage the rules. Watch as
                 you move toward your goal: increasing sales and turns through better service levels, with human insights
                 in simple language.
               </p>
