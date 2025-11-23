@@ -118,13 +118,20 @@ const Dashboard = () => {
     }
   };
 
-  // Load locations and products on mount
+  // Load locations and products when active dataset changes
   useEffect(() => {
     const loadInitialData = async () => {
+      if (!activeDataset) {
+        setLocations([]);
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         const [locsData, prodsData] = await Promise.all([
-          fetchLocations(),
-          fetchProducts(),
+          fetchLocations(activeDataset.id),
+          fetchProducts(activeDataset.id),
         ]);
 
         setLocations(locsData);
@@ -149,7 +156,7 @@ const Dashboard = () => {
     };
 
     loadInitialData();
-  }, [toast]);
+  }, [activeDataset, toast]);
 
   // Load KPI and fact data when filters change
   useEffect(() => {
