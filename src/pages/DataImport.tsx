@@ -1,31 +1,46 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, Download, MapPin, Package, TrendingUp, Archive, Info } from "lucide-react";
+import { Loader2, Upload, Download, MapPin, Package, TrendingUp, Archive, Info, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/Layout";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useDataset } from "@/contexts/DatasetContext";
 
 type ImportType = 'locations' | 'products' | 'sales' | 'inventory';
 
 export default function DataImport() {
-  const [csvTexts, setCsvTexts] = useState<Record<ImportType, string>>({
-    locations: '',
-    products: '',
-    sales: '',
-    inventory: '',
+  const [datasetName, setDatasetName] = useState("");
+  const [description, setDescription] = useState("");
+  const [currentDatasetId, setCurrentDatasetId] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<Record<ImportType, File | null>>({
+    locations: null,
+    products: null,
+    sales: null,
+    inventory: null,
   });
-  const [isImporting, setIsImporting] = useState<Record<ImportType, boolean>>({
+  const [uploadedFiles, setUploadedFiles] = useState<Record<ImportType, boolean>>({
     locations: false,
     products: false,
     sales: false,
     inventory: false,
   });
+  const [processingStatus, setProcessingStatus] = useState<Record<ImportType, 'idle' | 'uploading' | 'processing' | 'complete'>>({
+    locations: 'idle',
+    products: 'idle',
+    sales: 'idle',
+    inventory: 'idle',
+  });
   const [showInstructions, setShowInstructions] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { refreshDatasets } = useDataset();
 
   const getTemplateContent = (type: ImportType): string => {
     switch (type) {
@@ -70,43 +85,109 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
     });
   };
 
-  const handleImport = async (type: ImportType) => {
-    const csvText = csvTexts[type];
-    
-    if (!csvText.trim()) {
+  const handleCreateDataset = async () => {
+    if (!datasetName.trim()) {
       toast({
         title: "Error",
-        description: "Please paste CSV data first",
+        description: "Please enter a dataset name",
         variant: "destructive",
       });
       return;
     }
 
-    setIsImporting(prev => ({ ...prev, [type]: true }));
-    
     try {
-      const functionName = `import-${type}`;
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: { csvText }
-      });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const datasetSlug = datasetName.toLowerCase().replace(/\s+/g, '-');
+      
+      const { data, error } = await supabase
+        .from('datasets')
+        .insert({
+          dataset_name: datasetName,
+          dataset_slug: datasetSlug,
+          description: description || null,
+          user_id: user.id,
+          status: 'pending',
+          is_active: false,
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
+      setCurrentDatasetId(data.id);
       toast({
-        title: "Success",
-        description: data.message || `${type} data imported successfully`,
+        title: "Dataset Created",
+        description: "You can now upload your CSV files",
       });
-      
-      setCsvTexts(prev => ({ ...prev, [type]: '' }));
     } catch (error: any) {
-      console.error(`Import ${type} error:`, error);
+      console.error("Error creating dataset:", error);
       toast({
-        title: "Import Failed",
-        description: error.message || `Failed to import ${type} data`,
+        title: "Error",
+        description: error.message || "Failed to create dataset",
         variant: "destructive",
       });
-    } finally {
-      setIsImporting(prev => ({ ...prev, [type]: false }));
+    }
+  };
+
+  const handleFileSelect = (type: ImportType, file: File | null) => {
+    setSelectedFiles(prev => ({ ...prev, [type]: file }));
+  };
+
+  const handleUploadAndProcess = async (type: ImportType) => {
+    const file = selectedFiles[type];
+    if (!file || !currentDatasetId) return;
+
+    setProcessingStatus(prev => ({ ...prev, [type]: 'uploading' }));
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Upload file to storage
+      const filePath = `${user.id}/${currentDatasetId}/${type}_${Date.now()}.csv`;
+      const { error: uploadError } = await supabase.storage
+        .from('dataset-files')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Update dataset with filename
+      const updateField = `${type}_filename`;
+      const { error: updateError } = await supabase
+        .from('datasets')
+        .update({ [updateField]: filePath })
+        .eq('id', currentDatasetId);
+
+      if (updateError) throw updateError;
+
+      setUploadedFiles(prev => ({ ...prev, [type]: true }));
+      setProcessingStatus(prev => ({ ...prev, [type]: 'processing' }));
+
+      // Process the uploaded file
+      const { data, error: processError } = await supabase.functions.invoke('process-dataset-upload', {
+        body: { datasetId: currentDatasetId, fileType: type }
+      });
+
+      if (processError) throw processError;
+
+      setProcessingStatus(prev => ({ ...prev, [type]: 'complete' }));
+      toast({
+        title: "Success",
+        description: data.message || `${type} file processed successfully`,
+      });
+
+      // Refresh datasets to update counts
+      await refreshDatasets();
+    } catch (error: any) {
+      console.error(`Error uploading ${type}:`, error);
+      setProcessingStatus(prev => ({ ...prev, [type]: 'idle' }));
+      toast({
+        title: "Error",
+        description: error.message || `Failed to upload ${type} file`,
+        variant: "destructive",
+      });
     }
   };
 
@@ -140,12 +221,11 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
   return (
     <Layout>
       <div className="container mx-auto py-8 space-y-8">
-        {/* Header */}
         <div className="space-y-4">
           <div className="space-y-2">
             <h1 className="text-3xl font-bold">Data Import</h1>
             <p className="text-muted-foreground">
-              Download CSV templates, populate them with your data, then upload them below.
+              Create a dataset and upload your retail data files
             </p>
           </div>
 
@@ -245,100 +325,174 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
           </Collapsible>
         </div>
 
-        {/* Download Templates Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Step 1: Download Templates</CardTitle>
-            <CardDescription>
-              Download the CSV templates below to see the required format for each data type
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {!currentDatasetId ? (
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle>Step 1: Create Dataset</CardTitle>
+                <CardDescription>
+                  Start by creating a dataset to organize your imported data
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dataset-name">Dataset Name *</Label>
+                  <Input
+                    id="dataset-name"
+                    placeholder="e.g., Q1 2024 Sales Data"
+                    value={datasetName}
+                    onChange={(e) => setDatasetName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description (Optional)</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Describe this dataset..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handleCreateDataset}>
+                  Create Dataset
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Step 2: Download Templates</CardTitle>
+                <CardDescription>
+                  Download CSV templates to see required format
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(Object.keys(importConfigs) as ImportType[]).map((type) => {
+                    const config = importConfigs[type];
+                    const Icon = config.icon;
+                    return (
+                      <Button
+                        key={type}
+                        onClick={() => downloadTemplate(type)}
+                        variant="outline"
+                        className="h-auto flex-col gap-2 p-6"
+                      >
+                        <Icon className="h-6 w-6" />
+                        <span className="text-sm">{config.title}</span>
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <>
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Dataset created! Upload your CSV files below in any order.
+              </AlertDescription>
+            </Alert>
+
+            <div className="grid gap-6 md:grid-cols-2">
               {(Object.keys(importConfigs) as ImportType[]).map((type) => {
                 const config = importConfigs[type];
                 const Icon = config.icon;
+                const file = selectedFiles[type];
+                const status = processingStatus[type];
+
                 return (
-                  <Button
-                    key={type}
-                    onClick={() => downloadTemplate(type)}
-                    variant="outline"
-                    className="h-auto flex-col gap-2 p-6"
-                  >
-                    <Icon className="h-8 w-8" />
-                    <span className="font-semibold">{config.title}</span>
-                    <Download className="h-4 w-4" />
-                  </Button>
+                  <Card key={type}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-5 w-5" />
+                          <CardTitle className="text-lg">{config.title}</CardTitle>
+                        </div>
+                        {status === 'complete' && (
+                          <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        )}
+                      </div>
+                      <CardDescription>{config.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadTemplate(type)}
+                        className="w-full"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Template
+                      </Button>
+
+                      <div className="space-y-2">
+                        <Input
+                          type="file"
+                          accept=".csv"
+                          onChange={(e) => handleFileSelect(type, e.target.files?.[0] || null)}
+                          disabled={status === 'uploading' || status === 'processing'}
+                          className="cursor-pointer"
+                        />
+                        {file && (
+                          <p className="text-sm text-muted-foreground">
+                            Selected: {file.name}
+                          </p>
+                        )}
+                      </div>
+
+                      <Button
+                        onClick={() => handleUploadAndProcess(type)}
+                        disabled={!file || status === 'uploading' || status === 'processing' || status === 'complete'}
+                        className="w-full"
+                      >
+                        {status === 'uploading' && (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Uploading...
+                          </>
+                        )}
+                        {status === 'processing' && (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        )}
+                        {status === 'complete' && (
+                          <>
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                            Completed
+                          </>
+                        )}
+                        {status === 'idle' && (
+                          <>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Upload & Process
+                          </>
+                        )}
+                      </Button>
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Upload Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Step 2: Upload Your Data</CardTitle>
-            <CardDescription>
-              Paste your populated CSV data in the appropriate tab below
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="locations" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                {(Object.keys(importConfigs) as ImportType[]).map((type) => {
-                  const Icon = importConfigs[type].icon;
-                  return (
-                    <TabsTrigger key={type} value={type} className="gap-2">
-                      <Icon className="h-4 w-4" />
-                      {importConfigs[type].title}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-
-              {(Object.keys(importConfigs) as ImportType[]).map((type) => {
-                const config = importConfigs[type];
-                return (
-                  <TabsContent key={type} value={type} className="space-y-4">
-                    <div className="space-y-2">
-                      <h3 className="text-lg font-semibold">{config.title}</h3>
-                      <p className="text-sm text-muted-foreground">{config.description}</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">{config.instruction}</label>
-                      <Textarea
-                        placeholder={`Paste ${config.title.toLowerCase()} CSV data here...`}
-                        value={csvTexts[type]}
-                        onChange={(e) => setCsvTexts(prev => ({ ...prev, [type]: e.target.value }))}
-                        className="min-h-[300px] font-mono text-sm"
-                      />
-                    </div>
-
-                    <Button 
-                      onClick={() => handleImport(type)} 
-                      disabled={isImporting[type] || !csvTexts[type].trim()}
-                      className="w-full"
-                    >
-                      {isImporting[type] ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Importing...
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Import {config.title}
-                        </>
-                      )}
-                    </Button>
-                  </TabsContent>
-                );
-              })}
-            </Tabs>
-          </CardContent>
-        </Card>
+            <div className="flex justify-end gap-4">
+              <Button variant="outline" onClick={() => navigate('/dashboard')}>
+                Skip for Now
+              </Button>
+              <Button onClick={() => {
+                refreshDatasets();
+                navigate('/dashboard');
+              }}>
+                Done - Go to Dashboard
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </Layout>
   );
