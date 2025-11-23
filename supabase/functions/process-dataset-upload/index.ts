@@ -81,99 +81,60 @@ serve(async (req) => {
       records.push(record);
     }
 
-    // Process based on file type
-    let tableName = '';
-    let processedRecords: any[] = [];
+    // Process based on file type using RPC batch functions
     let countField = '';
+    let rpcFunction = '';
 
     switch (fileType) {
       case 'locations':
-        tableName = 'aifo.locations';
         countField = 'total_locations';
-        processedRecords = records.map(r => ({
-          code: r.store_code,
-          name: r.name,
-          production_lead_time: parseInt(r.production_lead_time) || 0,
-          shipping_lead_time: parseInt(r.shipping_lead_time) || 0,
-          order_days: r.order_days || 'mon,tue,wed,thu,fri',
-          dataset_id: datasetId,
-        }));
+        rpcFunction = 'upsert_locations_for_dataset';
         break;
 
       case 'products':
-        tableName = 'aifo.products';
         countField = 'total_products';
-        processedRecords = records.map(r => ({
-          sku: r.product_code,
-          name: r.name,
-          unit_cost: parseFloat(r.cost_price) || 0,
-          unit_price: parseFloat(r.sales_price) || 0,
-          pack_size: parseInt(r.pack_size) || 1,
-          minimum_order_quantity: parseInt(r.minimum_order_quantity) || 1,
-          group_1: r.group_1 || null,
-          group_2: r.group_2 || null,
-          group_3: r.group_3 || null,
-          dataset_id: datasetId,
-        }));
+        rpcFunction = 'upsert_products_for_dataset';
         break;
 
       case 'sales':
-        tableName = 'aifo.fact_daily';
         countField = 'total_sales_records';
-        processedRecords = records.map(r => ({
-          d: r.day || r.d,
-          location_code: r.store || r.location_code,
-          sku: r.product || r.sku,
-          units_sold: parseFloat(r.units || r.units_sold) || 0,
-          on_hand_units: parseFloat(r.on_hand_units) || null,
-          dataset_id: datasetId,
-        }));
+        rpcFunction = 'insert_sales_for_dataset';
         break;
 
       case 'inventory':
-        tableName = 'aifo.fact_daily';
         countField = 'total_inventory_records';
-        // For inventory, we need to upsert (update existing or insert new)
-        processedRecords = records.map(r => ({
-          d: r.day,
-          location_code: r.store,
-          sku: r.product,
-          on_hand_units: parseFloat(r.units_on_hand) || 0,
-          on_order_units: parseInt(r.units_on_order) || 0,
-          in_transit_units: parseInt(r.units_in_transit) || 0,
-          dataset_id: datasetId,
-        }));
+        rpcFunction = 'upsert_inventory_for_dataset';
         break;
 
       default:
         throw new Error(`Unknown file type: ${fileType}`);
     }
 
-    // Insert records in batches
+    // Insert records in batches using RPC
     const batchSize = 100;
-    for (let i = 0; i < processedRecords.length; i += batchSize) {
-      const batch = processedRecords.slice(i, i + batchSize);
+    for (let i = 0; i < records.length; i += batchSize) {
+      const batch = records.slice(i, i + batchSize);
       
-      const { error: insertError } = await supabase
-        .schema('aifo')
-        .from(tableName.replace('aifo.', ''))
-        .upsert(batch);
+      const { error: rpcError } = await supabase.rpc(rpcFunction, {
+        records: batch,
+        p_dataset_id: datasetId,
+      });
 
-      if (insertError) {
-        throw new Error(`Failed to insert batch: ${insertError.message}`);
+      if (rpcError) {
+        throw new Error(`Failed to process batch: ${rpcError.message}`);
       }
     }
 
     // Update dataset with record count and date range
     const updates: any = {
-      [countField]: processedRecords.length,
+      [countField]: records.length,
       status: 'processed',
       processed_at: new Date().toISOString(),
     };
 
     // Calculate date range for sales/inventory
     if (fileType === 'sales' || fileType === 'inventory') {
-      const dates = processedRecords.map(r => new Date(r.d)).filter(d => !isNaN(d.getTime()));
+      const dates = records.map(r => new Date(r.day || r.d)).filter(d => !isNaN(d.getTime()));
       if (dates.length > 0) {
         updates.date_range_start = new Date(Math.min(...dates.map(d => d.getTime()))).toISOString().split('T')[0];
         updates.date_range_end = new Date(Math.max(...dates.map(d => d.getTime()))).toISOString().split('T')[0];
@@ -192,8 +153,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Successfully processed ${processedRecords.length} ${fileType} records`,
-        recordCount: processedRecords.length,
+        message: `Successfully processed ${records.length} ${fileType} records`,
+        recordCount: records.length,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
