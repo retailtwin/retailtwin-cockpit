@@ -50,8 +50,15 @@ export interface DBMCalculation {
   created_at?: string;
 }
 
-export async function fetchLocations(): Promise<Location[]> {
-  const { data, error } = await supabase.rpc("get_locations" as any);
+export async function fetchLocations(datasetId?: string): Promise<Location[]> {
+  if (!datasetId) {
+    console.warn("fetchLocations called without datasetId - returning empty array");
+    return [];
+  }
+
+  const { data, error } = await supabase.rpc("get_locations" as any, {
+    p_dataset_id: datasetId
+  });
 
   if (error) {
     console.error("Error fetching locations:", error);
@@ -84,8 +91,15 @@ export async function fetchLocationOrderDays(locationCode: string): Promise<stri
   return "mon,tue,wed,thu,fri,sat,sun";
 }
 
-export async function fetchProducts(): Promise<Product[]> {
-  const { data, error } = await supabase.rpc("get_products" as any);
+export async function fetchProducts(datasetId?: string): Promise<Product[]> {
+  if (!datasetId) {
+    console.warn("fetchProducts called without datasetId - returning empty array");
+    return [];
+  }
+
+  const { data, error } = await supabase.rpc("get_products" as any, {
+    p_dataset_id: datasetId
+  });
 
   if (error) {
     console.error("Error fetching products:", error);

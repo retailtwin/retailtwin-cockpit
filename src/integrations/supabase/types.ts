@@ -704,7 +704,7 @@ export type Database = {
         }[]
       }
       get_locations: {
-        Args: never
+        Args: { p_dataset_id: string }
         Returns: {
           code: string
           name: string
@@ -759,7 +759,7 @@ export type Database = {
             }[]
           }
       get_products: {
-        Args: never
+        Args: { p_dataset_id: string }
         Returns: {
           name: string
           sku: string
