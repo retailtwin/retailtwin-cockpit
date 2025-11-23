@@ -161,7 +161,7 @@ serve(async (req) => {
     }
 
     // Insert records in batches using RPC
-    const batchSize = 100;
+    const batchSize = 500;
     for (let i = 0; i < dedupedRecords.length; i += batchSize) {
       const batch = dedupedRecords.slice(i, i + batchSize);
       
