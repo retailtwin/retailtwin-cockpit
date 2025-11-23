@@ -77,6 +77,52 @@ export default function DataImport() {
     });
   };
 
+  const handleDownloadFile = async (type: ImportType) => {
+    try {
+      const filePath = existingFilenames[type];
+      if (!filePath) {
+        toast({
+          variant: "destructive",
+          title: "No file found",
+          description: "No file has been uploaded for this type yet.",
+        });
+        return;
+      }
+
+      // Download file from Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('dataset-files')
+        .download(filePath);
+
+      if (error) throw error;
+
+      // Extract filename from path
+      const filename = filePath.split('/').pop() || `${type}.csv`;
+
+      // Create blob URL and trigger download
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download started",
+        description: `Downloading ${filename}`,
+      });
+    } catch (error: any) {
+      console.error(`Error downloading ${type} file:`, error);
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: error.message || "Failed to download file",
+      });
+    }
+  };
+
   const fetchExistingDatasets = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -546,6 +592,14 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                               {existingFilenames[type]?.split('/').pop()}
                             </p>
                           </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadFile(type)}
+                            className="flex-shrink-0"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
                         </div>
                       )}
 
