@@ -178,7 +178,7 @@ serve(async (req) => {
     // Update dataset with record count and date range
     const updates: any = {
       [countField]: dedupedRecords.length,
-      status: 'processed',
+      status: 'active',
       processed_at: new Date().toISOString(),
     };
  
