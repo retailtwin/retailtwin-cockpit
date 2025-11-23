@@ -13,7 +13,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDataset } from "@/contexts/DatasetContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 
 type ImportType = 'locations' | 'products' | 'sales' | 'inventory';
 
@@ -136,14 +135,14 @@ export default function DataImport() {
         .from('datasets')
         .select('id, dataset_name, description, created_at, status, locations_filename, products_filename, sales_filename, inventory_filename')
         .eq('user_id', user.id)
-        .in('status', ['pending', 'active'])
+        .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       setExistingDatasets(data || []);
       
-      // Auto-select the most recent dataset (pending or active) if available
+      // Auto-select the most recent pending dataset if available
       if (data && data.length > 0) {
         setCurrentDatasetId(data[0].id);
         updateExistingFilenames(data[0]);
@@ -263,11 +262,11 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
     const maxAttempts = 60;      // ~5 minutes
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const { data, error } = await supabase
-        .from("datasets")
-        .select("status, error_message, total_inventory_records, total_sales_records, total_locations, total_products")
-        .eq("id", datasetId)
-        .single();
+    const { data, error } = await supabase
+      .from("datasets")
+      .select("status, error_message, total_inventory_records, total_sales_records, total_locations, total_products")
+      .eq("id", datasetId)
+      .single();
 
       if (error) {
         console.error("Error polling dataset status:", error);
@@ -286,16 +285,16 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
           return;
         }
 
-        if (data.status === "error") {
-          setProcessingStatus(prev => ({ ...prev, [type]: "idle" }));
-          toast({
-            title: "Processing failed",
-            description: data.error_message
-              || "There was an error while processing the file. Please check your CSV and try again.",
-            variant: "destructive",
-          });
-          return;
-        }
+      if (data.status === "error") {
+        setProcessingStatus(prev => ({ ...prev, [type]: "idle" }));
+        toast({
+          title: "Processing failed",
+          description: data.error_message
+            || "There was an error while processing the file. Please check your CSV and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
       }
 
       // Still processing or unknown; wait and retry
@@ -514,7 +513,7 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
             <CardHeader>
               <CardTitle>Select or Create Dataset</CardTitle>
               <CardDescription>
-                Choose an existing dataset or create a new one to continue working
+                Choose an existing pending dataset or create a new one
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -538,15 +537,7 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                       <SelectContent>
                         {existingDatasets.map((dataset) => (
                           <SelectItem key={dataset.id} value={dataset.id}>
-                            <span className="flex items-center gap-2">
-                              {dataset.dataset_name}
-                              {dataset.status === 'active' && (
-                                <Badge variant="default" className="text-xs">Active</Badge>
-                              )}
-                              {dataset.status === 'pending' && (
-                                <Badge variant="secondary" className="text-xs">Pending</Badge>
-                              )}
-                            </span>
+                            {dataset.dataset_name} 
                             {dataset.description && ` - ${dataset.description}`}
                           </SelectItem>
                         ))}
