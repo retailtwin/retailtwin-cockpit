@@ -78,7 +78,8 @@ serve(async (req) => {
     switch (fileType) {
       case 'locations': {
         const { data, error } = await supabase
-          .from('aifo.locations')
+          .schema('aifo')
+          .from('locations')
           .select('code, name, production_lead_time, shipping_lead_time, order_days')
           .eq('dataset_id', datasetId)
           .order('code');
@@ -101,7 +102,8 @@ serve(async (req) => {
 
       case 'products': {
         const { data, error } = await supabase
-          .from('aifo.products')
+          .schema('aifo')
+          .from('products')
           .select('sku, name, unit_cost, unit_price, pack_size, minimum_order_quantity, group_1, group_2, group_3')
           .eq('dataset_id', datasetId)
           .order('sku');
@@ -128,7 +130,8 @@ serve(async (req) => {
 
       case 'sales': {
         const { data, error } = await supabase
-          .from('aifo.fact_daily')
+          .schema('aifo')
+          .from('fact_daily')
           .select('d, location_code, sku, units_sold')
           .eq('dataset_id', datasetId)
           .not('units_sold', 'is', null)
@@ -155,7 +158,8 @@ serve(async (req) => {
 
       case 'inventory': {
         const { data, error } = await supabase
-          .from('aifo.fact_daily')
+          .schema('aifo')
+          .from('fact_daily')
           .select('d, location_code, sku, on_hand_units, on_order_units, in_transit_units')
           .eq('dataset_id', datasetId)
           .not('on_hand_units', 'is', null)
