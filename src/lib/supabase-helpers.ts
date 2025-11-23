@@ -99,7 +99,8 @@ export async function fetchKPIData(
   locationCode: string,
   sku: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  datasetId?: string
 ): Promise<KPIData | null> {
   let finalStartDate = startDate;
   let finalEndDate = endDate;
@@ -119,12 +120,18 @@ export async function fetchKPIData(
       ? "get_kpi_data_aggregated"
       : "get_kpi_data";
 
-  const { data, error } = await supabase.rpc(rpcName as any, {
+  const params: any = {
     p_location_code: locationCode,
     p_sku: sku,
     p_start_date: finalStartDate || null,
     p_end_date: finalEndDate || null,
-  });
+  };
+  
+  if (datasetId) {
+    params.p_dataset_id = datasetId;
+  }
+
+  const { data, error } = await supabase.rpc(rpcName as any, params);
 
   if (error) {
     console.error("Error fetching KPI data:", error);
@@ -146,7 +153,8 @@ export async function fetchFactDaily(
   locationCode: string,
   sku: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  datasetId?: string
 ): Promise<FactDaily[]> {
   let finalStartDate = startDate;
   let finalEndDate = endDate;
@@ -164,14 +172,20 @@ export async function fetchFactDaily(
   const rpcName =
     locationCode === "ALL" || sku === "ALL"
       ? "get_fact_daily_aggregated"
-      : "get_fact_daily";
+      : "get_fact_daily_raw";
 
-  const { data, error } = await supabase.rpc(rpcName as any, {
+  const params: any = {
     p_location_code: locationCode,
     p_sku: sku,
     p_start_date: finalStartDate || null,
     p_end_date: finalEndDate || null,
-  });
+  };
+  
+  if (datasetId) {
+    params.p_dataset_id = datasetId;
+  }
+
+  const { data, error } = await supabase.rpc(rpcName as any, params);
 
   if (error) {
     console.error("Error fetching fact daily:", error);
@@ -192,12 +206,17 @@ export async function fetchDBMCalculations(
   locationCode?: string,
   sku?: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  datasetId?: string
 ): Promise<DBMCalculation[]> {
   let query = supabase
     .from("dbm_calculations")
     .select("*")
     .order("calculation_date", { ascending: false });
+
+  if (datasetId) {
+    query = query.eq("dataset_id", datasetId);
+  }
 
   if (locationCode && locationCode !== "ALL") {
     query = query.eq("location_code", locationCode);
