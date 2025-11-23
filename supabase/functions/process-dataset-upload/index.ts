@@ -155,6 +155,7 @@ serve(async (req) => {
       const batch = processedRecords.slice(i, i + batchSize);
       
       const { error: insertError } = await supabase
+        .schema('aifo')
         .from(tableName.replace('aifo.', ''))
         .upsert(batch);
 
