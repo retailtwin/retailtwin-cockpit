@@ -262,11 +262,11 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
     const maxAttempts = 60;      // ~5 minutes
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const { data, error } = await supabase
-      .from("datasets")
-      .select("status, error_message, total_inventory_records, total_sales_records, total_locations, total_products")
-      .eq("id", datasetId)
-      .single();
+      const { data, error } = await supabase
+        .from("datasets")
+        .select("status, error_message, total_inventory_records, total_sales_records, total_locations, total_products")
+        .eq("id", datasetId)
+        .single();
 
       if (error) {
         console.error("Error polling dataset status:", error);
@@ -285,16 +285,16 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
           return;
         }
 
-      if (data.status === "error") {
-        setProcessingStatus(prev => ({ ...prev, [type]: "idle" }));
-        toast({
-          title: "Processing failed",
-          description: data.error_message
-            || "There was an error while processing the file. Please check your CSV and try again.",
-          variant: "destructive",
-        });
-        return;
-      }
+        if (data.status === "error") {
+          setProcessingStatus(prev => ({ ...prev, [type]: "idle" }));
+          toast({
+            title: "Processing failed",
+            description: data.error_message
+              || "There was an error while processing the file. Please check your CSV and try again.",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
       // Still processing or unknown; wait and retry
