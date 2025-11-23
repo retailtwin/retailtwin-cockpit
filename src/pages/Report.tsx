@@ -12,8 +12,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useDataset } from "@/contexts/DatasetContext";
 
 const Report = () => {
+  const { activeDataset } = useDataset();
   const [locations, setLocations] = useState<Array<{ code: string; name: string }>>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>("ALL");
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
@@ -39,9 +41,12 @@ const Report = () => {
 
   // Fetch inventory zones data
   useEffect(() => {
+    if (!activeDataset) return;
+    
     const fetchInventoryZones = async () => {
       setIsLoading(true);
       const { data, error } = await supabase.rpc("get_inventory_zones_report", {
+        p_dataset_id: activeDataset.id,
         p_location_code: selectedLocation,
         p_start_date: format(dateRange.from, "yyyy-MM-dd"),
         p_end_date: format(dateRange.to, "yyyy-MM-dd"),
@@ -58,7 +63,7 @@ const Report = () => {
     };
 
     fetchInventoryZones();
-  }, [selectedLocation, dateRange]);
+  }, [selectedLocation, dateRange, activeDataset]);
 
   return (
     <Layout>
