@@ -11,6 +11,168 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Column mapping - flexible header recognition
+const COLUMN_MAPPINGS: Record<string, string[]> = {
+  // Locations
+  store_code: ['store_code', 'location_code', 'code', 'store', 'location'],
+  name: ['name', 'store_name', 'location_name'],
+  production_lead_time: ['production_lead_time', 'prod_lead_time', 'production_lt'],
+  shipping_lead_time: ['shipping_lead_time', 'ship_lead_time', 'shipping_lt'],
+  order_days: ['order_days', 'ordering_days', 'days'],
+  
+  // Products
+  product_code: ['product_code', 'sku', 'product', 'item_code'],
+  product_name: ['name', 'product_name', 'item_name', 'description'],
+  cost_price: ['cost_price', 'unit_cost', 'cost'],
+  sales_price: ['sales_price', 'unit_price', 'price', 'retail_price'],
+  pack_size: ['pack_size', 'pack', 'case_size'],
+  minimum_order_quantity: ['minimum_order_quantity', 'moq', 'min_order', 'min_qty'],
+  group_1: ['group_1', 'category', 'group1', 'cat1'],
+  group_2: ['group_2', 'subcategory', 'group2', 'cat2'],
+  group_3: ['group_3', 'subsubcategory', 'group3', 'cat3'],
+  
+  // Sales & Inventory
+  day: ['day', 'd', 'date', 'transaction_date'],
+  store: ['store', 'location_code', 'store_code', 'location'],
+  product: ['product', 'sku', 'product_code', 'item'],
+  units: ['units', 'quantity', 'qty', 'units_sold', 'sales'],
+  units_on_hand: ['units_on_hand', 'on_hand', 'inventory', 'stock'],
+  units_on_order: ['units_on_order', 'on_order', 'ordered'],
+  units_in_transit: ['units_in_transit', 'in_transit', 'transit'],
+};
+
+// Map CSV headers to standard column names
+const mapHeaders = (headers: string[]): Map<string, number> => {
+  const normalizedHeaders = headers.map(h => h.toLowerCase().trim());
+  const mapping = new Map<string, number>();
+  
+  for (const [standardName, variations] of Object.entries(COLUMN_MAPPINGS)) {
+    for (const variation of variations) {
+      const index = normalizedHeaders.indexOf(variation.toLowerCase());
+      if (index !== -1) {
+        mapping.set(standardName, index);
+        break;
+      }
+    }
+  }
+  
+  return mapping;
+};
+
+// Clean and normalize date format
+const normalizeDate = (dateStr: string): string => {
+  // Remove Excel formula prefix (="...") and quotes
+  let cleaned = dateStr.replace(/^="|"$/g, '').trim();
+  
+  // Try to parse the date
+  const date = new Date(cleaned);
+  if (!isNaN(date.getTime())) {
+    // Return in YYYY-MM-DD format
+    return date.toISOString().split('T')[0];
+  }
+  
+  return cleaned;
+};
+
+// Advanced CSV parsing that handles quotes and commas properly
+const parseCSVLine = (line: string): string[] => {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+    
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        current += '"';
+        i++; // Skip next quote
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  
+  result.push(current.trim());
+  return result;
+};
+
+// Generate normalized CSV
+const generateNormalizedCSV = async (fileType: string, records: any[]): Promise<string> => {
+  let headers: string[] = [];
+  let rows: string[][] = [];
+  
+  switch (fileType) {
+    case 'locations':
+      headers = ['store_code', 'name', 'production_lead_time', 'shipping_lead_time', 'order_days'];
+      rows = records.map(r => [
+        r.store_code || '',
+        r.name || '',
+        String(r.production_lead_time || 0),
+        String(r.shipping_lead_time || 0),
+        r.order_days || 'mon,tue,wed,thu,fri,sat,sun'
+      ]);
+      break;
+      
+    case 'products':
+      headers = ['product_code', 'name', 'cost_price', 'sales_price', 'pack_size', 'minimum_order_quantity', 'group_1', 'group_2', 'group_3'];
+      rows = records.map(r => [
+        r.product_code || '',
+        r.name || '',
+        String(r.cost_price || 0),
+        String(r.sales_price || 0),
+        String(r.pack_size || 1),
+        String(r.minimum_order_quantity || 1),
+        r.group_1 || '',
+        r.group_2 || '',
+        r.group_3 || ''
+      ]);
+      break;
+      
+    case 'sales':
+      headers = ['day', 'store', 'product', 'units'];
+      rows = records.map(r => [
+        r.day || '',
+        r.store || '',
+        r.product || '',
+        String(r.units || 0)
+      ]);
+      break;
+      
+    case 'inventory':
+      headers = ['day', 'store', 'product', 'units_on_hand', 'units_on_order', 'units_in_transit'];
+      rows = records.map(r => [
+        r.day || '',
+        r.store || '',
+        r.product || '',
+        String(r.units_on_hand || 0),
+        String(r.units_on_order || 0),
+        String(r.units_in_transit || 0)
+      ]);
+      break;
+  }
+  
+  const csvLines = [headers.join(',')];
+  for (const row of rows) {
+    // Quote values that need it
+    const quotedRow = row.map(val => {
+      if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    });
+    csvLines.push(quotedRow.join(','));
+  }
+  
+  return csvLines.join('\n');
+};
+
 // Deduplication helper
 const deduplicateRecords = (type: string, items: any[]): any[] => {
   const map = new Map<string, any>();
@@ -79,26 +241,146 @@ async function processFileInBackground(
     // Convert blob to text
     const csvText = await fileData.text();
 
-    // Parse CSV
-    const lines = csvText.trim().split('\n');
+    // Parse CSV with proper quote handling
+    const lines = csvText.trim().split('\n').filter((line: string) => line.trim());
     if (lines.length < 2) {
       throw new Error('CSV file must contain at least a header row and one data row');
     }
 
-    const headers = lines[0].split(',').map((h: string) => h.trim());
+    // Parse headers and create mapping
+    const rawHeaders = parseCSVLine(lines[0]);
+    const headerMapping = mapHeaders(rawHeaders);
+    
+    console.log(`Found headers: ${rawHeaders.join(', ')}`);
+    console.log(`Mapped to: ${Array.from(headerMapping.keys()).join(', ')}`);
+
     const records = [] as any[];
 
+    // Parse each data row
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map((v: string) => v.trim().replace(/^['"]|['"]$/g, ''));
+      if (!lines[i].trim()) continue; // Skip empty lines
+      
+      const values = parseCSVLine(lines[i]);
       const record: any = {};
-      headers.forEach((header: string, index: number) => {
-        record[header] = values[index] || null;
-      });
+      
+      // Map values based on flexible header matching
+      switch (fileType) {
+        case 'locations': {
+          const storeCodeIdx = headerMapping.get('store_code');
+          const nameIdx = headerMapping.get('name');
+          const prodLtIdx = headerMapping.get('production_lead_time');
+          const shipLtIdx = headerMapping.get('shipping_lead_time');
+          const orderDaysIdx = headerMapping.get('order_days');
+          
+          if (storeCodeIdx === undefined || nameIdx === undefined) {
+            throw new Error(`Missing required columns: store_code and name must be present`);
+          }
+          
+          record.store_code = values[storeCodeIdx]?.trim();
+          record.name = values[nameIdx]?.trim();
+          record.production_lead_time = prodLtIdx !== undefined ? (parseInt(values[prodLtIdx]) || 0) : 0;
+          record.shipping_lead_time = shipLtIdx !== undefined ? (parseInt(values[shipLtIdx]) || 0) : 0;
+          record.order_days = orderDaysIdx !== undefined ? values[orderDaysIdx]?.trim() : 'mon,tue,wed,thu,fri,sat,sun';
+          break;
+        }
+        
+        case 'products': {
+          const productCodeIdx = headerMapping.get('product_code');
+          const nameIdx = headerMapping.get('product_name') ?? headerMapping.get('name');
+          const costIdx = headerMapping.get('cost_price');
+          const priceIdx = headerMapping.get('sales_price');
+          const packIdx = headerMapping.get('pack_size');
+          const moqIdx = headerMapping.get('minimum_order_quantity');
+          const g1Idx = headerMapping.get('group_1');
+          const g2Idx = headerMapping.get('group_2');
+          const g3Idx = headerMapping.get('group_3');
+          
+          if (productCodeIdx === undefined || nameIdx === undefined) {
+            throw new Error(`Missing required columns: product_code and name must be present`);
+          }
+          
+          record.product_code = values[productCodeIdx]?.trim();
+          record.name = values[nameIdx]?.trim();
+          record.cost_price = costIdx !== undefined ? parseFloat(values[costIdx]) : 0;
+          record.sales_price = priceIdx !== undefined ? parseFloat(values[priceIdx]) : 0;
+          record.pack_size = packIdx !== undefined ? (parseInt(values[packIdx]) || 1) : 1;
+          record.minimum_order_quantity = moqIdx !== undefined ? (parseInt(values[moqIdx]) || 1) : 1;
+          record.group_1 = g1Idx !== undefined ? values[g1Idx]?.trim() : null;
+          record.group_2 = g2Idx !== undefined ? values[g2Idx]?.trim() : null;
+          record.group_3 = g3Idx !== undefined ? values[g3Idx]?.trim() : null;
+          break;
+        }
+        
+        case 'sales': {
+          const dayIdx = headerMapping.get('day');
+          const storeIdx = headerMapping.get('store');
+          const productIdx = headerMapping.get('product');
+          const unitsIdx = headerMapping.get('units');
+          
+          if (dayIdx === undefined || storeIdx === undefined || productIdx === undefined || unitsIdx === undefined) {
+            throw new Error(`Missing required columns: day, store, product, units must be present`);
+          }
+          
+          record.day = normalizeDate(values[dayIdx]?.trim());
+          record.store = values[storeIdx]?.trim();
+          record.product = values[productIdx]?.trim();
+          record.units = parseFloat(values[unitsIdx]) || 0;
+          break;
+        }
+        
+        case 'inventory': {
+          const dayIdx = headerMapping.get('day');
+          const storeIdx = headerMapping.get('store');
+          const productIdx = headerMapping.get('product');
+          const onHandIdx = headerMapping.get('units_on_hand');
+          const onOrderIdx = headerMapping.get('units_on_order');
+          const inTransitIdx = headerMapping.get('units_in_transit');
+          
+          if (dayIdx === undefined || storeIdx === undefined || productIdx === undefined) {
+            throw new Error(`Missing required columns: day, store, product must be present`);
+          }
+          
+          record.day = normalizeDate(values[dayIdx]?.trim());
+          record.store = values[storeIdx]?.trim();
+          record.product = values[productIdx]?.trim();
+          record.units_on_hand = onHandIdx !== undefined ? (parseFloat(values[onHandIdx]) || 0) : 0;
+          record.units_on_order = onOrderIdx !== undefined ? (parseInt(values[onOrderIdx]) || 0) : 0;
+          record.units_in_transit = inTransitIdx !== undefined ? (parseInt(values[inTransitIdx]) || 0) : 0;
+          break;
+        }
+      }
+      
       records.push(record);
     }
+    
+    console.log(`Parsed ${records.length} records from CSV`);
 
     // Deduplicate records
     const dedupedRecords = deduplicateRecords(fileType, records);
+    console.log(`After deduplication: ${dedupedRecords.length} records`);
+    
+    // Generate normalized CSV content
+    const normalizedCSV = await generateNormalizedCSV(fileType, dedupedRecords);
+    
+    // Upload normalized version to storage
+    const normalizedPath = filePath.replace(/\.(csv|CSV)$/, '_normalized.csv');
+    const { error: normalizedUploadError } = await supabase.storage
+      .from('dataset-files')
+      .upload(normalizedPath, new Blob([normalizedCSV], { type: 'text/csv' }), {
+        upsert: true
+      });
+    
+    if (normalizedUploadError) {
+      console.warn('Failed to upload normalized file:', normalizedUploadError);
+    } else {
+      console.log(`Uploaded normalized file to ${normalizedPath}`);
+      // Update dataset with normalized filename
+      const normalizedField = `${fileType}_filename`;
+      await supabase
+        .from('datasets')
+        .update({ [normalizedField]: normalizedPath })
+        .eq('id', datasetId);
+    }
 
     // Determine RPC function and count field
     let countField = '';

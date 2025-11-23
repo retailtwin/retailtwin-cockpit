@@ -22,6 +22,7 @@ interface Dataset {
   description: string | null;
   created_at: string;
   status: string;
+  is_template: boolean | null;
   locations_filename: string | null;
   products_filename: string | null;
   sales_filename: string | null;
@@ -87,50 +88,81 @@ export default function DataImport() {
     });
   };
 
-  const handleDownloadFile = async (type: ImportType) => {
+  const handleExportAndDownload = async (type: ImportType) => {
     try {
+      const selectedDataset = existingDatasets.find(d => d.id === currentDatasetId);
+      if (!selectedDataset) return;
+
+      // If file already exists, just download it
       const filePath = existingFilenames[type];
-      if (!filePath) {
-        toast({
-          variant: "destructive",
-          title: "No file found",
-          description: "No file has been uploaded for this type yet.",
-        });
+      if (filePath) {
+        await downloadFile(filePath, type);
         return;
       }
 
-      // Download file from Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('dataset-files')
-        .download(filePath);
+      // Otherwise, export from database first (for template datasets)
+      toast({
+        title: "Exporting data",
+        description: `Generating ${type} CSV from database...`,
+      });
+
+      const { data, error } = await supabase.functions.invoke('export-dataset-csv', {
+        body: { datasetId: currentDatasetId, fileType: type }
+      });
 
       if (error) throw error;
 
-      // Extract filename from path
-      const filename = filePath.split('/').pop() || `${type}.csv`;
+      // Update local state with new filename
+      setExistingFilenames(prev => ({
+        ...prev,
+        [type]: data.filePath
+      }));
 
-      // Create blob URL and trigger download
-      const url = URL.createObjectURL(data);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Refresh datasets to get updated filenames
+      await fetchExistingDatasets();
+
+      // Now download the exported file
+      await downloadFile(data.filePath, type);
 
       toast({
-        title: "Download started",
-        description: `Downloading ${filename}`,
+        title: "Export complete",
+        description: `${type} file is ready for download`,
       });
     } catch (error: any) {
-      console.error(`Error downloading ${type} file:`, error);
+      console.error(`Error exporting ${type} file:`, error);
       toast({
         variant: "destructive",
-        title: "Download failed",
-        description: error.message || "Failed to download file",
+        title: "Export failed",
+        description: error.message || "Failed to export file",
       });
     }
+  };
+
+  const downloadFile = async (filePath: string, type: ImportType) => {
+    // Download file from Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('dataset-files')
+      .download(filePath);
+
+    if (error) throw error;
+
+    // Extract filename from path
+    const filename = filePath.split('/').pop() || `${type}.csv`;
+
+    // Create blob URL and trigger download
+    const url = URL.createObjectURL(data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Download started",
+      description: `Downloading ${filename}`,
+    });
   };
 
   const fetchExistingDatasets = async () => {
@@ -143,8 +175,8 @@ export default function DataImport() {
 
       const { data, error } = await supabase
         .from('datasets')
-        .select('id, dataset_name, description, created_at, status, locations_filename, products_filename, sales_filename, inventory_filename')
-        .eq('user_id', user.id)
+        .select('id, dataset_name, description, created_at, status, is_template, locations_filename, products_filename, sales_filename, inventory_filename')
+        .or(`user_id.eq.${user.id},is_template.eq.true`)
         .in('status', ['pending', 'active'])
         .order('created_at', { ascending: false });
 
@@ -680,7 +712,7 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleDownloadFile(type)}
+                                onClick={() => handleExportAndDownload(type)}
                                 className="flex-shrink-0"
                               >
                                 <Download className="h-4 w-4 mr-2" />
@@ -692,8 +724,23 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                       ) : (
                         <Alert variant="default">
                           <Info className="h-4 w-4" />
-                          <AlertDescription className="text-sm">
-                            No file uploaded yet. Select a CSV file to upload.
+                          <AlertDescription className="flex items-center justify-between gap-2">
+                            <span className="text-sm">
+                              {existingDatasets.find(d => d.id === currentDatasetId)?.is_template 
+                                ? 'Template dataset - export from database to download' 
+                                : 'No file uploaded yet. Select a CSV file to upload.'}
+                            </span>
+                            {existingDatasets.find(d => d.id === currentDatasetId)?.is_template && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleExportAndDownload(type)}
+                                className="flex-shrink-0"
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Export
+                              </Button>
+                            )}
                           </AlertDescription>
                         </Alert>
                       )}
