@@ -116,10 +116,119 @@ export type Database = {
         }
         Relationships: []
       }
+      dataset_limits: {
+        Row: {
+          created_at: string | null
+          id: string
+          max_datasets: number | null
+          max_file_size_mb: number | null
+          max_records_per_dataset: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          max_datasets?: number | null
+          max_file_size_mb?: number | null
+          max_records_per_dataset?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          max_datasets?: number | null
+          max_file_size_mb?: number | null
+          max_records_per_dataset?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      datasets: {
+        Row: {
+          created_at: string | null
+          dataset_name: string
+          dataset_slug: string
+          date_range_end: string | null
+          date_range_start: string | null
+          description: string | null
+          error_message: string | null
+          id: string
+          inventory_filename: string | null
+          is_active: boolean | null
+          is_template: boolean | null
+          locations_filename: string | null
+          processed_at: string | null
+          products_filename: string | null
+          sales_filename: string | null
+          status: string
+          total_inventory_records: number | null
+          total_locations: number | null
+          total_products: number | null
+          total_sales_records: number | null
+          updated_at: string | null
+          uploaded_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dataset_name: string
+          dataset_slug: string
+          date_range_end?: string | null
+          date_range_start?: string | null
+          description?: string | null
+          error_message?: string | null
+          id?: string
+          inventory_filename?: string | null
+          is_active?: boolean | null
+          is_template?: boolean | null
+          locations_filename?: string | null
+          processed_at?: string | null
+          products_filename?: string | null
+          sales_filename?: string | null
+          status?: string
+          total_inventory_records?: number | null
+          total_locations?: number | null
+          total_products?: number | null
+          total_sales_records?: number | null
+          updated_at?: string | null
+          uploaded_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dataset_name?: string
+          dataset_slug?: string
+          date_range_end?: string | null
+          date_range_start?: string | null
+          description?: string | null
+          error_message?: string | null
+          id?: string
+          inventory_filename?: string | null
+          is_active?: boolean | null
+          is_template?: boolean | null
+          locations_filename?: string | null
+          processed_at?: string | null
+          products_filename?: string | null
+          sales_filename?: string | null
+          status?: string
+          total_inventory_records?: number | null
+          total_locations?: number | null
+          total_products?: number | null
+          total_sales_records?: number | null
+          updated_at?: string | null
+          uploaded_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       dbm_calculations: {
         Row: {
           calculation_date: string
           created_at: string
+          dataset_id: string | null
           economic_overstock_units: number | null
           economic_units: number | null
           id: string
@@ -131,6 +240,7 @@ export type Database = {
         Insert: {
           calculation_date: string
           created_at?: string
+          dataset_id?: string | null
           economic_overstock_units?: number | null
           economic_units?: number | null
           id?: string
@@ -142,6 +252,7 @@ export type Database = {
         Update: {
           calculation_date?: string
           created_at?: string
+          dataset_id?: string | null
           economic_overstock_units?: number | null
           economic_units?: number | null
           id?: string
@@ -150,7 +261,15 @@ export type Database = {
           sku?: string
           target_units?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "dbm_calculations_dataset_id_fkey"
+            columns: ["dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       knowledge_usage: {
         Row: {
@@ -384,43 +503,84 @@ export type Database = {
           min_date: string
         }[]
       }
-      get_fact_daily_aggregated: {
-        Args: {
-          p_end_date?: string
-          p_location_code: string
-          p_sku: string
-          p_start_date?: string
-        }
-        Returns: {
-          d: string
-          location_code: string
-          on_hand_units: number
-          on_hand_units_sim: number
-          sku: string
-          units_sold: number
-        }[]
-      }
-      get_fact_daily_raw: {
-        Args: {
-          p_end_date: string
-          p_location_code: string
-          p_sku: string
-          p_start_date: string
-        }
-        Returns: {
-          d: string
-          economic_overstock_units: number
-          economic_units: number
-          in_transit_units: number
-          location_code: string
-          on_hand_units: number
-          on_hand_units_sim: number
-          on_order_units: number
-          sku: string
-          target_units: number
-          units_sold: number
-        }[]
-      }
+      get_fact_daily_aggregated:
+        | {
+            Args: {
+              p_dataset_id: string
+              p_end_date?: string
+              p_location_code: string
+              p_sku: string
+              p_start_date?: string
+            }
+            Returns: {
+              d: string
+              location_code: string
+              on_hand_units: number
+              on_hand_units_sim: number
+              sku: string
+              units_sold: number
+            }[]
+          }
+        | {
+            Args: {
+              p_end_date?: string
+              p_location_code: string
+              p_sku: string
+              p_start_date?: string
+            }
+            Returns: {
+              d: string
+              location_code: string
+              on_hand_units: number
+              on_hand_units_sim: number
+              sku: string
+              units_sold: number
+            }[]
+          }
+      get_fact_daily_raw:
+        | {
+            Args: {
+              p_dataset_id: string
+              p_end_date: string
+              p_location_code: string
+              p_sku: string
+              p_start_date: string
+            }
+            Returns: {
+              d: string
+              economic_overstock_units: number
+              economic_units: number
+              in_transit_units: number
+              location_code: string
+              on_hand_units: number
+              on_hand_units_sim: number
+              on_order_units: number
+              sku: string
+              target_units: number
+              units_sold: number
+            }[]
+          }
+        | {
+            Args: {
+              p_end_date: string
+              p_location_code: string
+              p_sku: string
+              p_start_date: string
+            }
+            Returns: {
+              d: string
+              economic_overstock_units: number
+              economic_units: number
+              in_transit_units: number
+              location_code: string
+              on_hand_units: number
+              on_hand_units_sim: number
+              on_order_units: number
+              sku: string
+              target_units: number
+              units_sold: number
+            }[]
+          }
       get_inventory_pipeline: {
         Args: {
           p_end_date?: string
@@ -440,49 +600,96 @@ export type Database = {
           total_value: number
         }[]
       }
-      get_inventory_zones_report: {
-        Args: {
-          p_end_date?: string
-          p_location_code?: string
-          p_start_date?: string
-        }
-        Returns: {
-          avg_economic: number
-          avg_economic_overstock: number
-          avg_on_hand: number
-          avg_target: number
-          avg_weekly_sales: number
-          rolling_21d_avg_daily: number
-          rolling_21d_sales: number
-          sku: string
-          sku_name: string
-          stockout_days: number
-          total_days: number
-        }[]
-      }
-      get_kpi_data_aggregated: {
-        Args: {
-          p_end_date?: string
-          p_location_code: string
-          p_sku: string
-          p_start_date?: string
-        }
-        Returns: {
-          days_total: number
-          location_code: string
-          missed_units: number
-          mtv: number
-          riv: number
-          riv_sim: number
-          service_level: number
-          service_level_sim: number
-          sku: string
-          sku_loc_days: number
-          tcm: number
-          turns_current: number
-          turns_sim: number
-        }[]
-      }
+      get_inventory_zones_report:
+        | {
+            Args: {
+              p_dataset_id: string
+              p_end_date?: string
+              p_location_code?: string
+              p_start_date?: string
+            }
+            Returns: {
+              avg_economic: number
+              avg_economic_overstock: number
+              avg_on_hand: number
+              avg_target: number
+              avg_weekly_sales: number
+              rolling_21d_avg_daily: number
+              rolling_21d_sales: number
+              sku: string
+              sku_name: string
+              stockout_days: number
+              total_days: number
+            }[]
+          }
+        | {
+            Args: {
+              p_end_date?: string
+              p_location_code?: string
+              p_start_date?: string
+            }
+            Returns: {
+              avg_economic: number
+              avg_economic_overstock: number
+              avg_on_hand: number
+              avg_target: number
+              avg_weekly_sales: number
+              rolling_21d_avg_daily: number
+              rolling_21d_sales: number
+              sku: string
+              sku_name: string
+              stockout_days: number
+              total_days: number
+            }[]
+          }
+      get_kpi_data_aggregated:
+        | {
+            Args: {
+              p_dataset_id: string
+              p_end_date?: string
+              p_location_code: string
+              p_sku: string
+              p_start_date?: string
+            }
+            Returns: {
+              days_total: number
+              location_code: string
+              missed_units: number
+              mtv: number
+              riv: number
+              riv_sim: number
+              service_level: number
+              service_level_sim: number
+              sku: string
+              sku_loc_days: number
+              tcm: number
+              turns_current: number
+              turns_sim: number
+            }[]
+          }
+        | {
+            Args: {
+              p_end_date?: string
+              p_location_code: string
+              p_sku: string
+              p_start_date?: string
+            }
+            Returns: {
+              days_total: number
+              location_code: string
+              missed_units: number
+              mtv: number
+              riv: number
+              riv_sim: number
+              service_level: number
+              service_level_sim: number
+              sku: string
+              sku_loc_days: number
+              tcm: number
+              turns_current: number
+              turns_sim: number
+            }[]
+          }
       get_latest_inventory_snapshot: {
         Args: { p_location_code?: string }
         Returns: {
@@ -517,20 +724,40 @@ export type Database = {
           total_mtv: number
         }[]
       }
-      get_pareto_analysis: {
-        Args: { p_date?: string; p_location_code: string; p_sku?: string }
-        Returns: {
-          availability_percent: number
-          cumulative_percent: number
-          cumulative_units: number
-          is_selected_sku: boolean
-          rank: number
-          sku: string
-          sku_name: string
-          total_skus: number
-          total_units_sold: number
-        }[]
-      }
+      get_pareto_analysis:
+        | {
+            Args: {
+              p_dataset_id: string
+              p_date?: string
+              p_location_code: string
+              p_sku?: string
+            }
+            Returns: {
+              availability_percent: number
+              cumulative_percent: number
+              cumulative_units: number
+              is_selected_sku: boolean
+              rank: number
+              sku: string
+              sku_name: string
+              total_skus: number
+              total_units_sold: number
+            }[]
+          }
+        | {
+            Args: { p_date?: string; p_location_code: string; p_sku?: string }
+            Returns: {
+              availability_percent: number
+              cumulative_percent: number
+              cumulative_units: number
+              is_selected_sku: boolean
+              rank: number
+              sku: string
+              sku_name: string
+              total_skus: number
+              total_units_sold: number
+            }[]
+          }
       get_products: {
         Args: never
         Returns: {
@@ -538,25 +765,46 @@ export type Database = {
           sku: string
         }[]
       }
-      get_sku_details: {
-        Args: {
-          p_end_date: string
-          p_location_code: string
-          p_sku: string
-          p_start_date: string
-        }
-        Returns: {
-          avg_daily_sales: number
-          avg_on_hand: number
-          days_with_data: number
-          max_on_hand: number
-          min_on_hand: number
-          sku: string
-          sku_name: string
-          stockout_days: number
-          total_units_sold: number
-        }[]
-      }
+      get_sku_details:
+        | {
+            Args: {
+              p_dataset_id: string
+              p_end_date: string
+              p_location_code: string
+              p_sku: string
+              p_start_date: string
+            }
+            Returns: {
+              avg_daily_sales: number
+              avg_on_hand: number
+              days_with_data: number
+              max_on_hand: number
+              min_on_hand: number
+              sku: string
+              sku_name: string
+              stockout_days: number
+              total_units_sold: number
+            }[]
+          }
+        | {
+            Args: {
+              p_end_date: string
+              p_location_code: string
+              p_sku: string
+              p_start_date: string
+            }
+            Returns: {
+              avg_daily_sales: number
+              avg_on_hand: number
+              days_with_data: number
+              max_on_hand: number
+              min_on_hand: number
+              sku: string
+              sku_name: string
+              stockout_days: number
+              total_units_sold: number
+            }[]
+          }
       get_system_setting: {
         Args: {
           p_location_code?: string
