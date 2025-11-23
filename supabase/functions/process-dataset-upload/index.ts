@@ -70,16 +70,66 @@ serve(async (req) => {
     }
 
     const headers = lines[0].split(',').map(h => h.trim());
-    const records = [];
+    const records = [] as any[];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/^["']|["']$/g, ''));
+      const values = lines[i].split(',').map(v => v.trim().replace(/^['"]|['"]$/g, ''));
       const record: any = {};
       headers.forEach((header, index) => {
         record[header] = values[index] || null;
       });
       records.push(record);
     }
+
+    // Deduplicate records by natural key to avoid ON CONFLICT DO UPDATE issues
+    const deduplicateRecords = (type: string, items: any[]): any[] => {
+      const map = new Map<string, any>();
+
+      for (const item of items) {
+        let key: string | null = null;
+
+        switch (type) {
+          case 'products': {
+            const code = item.product_code ?? item.sku ?? null;
+            key = code ? `product:${code}` : null;
+            break;
+          }
+          case 'locations': {
+            const storeCode = item.store_code ?? item.location_code ?? item.code ?? null;
+            key = storeCode ? `location:${storeCode}` : null;
+            break;
+          }
+          case 'sales': {
+            const d = item.day ?? item.d ?? null;
+            const store = item.store ?? item.location_code ?? null;
+            const product = item.product ?? item.sku ?? null;
+            key = d && store && product ? `sales:${d}:${store}:${product}` : null;
+            break;
+          }
+          case 'inventory': {
+            const d = item.day ?? item.d ?? null;
+            const store = item.store ?? item.location_code ?? null;
+            const product = item.product ?? item.sku ?? null;
+            key = d && store && product ? `inventory:${d}:${store}:${product}` : null;
+            break;
+          }
+          default:
+            break;
+        }
+
+        if (key) {
+          // Later rows override earlier ones for the same key
+          map.set(key, item);
+        } else {
+          // If we can't determine a key, keep the record as-is using a unique fallback
+          map.set(`row:${map.size}`, item);
+        }
+      }
+
+      return Array.from(map.values());
+    };
+
+    const dedupedRecords = deduplicateRecords(fileType, records);
 
     // Process based on file type using RPC batch functions
     let countField = '';
@@ -112,14 +162,14 @@ serve(async (req) => {
 
     // Insert records in batches using RPC
     const batchSize = 100;
-    for (let i = 0; i < records.length; i += batchSize) {
-      const batch = records.slice(i, i + batchSize);
+    for (let i = 0; i < dedupedRecords.length; i += batchSize) {
+      const batch = dedupedRecords.slice(i, i + batchSize);
       
       const { error: rpcError } = await supabase.rpc(rpcFunction, {
         records: batch,
         p_dataset_id: datasetId,
       });
-
+ 
       if (rpcError) {
         throw new Error(`Failed to process batch: ${rpcError.message}`);
       }
@@ -127,14 +177,16 @@ serve(async (req) => {
 
     // Update dataset with record count and date range
     const updates: any = {
-      [countField]: records.length,
+      [countField]: dedupedRecords.length,
       status: 'processed',
       processed_at: new Date().toISOString(),
     };
-
+ 
     // Calculate date range for sales/inventory
     if (fileType === 'sales' || fileType === 'inventory') {
-      const dates = records.map(r => new Date(r.day || r.d)).filter(d => !isNaN(d.getTime()));
+      const dates = dedupedRecords
+        .map(r => new Date(r.day || r.d))
+        .filter(d => !isNaN(d.getTime()));
       if (dates.length > 0) {
         updates.date_range_start = new Date(Math.min(...dates.map(d => d.getTime()))).toISOString().split('T')[0];
         updates.date_range_end = new Date(Math.max(...dates.map(d => d.getTime()))).toISOString().split('T')[0];
@@ -153,8 +205,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Successfully processed ${records.length} ${fileType} records`,
-        recordCount: records.length,
+        message: `Successfully processed ${dedupedRecords.length} ${fileType} records`,
+        recordCount: dedupedRecords.length,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
