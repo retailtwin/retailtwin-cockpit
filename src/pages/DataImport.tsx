@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,13 +12,25 @@ import { Layout } from "@/components/Layout";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDataset } from "@/contexts/DatasetContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type ImportType = 'locations' | 'products' | 'sales' | 'inventory';
+
+interface Dataset {
+  id: string;
+  dataset_name: string;
+  description: string | null;
+  created_at: string;
+  status: string;
+}
 
 export default function DataImport() {
   const [datasetName, setDatasetName] = useState("");
   const [description, setDescription] = useState("");
   const [currentDatasetId, setCurrentDatasetId] = useState<string | null>(null);
+  const [existingDatasets, setExistingDatasets] = useState<Dataset[]>([]);
+  const [isLoadingDatasets, setIsLoadingDatasets] = useState(true);
+  const [showCreateNew, setShowCreateNew] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Record<ImportType, File | null>>({
     locations: null,
     products: null,
@@ -41,6 +53,45 @@ export default function DataImport() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { refreshDatasets } = useDataset();
+
+  useEffect(() => {
+    fetchExistingDatasets();
+  }, []);
+
+  const fetchExistingDatasets = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setIsLoadingDatasets(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('datasets')
+        .select('id, dataset_name, description, created_at, status')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setExistingDatasets(data || []);
+      
+      // Auto-select the most recent pending dataset if available
+      if (data && data.length > 0) {
+        setCurrentDatasetId(data[0].id);
+      }
+    } catch (error: any) {
+      console.error("Error fetching datasets:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load existing datasets",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingDatasets(false);
+    }
+  };
 
   const getTemplateContent = (type: ImportType): string => {
     switch (type) {
@@ -117,6 +168,8 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
       if (error) throw error;
 
       setCurrentDatasetId(data.id);
+      setShowCreateNew(false);
+      await fetchExistingDatasets(); // Refresh the list
       toast({
         title: "Dataset Created",
         description: "You can now upload your CSV files",
@@ -325,75 +378,100 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
           </Collapsible>
         </div>
 
-        {!currentDatasetId ? (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle>Step 1: Create Dataset</CardTitle>
-                <CardDescription>
-                  Start by creating a dataset to organize your imported data
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="dataset-name">Dataset Name *</Label>
-                  <Input
-                    id="dataset-name"
-                    placeholder="e.g., Q1 2024 Sales Data"
-                    value={datasetName}
-                    onChange={(e) => setDatasetName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description (Optional)</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe this dataset..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                </div>
-                <Button onClick={handleCreateDataset}>
-                  Create Dataset
-                </Button>
-              </CardContent>
-            </Card>
+        {isLoadingDatasets ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : !currentDatasetId ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Select or Create Dataset</CardTitle>
+              <CardDescription>
+                Choose an existing pending dataset or create a new one
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {existingDatasets.length > 0 && !showCreateNew && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="dataset-select">Select Existing Dataset</Label>
+                    <Select value={currentDatasetId || undefined} onValueChange={setCurrentDatasetId}>
+                      <SelectTrigger id="dataset-select">
+                        <SelectValue placeholder="Choose a dataset..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {existingDatasets.map((dataset) => (
+                          <SelectItem key={dataset.id} value={dataset.id}>
+                            {dataset.dataset_name} 
+                            {dataset.description && ` - ${dataset.description}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 border-t" />
+                    <span className="text-sm text-muted-foreground">or</span>
+                    <div className="flex-1 border-t" />
+                  </div>
+                  <Button variant="outline" onClick={() => setShowCreateNew(true)} className="w-full">
+                    Create New Dataset
+                  </Button>
+                </>
+              )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Step 2: Download Templates</CardTitle>
-                <CardDescription>
-                  Download CSV templates to see required format
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {(Object.keys(importConfigs) as ImportType[]).map((type) => {
-                    const config = importConfigs[type];
-                    const Icon = config.icon;
-                    return (
-                      <Button
-                        key={type}
-                        onClick={() => downloadTemplate(type)}
-                        variant="outline"
-                        className="h-auto flex-col gap-2 p-6"
-                      >
-                        <Icon className="h-6 w-6" />
-                        <span className="text-sm">{config.title}</span>
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </>
+              {(showCreateNew || existingDatasets.length === 0) && (
+                <>
+                  {showCreateNew && (
+                    <Button variant="ghost" onClick={() => setShowCreateNew(false)} className="w-full">
+                      ← Back to Selection
+                    </Button>
+                  )}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="dataset-name">Dataset Name *</Label>
+                      <Input
+                        id="dataset-name"
+                        placeholder="e.g., Q1 2024 Sales Data"
+                        value={datasetName}
+                        onChange={(e) => setDatasetName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Description (Optional)</Label>
+                      <Textarea
+                        id="description"
+                        placeholder="Describe this dataset..."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                      />
+                    </div>
+                    <Button onClick={handleCreateDataset}>
+                      Create Dataset
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
         ) : (
           <>
             <Alert>
               <Info className="h-4 w-4" />
-              <AlertDescription>
-                Dataset created! Upload your CSV files below in any order.
+              <AlertDescription className="flex items-center justify-between">
+                <span>
+                  Dataset selected: <strong>{existingDatasets.find(d => d.id === currentDatasetId)?.dataset_name || "Dataset"}</strong>. Upload your CSV files below in any order.
+                </span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    setCurrentDatasetId(null);
+                    setShowCreateNew(false);
+                  }}
+                >
+                  Switch Dataset
+                </Button>
               </AlertDescription>
             </Alert>
 
