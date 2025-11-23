@@ -23,16 +23,7 @@ const CaseStudyDK = () => {
                   Multi-Brand Fashion Retailer Case Study
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Originally published at{" "}
-                  <a
-                    href="https://www.retailisation.com/insights/how-dk-company-increased-sales-while-decreasing-inventory"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline hover:text-amber-600 dark:hover:text-amber-400"
-                  >
-                    retailisation.com
-                  </a>
-                  {" "}• January 2023
+                  Archived marketing material from Retailisation • January 2023
                 </p>
               </div>
             </div>
@@ -49,7 +40,7 @@ const CaseStudyDK = () => {
                 <div className="relative">
                   <img 
                     src={dkCaseStudyOriginal} 
-                    alt="Original DK Company case study article from Retailisation website"
+                    alt="Multi-brand fashion retailer case study from Retailisation"
                     className="w-full h-auto"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent pointer-events-none"></div>
@@ -228,7 +219,7 @@ const CaseStudyDK = () => {
                     As a company with 25 brands and more than 16,500 selling points, forecasting and planning is more important than ever. The complexity is enormous and we need automated systems to support us in decision making and to run the daily planning routines. Retailisation plays a big part in the future of our company, helping it remain a relevant fashion partner. Their data-driven solution lets us meet high demands from key accounts, with automated re-ordering on a daily/weekly basis.
                   </blockquote>
                   <p className="text-sm font-semibold pt-4">
-                    — Thomas Fjord Pedersen, IT Planning Manager
+                    — IT Planning Manager
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Multi-brand fashion group with 250+ stores
