@@ -22,6 +22,10 @@ interface Dataset {
   description: string | null;
   created_at: string;
   status: string;
+  locations_filename: string | null;
+  products_filename: string | null;
+  sales_filename: string | null;
+  inventory_filename: string | null;
 }
 
 export default function DataImport() {
@@ -49,6 +53,12 @@ export default function DataImport() {
     sales: 'idle',
     inventory: 'idle',
   });
+  const [existingFilenames, setExistingFilenames] = useState<Record<ImportType, string | null>>({
+    locations: null,
+    products: null,
+    sales: null,
+    inventory: null,
+  });
   const [showInstructions, setShowInstructions] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -57,6 +67,15 @@ export default function DataImport() {
   useEffect(() => {
     fetchExistingDatasets();
   }, []);
+
+  const updateExistingFilenames = (dataset: Dataset) => {
+    setExistingFilenames({
+      locations: dataset.locations_filename,
+      products: dataset.products_filename,
+      sales: dataset.sales_filename,
+      inventory: dataset.inventory_filename,
+    });
+  };
 
   const fetchExistingDatasets = async () => {
     try {
@@ -68,7 +87,7 @@ export default function DataImport() {
 
       const { data, error } = await supabase
         .from('datasets')
-        .select('id, dataset_name, description, created_at, status')
+        .select('id, dataset_name, description, created_at, status, locations_filename, products_filename, sales_filename, inventory_filename')
         .eq('user_id', user.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
@@ -80,6 +99,7 @@ export default function DataImport() {
       // Auto-select the most recent pending dataset if available
       if (data && data.length > 0) {
         setCurrentDatasetId(data[0].id);
+        updateExistingFilenames(data[0]);
       }
     } catch (error: any) {
       console.error("Error fetching datasets:", error);
@@ -231,7 +251,8 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
         description: data.message || `${type} file processed successfully`,
       });
 
-      // Refresh datasets to update counts
+      // Refresh datasets and existing filenames
+      await fetchExistingDatasets();
       await refreshDatasets();
     } catch (error: any) {
       console.error(`Error uploading ${type}:`, error);
@@ -395,7 +416,16 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="dataset-select">Select Existing Dataset</Label>
-                    <Select value={currentDatasetId || undefined} onValueChange={setCurrentDatasetId}>
+                    <Select 
+                      value={currentDatasetId || undefined} 
+                      onValueChange={(value) => {
+                        setCurrentDatasetId(value);
+                        const selectedDataset = existingDatasets.find(d => d.id === value);
+                        if (selectedDataset) {
+                          updateExistingFilenames(selectedDataset);
+                        }
+                      }}
+                    >
                       <SelectTrigger id="dataset-select">
                         <SelectValue placeholder="Choose a dataset..." />
                       </SelectTrigger>
@@ -507,6 +537,18 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                         Download Template
                       </Button>
 
+                      {existingFilenames[type] && (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-md">
+                          <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">Currently uploaded:</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {existingFilenames[type]?.split('/').pop()}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="space-y-2">
                         <Input
                           type="file"
@@ -518,6 +560,7 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                         {file && (
                           <p className="text-sm text-muted-foreground">
                             Selected: {file.name}
+                            {existingFilenames[type] && <span className="text-yellow-600"> (will replace current file)</span>}
                           </p>
                         )}
                       </div>
@@ -548,7 +591,7 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                         {status === 'idle' && (
                           <>
                             <Upload className="mr-2 h-4 w-4" />
-                            Upload & Process
+                            {existingFilenames[type] ? 'Replace & Process' : 'Upload & Process'}
                           </>
                         )}
                       </Button>
