@@ -12,6 +12,7 @@ import Report from "./pages/Report";
 import About from "./pages/About";
 import Login from "./pages/Login";
 import DataImport from "./pages/DataImport";
+import DatasetManagement from "./pages/DatasetManagement";
 import Settings from "./pages/Settings";
 import BlogList from "./pages/BlogList";
 import BlogPost from "./pages/BlogPost";
@@ -42,6 +43,7 @@ const App = () => (
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
           <Route path="/import" element={<ProtectedRoute><DataImport /></ProtectedRoute>} />
+          <Route path="/datasets" element={<ProtectedRoute><DatasetManagement /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/dbm-explainer" element={<ProtectedRoute><DBMExplainer /></ProtectedRoute>} />
           <Route path="/case-study/dk-company" element={<CaseStudyDK />} />

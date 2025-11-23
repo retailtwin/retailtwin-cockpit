@@ -11,6 +11,12 @@ interface Dataset {
   status: string;
   date_range_start: string | null;
   date_range_end: string | null;
+  description: string | null;
+  total_locations: number | null;
+  total_products: number | null;
+  total_sales_records: number | null;
+  total_inventory_records: number | null;
+  error_message: string | null;
 }
 
 interface DatasetContextType {
