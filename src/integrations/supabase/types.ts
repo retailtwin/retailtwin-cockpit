@@ -837,10 +837,9 @@ export type Database = {
         Returns: boolean
       }
       insert_fact_daily_batch: { Args: { records: Json }; Returns: undefined }
-      insert_sales_for_dataset: {
-        Args: { p_dataset_id: string; records: Json }
-        Returns: undefined
-      }
+      insert_sales_for_dataset:
+        | { Args: { p_dataset_id: string; records: Json }; Returns: undefined }
+        | { Args: { p_dataset_id: string; records: Json }; Returns: undefined }
       search_knowledge:
         | {
             Args: {
