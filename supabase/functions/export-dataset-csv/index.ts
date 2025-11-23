@@ -78,16 +78,12 @@ serve(async (req) => {
     switch (fileType) {
       case 'locations': {
         const { data, error } = await supabase
-          .schema('aifo')
-          .from('locations')
-          .select('code, name, production_lead_time, shipping_lead_time, order_days')
-          .eq('dataset_id', datasetId)
-          .order('code');
+          .rpc('export_locations_data', { p_dataset_id: datasetId });
 
         if (error) throw error;
 
         const headers = ['store_code', 'name', 'production_lead_time', 'shipping_lead_time', 'order_days'];
-        const rows = (data || []).map(loc => ({
+        const rows = (data || []).map((loc: any) => ({
           store_code: loc.code,
           name: loc.name,
           production_lead_time: loc.production_lead_time,
@@ -102,16 +98,12 @@ serve(async (req) => {
 
       case 'products': {
         const { data, error } = await supabase
-          .schema('aifo')
-          .from('products')
-          .select('sku, name, unit_cost, unit_price, pack_size, minimum_order_quantity, group_1, group_2, group_3')
-          .eq('dataset_id', datasetId)
-          .order('sku');
+          .rpc('export_products_data', { p_dataset_id: datasetId });
 
         if (error) throw error;
 
         const headers = ['product_code', 'name', 'cost_price', 'sales_price', 'pack_size', 'minimum_order_quantity', 'group_1', 'group_2', 'group_3'];
-        const rows = (data || []).map(prod => ({
+        const rows = (data || []).map((prod: any) => ({
           product_code: prod.sku,
           name: prod.name,
           cost_price: prod.unit_cost,
@@ -130,21 +122,12 @@ serve(async (req) => {
 
       case 'sales': {
         const { data, error } = await supabase
-          .schema('aifo')
-          .from('fact_daily')
-          .select('d, location_code, sku, units_sold')
-          .eq('dataset_id', datasetId)
-          .not('units_sold', 'is', null)
-          .gt('units_sold', 0)
-          .order('d')
-          .order('location_code')
-          .order('sku')
-          .limit(50000); // Limit for performance
+          .rpc('export_sales_data', { p_dataset_id: datasetId });
 
         if (error) throw error;
 
         const headers = ['day', 'store', 'product', 'units'];
-        const rows = (data || []).map(row => ({
+        const rows = (data || []).map((row: any) => ({
           day: row.d,
           store: row.location_code,
           product: row.sku,
@@ -158,20 +141,12 @@ serve(async (req) => {
 
       case 'inventory': {
         const { data, error } = await supabase
-          .schema('aifo')
-          .from('fact_daily')
-          .select('d, location_code, sku, on_hand_units, on_order_units, in_transit_units')
-          .eq('dataset_id', datasetId)
-          .not('on_hand_units', 'is', null)
-          .order('d')
-          .order('location_code')
-          .order('sku')
-          .limit(50000); // Limit for performance
+          .rpc('export_inventory_data', { p_dataset_id: datasetId });
 
         if (error) throw error;
 
         const headers = ['day', 'store', 'product', 'units_on_hand', 'units_on_order', 'units_in_transit'];
-        const rows = (data || []).map(row => ({
+        const rows = (data || []).map((row: any) => ({
           day: row.d,
           store: row.location_code,
           product: row.sku,
