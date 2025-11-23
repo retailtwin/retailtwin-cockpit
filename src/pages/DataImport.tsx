@@ -68,6 +68,16 @@ export default function DataImport() {
     fetchExistingDatasets();
   }, []);
 
+  // Update existing filenames when currentDatasetId changes
+  useEffect(() => {
+    if (currentDatasetId) {
+      const selectedDataset = existingDatasets.find(d => d.id === currentDatasetId);
+      if (selectedDataset) {
+        updateExistingFilenames(selectedDataset);
+      }
+    }
+  }, [currentDatasetId, existingDatasets]);
+
   const updateExistingFilenames = (dataset: Dataset) => {
     setExistingFilenames({
       locations: dataset.locations_filename,
@@ -656,24 +666,36 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                         Download Template
                       </Button>
 
-                      {existingFilenames[type] && (
-                        <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-md">
-                          <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">Currently uploaded:</p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {existingFilenames[type]?.split('/').pop()}
-                            </p>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownloadFile(type)}
-                            className="flex-shrink-0"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      {existingFilenames[type] ? (
+                        <Alert>
+                          <CheckCircle2 className="h-4 w-4" />
+                          <AlertDescription>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium mb-1">File already uploaded</p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {existingFilenames[type]?.split('/').pop()}
+                                </p>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDownloadFile(type)}
+                                className="flex-shrink-0"
+                              >
+                                <Download className="h-4 w-4 mr-2" />
+                                Download
+                              </Button>
+                            </div>
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <Alert variant="default">
+                          <Info className="h-4 w-4" />
+                          <AlertDescription className="text-sm">
+                            No file uploaded yet. Select a CSV file to upload.
+                          </AlertDescription>
+                        </Alert>
                       )}
 
                       <div className="space-y-2">
@@ -687,8 +709,15 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                         {file && (
                           <p className="text-sm text-muted-foreground">
                             Selected: {file.name}
-                            {existingFilenames[type] && <span className="text-yellow-600"> (will replace current file)</span>}
                           </p>
+                        )}
+                        {file && existingFilenames[type] && (
+                          <Alert variant="default" className="py-2">
+                            <Info className="h-4 w-4" />
+                            <AlertDescription className="text-xs">
+                              This will replace the existing file
+                            </AlertDescription>
+                          </Alert>
                         )}
                       </div>
 
