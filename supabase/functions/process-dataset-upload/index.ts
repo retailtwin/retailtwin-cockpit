@@ -151,12 +151,24 @@ async function processFileInBackground(
  
     // Calculate date range for sales/inventory
     if (fileType === 'sales' || fileType === 'inventory') {
-      const dates = dedupedRecords
-        .map(r => new Date(r.day || r.d))
-        .filter(d => !isNaN(d.getTime()));
-      if (dates.length > 0) {
-        updates.date_range_start = new Date(Math.min(...dates.map(d => d.getTime()))).toISOString().split('T')[0];
-        updates.date_range_end = new Date(Math.max(...dates.map(d => d.getTime()))).toISOString().split('T')[0];
+      let minTime = Number.POSITIVE_INFINITY;
+      let maxTime = Number.NEGATIVE_INFINITY;
+
+      for (const r of dedupedRecords) {
+        const dateStr = r.day || r.d;
+        if (!dateStr) continue;
+
+        const d = new Date(dateStr);
+        const t = d.getTime();
+        if (isNaN(t)) continue;
+
+        if (t < minTime) minTime = t;
+        if (t > maxTime) maxTime = t;
+      }
+
+      if (minTime !== Number.POSITIVE_INFINITY && maxTime !== Number.NEGATIVE_INFINITY) {
+        updates.date_range_start = new Date(minTime).toISOString().split('T')[0];
+        updates.date_range_end = new Date(maxTime).toISOString().split('T')[0];
       }
     }
 
