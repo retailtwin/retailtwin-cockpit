@@ -135,14 +135,14 @@ export default function DataImport() {
         .from('datasets')
         .select('id, dataset_name, description, created_at, status, locations_filename, products_filename, sales_filename, inventory_filename')
         .eq('user_id', user.id)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'active'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       setExistingDatasets(data || []);
       
-      // Auto-select the most recent pending dataset if available
+      // Auto-select the most recent dataset if available
       if (data && data.length > 0) {
         setCurrentDatasetId(data[0].id);
         updateExistingFilenames(data[0]);
@@ -513,7 +513,7 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
             <CardHeader>
               <CardTitle>Select or Create Dataset</CardTitle>
               <CardDescription>
-                Choose an existing pending dataset or create a new one
+                Choose an existing active or pending dataset, or create a new one
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -537,14 +537,28 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                       <SelectContent>
                         {existingDatasets.map((dataset) => (
                           <SelectItem key={dataset.id} value={dataset.id}>
-                            {dataset.dataset_name} 
-                            {dataset.description && ` - ${dataset.description}`}
+                            <div className="flex items-center justify-between w-full">
+                              <span>{dataset.dataset_name}</span>
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                ({dataset.status === 'active' ? '✓ Active' : 'Pending'})
+                              </span>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="flex items-center gap-2">
+                   </div>
+                   {currentDatasetId && (
+                     <Alert className="mt-2">
+                       <Info className="h-4 w-4" />
+                       <AlertDescription>
+                         {existingDatasets.find(d => d.id === currentDatasetId)?.status === 'active'
+                           ? 'This dataset is already active. You can add or update files.'
+                           : 'This dataset is pending. Upload all required files to activate it.'}
+                       </AlertDescription>
+                     </Alert>
+                   )}
+                   <div className="flex items-center gap-2">
                     <div className="flex-1 border-t" />
                     <span className="text-sm text-muted-foreground">or</span>
                     <div className="flex-1 border-t" />
