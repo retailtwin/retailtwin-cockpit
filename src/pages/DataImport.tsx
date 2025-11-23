@@ -254,6 +254,64 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
     setSelectedFiles(prev => ({ ...prev, [type]: file }));
   };
 
+  const pollDatasetUntilComplete = async (
+    datasetId: string,
+    type: ImportType
+  ) => {
+    const pollIntervalMs = 5000; // 5 seconds
+    const maxAttempts = 60;      // ~5 minutes
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const { data, error } = await supabase
+        .from("datasets")
+        .select("status, total_inventory_records, total_sales_records, total_locations, total_products")
+        .eq("id", datasetId)
+        .single();
+
+      if (error) {
+        console.error("Error polling dataset status:", error);
+        // Non-fatal; wait and try again
+      } else if (data) {
+        if (data.status === "active") {
+          setProcessingStatus(prev => ({ ...prev, [type]: "complete" }));
+          toast({
+            title: "Processing complete",
+            description: `${type} file processed successfully.`,
+          });
+
+          // Refresh dataset lists & counts
+          await fetchExistingDatasets();
+          await refreshDatasets();
+          return;
+        }
+
+        if (data.status === "error") {
+          setProcessingStatus(prev => ({ ...prev, [type]: "idle" }));
+          toast({
+            title: "Processing failed",
+            description:
+              "There was an error while processing the file. Please check your CSV and try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Still processing or unknown; wait and retry
+      await new Promise((resolve) =>
+        setTimeout(resolve, pollIntervalMs)
+      );
+    }
+
+    // Timed out
+    setProcessingStatus(prev => ({ ...prev, [type]: "idle" }));
+    toast({
+      title: "Processing is taking longer than expected",
+      description:
+        "The file is still being processed in the background. Please check back later or reload the page.",
+    });
+  };
+
   const handleUploadAndProcess = async (type: ImportType) => {
     const file = selectedFiles[type];
     if (!file || !currentDatasetId) return;
@@ -284,28 +342,29 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
       setUploadedFiles(prev => ({ ...prev, [type]: true }));
       setProcessingStatus(prev => ({ ...prev, [type]: 'processing' }));
 
-      // Process the uploaded file
+      // Call edge function (now only starts background processing)
       const { data, error: processError } = await supabase.functions.invoke('process-dataset-upload', {
         body: { datasetId: currentDatasetId, fileType: type }
       });
 
       if (processError) throw processError;
 
-      setProcessingStatus(prev => ({ ...prev, [type]: 'complete' }));
       toast({
-        title: "Success",
-        description: data.message || `${type} file processed successfully`,
+        title: "Processing started",
+        description:
+          data?.message ??
+          `${type} file is now being processed. This may take a few minutes for large files.`,
       });
 
-      // Refresh datasets and existing filenames
-      await fetchExistingDatasets();
-      await refreshDatasets();
+      // Start polling dataset status
+      await pollDatasetUntilComplete(currentDatasetId, type);
+
     } catch (error: any) {
       console.error(`Error uploading ${type}:`, error);
       setProcessingStatus(prev => ({ ...prev, [type]: 'idle' }));
       toast({
         title: "Error",
-        description: error.message || `Failed to upload ${type} file`,
+        description: error.message || `Failed to upload or process ${type} file`,
         variant: "destructive",
       });
     }
