@@ -11,6 +11,12 @@ interface InventoryGraphProps {
     targetUnits?: number;
     economicUnits?: number;
   }>;
+  stats?: {
+    totalSkus: number;
+    processedSkus: number;
+    zeroSalesSkus: number;
+    noInventorySkus: number;
+  } | null;
 }
 
 interface CustomTooltipProps extends TooltipProps<number, string> {
@@ -103,7 +109,7 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   );
 };
 
-export const InventoryGraph = ({ data }: InventoryGraphProps) => {
+export const InventoryGraph = ({ data, stats }: InventoryGraphProps) => {
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -169,6 +175,34 @@ export const InventoryGraph = ({ data }: InventoryGraphProps) => {
             />
           </LineChart>
         </ResponsiveContainer>
+        
+        {/* Simulation Statistics */}
+        {stats && (
+          <div className="mt-6 pt-4 border-t border-border">
+            <h4 className="text-sm font-semibold text-muted-foreground mb-3">Simulation Statistics</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Total SKU-Locations</p>
+                <p className="text-2xl font-bold text-foreground">{stats.totalSkus}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Processed</p>
+                <p className="text-2xl font-bold text-success">{stats.processedSkus}</p>
+                <p className="text-xs text-muted-foreground">({((stats.processedSkus / stats.totalSkus) * 100).toFixed(0)}%)</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Zero Sales (Filtered)</p>
+                <p className="text-2xl font-bold text-muted-foreground">{stats.zeroSalesSkus}</p>
+                <p className="text-xs text-muted-foreground">({((stats.zeroSalesSkus / stats.totalSkus) * 100).toFixed(0)}%)</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">No Inventory</p>
+                <p className="text-2xl font-bold text-warning">{stats.noInventorySkus}</p>
+                <p className="text-xs text-muted-foreground">({((stats.noInventorySkus / stats.totalSkus) * 100).toFixed(0)}%)</p>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

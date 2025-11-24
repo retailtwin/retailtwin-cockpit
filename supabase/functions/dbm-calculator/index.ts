@@ -182,17 +182,30 @@ serve(async (req) => {
       from += pageSize;
     }
 
-    console.log(`Processing ${allRows.length} records`);
+    console.log(`Fetched ${allRows.length} total records`);
 
     // Organize data by SKU-Location and calculate rolling averages
     const salesBySkuLoc = new Map<string, any[]>();
+    const skuWithSales = new Set<string>();
+    const skuWithInventory = new Set<string>();
+    
     allRows.forEach((row: any) => {
       const key = `${row.location_code}_${row.sku}`;
       if (!salesBySkuLoc.has(key)) {
         salesBySkuLoc.set(key, []);
       }
       salesBySkuLoc.get(key)!.push(row);
+      
+      // Track SKUs with sales and inventory
+      if (row.units_sold > 0) skuWithSales.add(key);
+      if (row.on_hand_units > 0) skuWithInventory.add(key);
     });
+
+    const totalSkuLocations = salesBySkuLoc.size;
+    const skuWithZeroSales = totalSkuLocations - skuWithSales.size;
+    const skuWithNoInventory = totalSkuLocations - skuWithInventory.size;
+    
+    console.log(`Statistics: ${totalSkuLocations} SKU-Locations, ${skuWithSales.size} with sales, ${skuWithZeroSales} zero-sales, ${skuWithNoInventory} no inventory`);
 
     // Calculate 7-day rolling average for each SKU-Location
     salesBySkuLoc.forEach((rows) => {
@@ -208,6 +221,7 @@ serve(async (req) => {
     // Process each SKU-Location group sequentially, maintaining state
     const engine = new DBMEngine();
     const results: any[] = [];
+    let processedCount = 0;
 
     // Order tracking structure
     interface PendingOrder {
@@ -221,6 +235,12 @@ serve(async (req) => {
       let previousCalculated: SkuLocDate | null = null;
       let sim_inventory = 0;
       const sku_location_orders: PendingOrder[] = [];
+      
+      // Progress tracking - log every 50 SKU-Locations
+      processedCount++;
+      if (processedCount % 50 === 0) {
+        console.log(`Progress: ${processedCount}/${totalSkuLocations} SKU-Locations processed`);
+      }
       
       rows.forEach((row: any, idx: number) => {
         // Initialize sim_inventory on first day
@@ -306,18 +326,12 @@ serve(async (req) => {
           units_economic_overstock: 0,
           units_economic_understock: 0,
         };
-
-        // Log before DBM calculation
-        console.log(`Day ${idx + 1} ${row.location_code}/${row.sku} IN: avg_weekly=${(row.avg_weekly_sales || 0).toFixed(2)}, green_in=${initialGreen}, sales=${row.units_sold}, on_hand=${row.unit_on_hand}`);
         
         const calculated = engine.executeDBMAlgorithm(input);
         const economics = calculateEconomicUnits(calculated);
         calculated.units_economic = economics.economic;
         calculated.units_economic_overstock = economics.overstock;
         calculated.units_economic_understock = economics.understock;
-        
-        // Log after DBM calculation
-        console.log(`Day ${idx + 1} ${row.location_code}/${row.sku} OUT: green_out=${calculated.green}, decision=${calculated.decision}, state=${calculated.state}, zone=${calculated.dbm_zone}`);
         
         // Step 4: Check if order is needed
         const pending_orders = sku_location_orders.reduce((sum, o) => sum + o.quantity, 0);
@@ -376,6 +390,10 @@ serve(async (req) => {
 
     const summary = {
       processed: results.length,
+      totalSkus: totalSkuLocations,
+      skuWithSales: skuWithSales.size,
+      zeroSalesSkus: skuWithZeroSales,
+      noInventorySkus: skuWithNoInventory,
       increases: results.filter((r: any) => r.decision === 'inc_from_red').length,
       decreases: results.filter((r: any) => r.decision === 'dec_from_green').length,
       new_items: results.filter((r: any) => r.decision === 'new').length,
