@@ -5,12 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Download, FileText, AlertCircle, CheckCircle, Info, AlertTriangle, Loader2, CheckCircle2 } from "lucide-react";
+import { Upload, Download, FileText, AlertCircle, CheckCircle, Info, AlertTriangle, Loader2, CheckCircle2, FileSpreadsheet } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import * as XLSX from 'xlsx';
 
 type ImportType = 'locations' | 'products' | 'sales' | 'inventory';
 
@@ -67,6 +68,7 @@ export default function DataImport() {
   });
 
   const [showInstructions, setShowInstructions] = useState(false);
+  const [isExcelUpload, setIsExcelUpload] = useState(false);
 
   const [csvPreviews, setCsvPreviews] = useState<Record<ImportType, CSVPreview | null>>({
     locations: null,
@@ -154,6 +156,64 @@ export default function DataImport() {
     return normalizedExpected.every(expected => normalizedHeaders.includes(expected));
   };
 
+  const parseExcelWorkbook = async (file: File): Promise<Record<ImportType, File>> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          
+          // Map worksheet names to import types
+          const worksheetMap: Record<string, ImportType> = {
+            'Stores': 'locations',
+            'Products': 'products',
+            'Inventory': 'inventory',
+            'Sales': 'sales'
+          };
+          
+          const csvFiles: Partial<Record<ImportType, File>> = {};
+          
+          // Extract each worksheet and convert to CSV
+          for (const [sheetName, importType] of Object.entries(worksheetMap)) {
+            const worksheet = workbook.Sheets[sheetName];
+            
+            if (!worksheet) {
+              reject(new Error(`Missing worksheet: ${sheetName}`));
+              return;
+            }
+            
+            // Convert worksheet to CSV
+            const csv = XLSX.utils.sheet_to_csv(worksheet);
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const csvFile = new File([blob], `${importType}.csv`, { type: 'text/csv' });
+            csvFiles[importType] = csvFile;
+          }
+          
+          // Verify all 4 worksheets were found
+          const allTypesPresent = (['locations', 'products', 'sales', 'inventory'] as ImportType[])
+            .every(type => csvFiles[type] !== undefined);
+          
+          if (!allTypesPresent) {
+            reject(new Error('Excel workbook must contain all 4 worksheets: Stores, Products, Inventory, Sales'));
+            return;
+          }
+          
+          resolve(csvFiles as Record<ImportType, File>);
+        } catch (error: any) {
+          reject(new Error(`Failed to parse Excel file: ${error.message}`));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Failed to read Excel file'));
+      };
+      
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
   const parseCSVPreview = async (file: File, type: ImportType): Promise<CSVPreview> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -206,7 +266,63 @@ export default function DataImport() {
     });
   };
 
+  const handleExcelFileSelect = async (file: File | null) => {
+    if (!file) {
+      setSelectedFiles({
+        locations: null,
+        products: null,
+        sales: null,
+        inventory: null,
+      });
+      setCsvPreviews({
+        locations: null,
+        products: null,
+        sales: null,
+        inventory: null,
+      });
+      setIsExcelUpload(false);
+      return;
+    }
+    
+    setIsExcelUpload(true);
+    
+    try {
+      const extractedFiles = await parseExcelWorkbook(file);
+      
+      // Set all extracted CSV files
+      setSelectedFiles(extractedFiles);
+      
+      // Generate previews for each
+      for (const type of ['locations', 'products', 'sales', 'inventory'] as ImportType[]) {
+        const csvFile = extractedFiles[type];
+        const preview = await parseCSVPreview(csvFile, type);
+        setCsvPreviews(prev => ({ ...prev, [type]: preview }));
+        
+        if (!preview.isValid) {
+          toast({
+            variant: "destructive",
+            title: `Invalid ${type} data`,
+            description: preview.error || "The worksheet doesn't match the expected format",
+          });
+        }
+      }
+      
+      toast({
+        title: "Excel Workbook Loaded",
+        description: "All 4 worksheets extracted successfully. Review the previews below.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Excel Parsing Failed",
+        description: error.message || "Failed to parse Excel workbook",
+      });
+      setIsExcelUpload(false);
+    }
+  };
+
   const handleFileSelect = async (type: ImportType, file: File | null) => {
+    setIsExcelUpload(false);
     setSelectedFiles(prev => ({ ...prev, [type]: file }));
     
     if (file) {
@@ -485,8 +601,19 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <h3 className="font-semibold mb-2">General Guidelines</h3>
+                <h3 className="font-semibold mb-2">Excel Workbook Format</h3>
                 <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>Upload a single .xlsx file with 4 worksheets</li>
+                  <li>Worksheet names must be exactly: <strong>Stores</strong>, <strong>Products</strong>, <strong>Inventory</strong>, <strong>Sales</strong></li>
+                  <li>Each worksheet should contain the required columns for that data type</li>
+                  <li>All worksheets are extracted and validated automatically</li>
+                </ul>
+              </div>
+              <Separator />
+              <div>
+                <h3 className="font-semibold mb-2">CSV Upload Alternative</h3>
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                  <li>Upload 4 separate CSV files</li>
                   <li>All CSV files must include the header row</li>
                   <li>Date format must be YYYY-MM-DD</li>
                   <li>Use commas as separators</li>
@@ -498,16 +625,16 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                 <h3 className="font-semibold mb-2">File Types</h3>
                 <div className="space-y-2 text-sm">
                   <div>
-                    <strong>Locations:</strong> Store master data
+                    <strong>Locations (Stores):</strong> Store master data (store_code, name)
                   </div>
                   <div>
-                    <strong>Products:</strong> Product master data
+                    <strong>Products:</strong> Product master data (product_code, name)
                   </div>
                   <div>
-                    <strong>Sales:</strong> Daily sales transactions
+                    <strong>Sales:</strong> Daily sales transactions (day, store, product, units)
                   </div>
                   <div>
-                    <strong>Inventory:</strong> Inventory snapshots
+                    <strong>Inventory:</strong> Inventory snapshots (day, store, product)
                   </div>
                 </div>
               </div>
@@ -561,45 +688,85 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
           <CardHeader>
             <CardTitle>Select Files to Upload</CardTitle>
             <CardDescription>
-              Select all 4 required CSV files, then process them together. This will replace all existing data.
+              Upload an Excel workbook with 4 worksheets (Stores, Products, Inventory, Sales) or select individual CSV files.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {(['locations', 'products', 'sales', 'inventory'] as ImportType[]).map(
-              (fileType) => (
-                <div key={fileType} className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    {selectedFiles[fileType] ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                    )}
-                    <span className="font-medium capitalize">{fileType}</span>
-                  </div>
-                  
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Input
-                      type="file"
-                      accept=".csv"
-                      onChange={(e) => handleFileSelect(fileType, e.target.files?.[0] || null)}
-                      className="flex-1"
-                      disabled={batchUploading}
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => downloadTemplate(fileType)}
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Template
-                    </Button>
-                  </div>
+          <CardContent className="space-y-6">
+            {/* Excel Upload Option */}
+            <div className="border-2 border-dashed rounded-lg p-6 bg-muted/50">
+              <div className="flex items-center gap-3 mb-3">
+                <FileSpreadsheet className="h-6 w-6 text-primary" />
+                <div>
+                  <h3 className="font-semibold">Upload Excel Workbook</h3>
+                  <p className="text-sm text-muted-foreground">
+                    One file with all 4 worksheets: Stores, Products, Inventory, Sales
+                  </p>
+                </div>
+              </div>
+              <Input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={(e) => handleExcelFileSelect(e.target.files?.[0] || null)}
+                disabled={batchUploading}
+              />
+              {isExcelUpload && (
+                <p className="text-sm text-green-600 mt-2">
+                  ✓ Excel workbook loaded - all 4 worksheets extracted
+                </p>
+              )}
+            </div>
 
-                  {selectedFiles[fileType] && (
-                    <p className="text-sm text-muted-foreground">
-                      ✓ {selectedFiles[fileType]!.name} ready to upload
-                    </p>
-                  )}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or upload individual CSV files
+                </span>
+              </div>
+            </div>
+
+            {/* Individual CSV Upload Options */}
+            <div className="space-y-4">
+              {(['locations', 'products', 'sales', 'inventory'] as ImportType[]).map(
+                (fileType) => (
+                  <div key={fileType} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      {selectedFiles[fileType] ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                      )}
+                      <span className="font-medium capitalize">{fileType}</span>
+                      {isExcelUpload && selectedFiles[fileType] && (
+                        <Badge variant="secondary" className="text-xs">From Excel</Badge>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Input
+                        type="file"
+                        accept=".csv"
+                        onChange={(e) => handleFileSelect(fileType, e.target.files?.[0] || null)}
+                        className="flex-1"
+                        disabled={batchUploading || isExcelUpload}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => downloadTemplate(fileType)}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Template
+                      </Button>
+                    </div>
+
+                    {selectedFiles[fileType] && (
+                      <p className="text-sm text-muted-foreground">
+                        ✓ {selectedFiles[fileType]!.name} ready to upload
+                      </p>
+                    )}
 
                   {/* CSV Preview */}
                   {csvPreviews[fileType] && (
@@ -639,9 +806,10 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                       </div>
                     </div>
                   )}
-                </div>
+                 </div>
               )
             )}
+            </div>
 
             {/* Batch Upload Button */}
             <div className="pt-4">
