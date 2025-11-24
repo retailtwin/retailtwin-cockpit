@@ -77,6 +77,9 @@ const Dashboard = () => {
   } | null>(null);
   const [optimalScope, setOptimalScope] = useState<OptimalScope | null>(null);
   const [isLoadingOptimalScope, setIsLoadingOptimalScope] = useState(false);
+  const [validDates, setValidDates] = useState<Set<string> | null>(null);
+  const [locationOrderDays, setLocationOrderDays] = useState<string | null>(null);
+
 
   // Check admin status and load settings
   useEffect(() => {
@@ -93,26 +96,68 @@ const Dashboard = () => {
   const loadOptimalScope = async () => {
     setIsLoadingOptimalScope(true);
     try {
-      const optimal = await findOptimalSimulationScope();
-      if (optimal) {
-        setOptimalScope(optimal);
+      const scope = await findOptimalSimulationScope();
+      
+      if (scope) {
+        console.log('Optimal scope found:', scope);
         
-        // Auto-select optimal date range and location
+        // Set location
+        setSelectedLocation(scope.location);
+        
+        // Set date range
+        const startDate = new Date(scope.dateRange.start);
+        const endDate = new Date(scope.dateRange.end);
         setDateRange({
-          from: new Date(optimal.dateRange.start),
-          to: new Date(optimal.dateRange.end)
+          from: startDate,
+          to: endDate
         });
-        setSelectedLocation(optimal.location);
         
-        toast({
-          title: "Optimal Scope Auto-Selected",
-          description: `Found best period: ${optimal.metrics.dataCompleteness}% data coverage, ${optimal.metrics.totalSales.toLocaleString()} units sold`,
-        });
+        console.log('Setting optimal date range:', { from: startDate, to: endDate });
+        
+        // Load locations and products
+        const locs = await fetchLocations();
+        const prods = await fetchProducts();
+        setLocations(locs);
+        setProducts(prods);
+        
+        // Load order days for optimal location
+        const orderDays = await fetchLocationOrderDays(scope.location);
+        setLocationOrderDays(orderDays);
+        
+        // Load valid dates for the optimal location
+        await loadValidDates(scope.location, 'ALL');
+      } else {
+        console.log('No optimal scope found, using defaults');
+        // Fallback: load locations/products and use first location
+        const locs = await fetchLocations();
+        const prods = await fetchProducts();
+        setLocations(locs);
+        setProducts(prods);
+        
+        if (locs.length > 0) {
+          setSelectedLocation(locs[0].code);
+          await loadValidDates(locs[0].code, 'ALL');
+        }
       }
     } catch (error) {
-      console.error("Error loading optimal scope:", error);
+      console.error('Error loading optimal scope:', error);
     } finally {
       setIsLoadingOptimalScope(false);
+    }
+  };
+
+  const loadValidDates = async (location: string, sku: string) => {
+    try {
+      const { getValidDates } = await import('@/lib/supabase-helpers');
+      const dates = await getValidDates(
+        location === 'ALL' ? undefined : location,
+        sku === 'ALL' ? undefined : sku
+      );
+      setValidDates(dates);
+      console.log(`Loaded ${dates.size} valid dates with both sales and inventory`);
+    } catch (error) {
+      console.error('Error loading valid dates:', error);
+      setValidDates(new Set());
     }
   };
 
@@ -245,7 +290,7 @@ const Dashboard = () => {
     loadData();
   }, [selectedLocation, selectedProduct, dateRange, toast]);
 
-  // Load order days when location changes
+  // Load order days and valid dates when location or product changes
   useEffect(() => {
     if (!selectedLocation) return;
 
@@ -259,7 +304,12 @@ const Dashboard = () => {
     };
 
     loadOrderDays();
-  }, [selectedLocation]);
+    
+    // Reload valid dates when filters change
+    if (selectedProduct) {
+      loadValidDates(selectedLocation, selectedProduct);
+    }
+  }, [selectedLocation, selectedProduct]);
 
   const handleAskArchie = (prompt: string) => {
     setPreloadedPrompt(prompt);
@@ -913,17 +963,18 @@ const Dashboard = () => {
           {/* Scope Selection */}
           <div>
             <h2 className="text-xl font-semibold mb-4">Scope Selection</h2>
-            <FilterBar
-              locations={locations}
-              products={products}
-              selectedLocation={selectedLocation}
-              selectedProduct={selectedProduct}
-              dateRange={dateRange}
-              dataDateRange={dataDateRange}
-              onLocationChange={setSelectedLocation}
-              onProductChange={setSelectedProduct}
-              onDateRangeChange={setDateRange}
-            />
+        <FilterBar
+          locations={locations}
+          products={products}
+          selectedLocation={selectedLocation}
+          selectedProduct={selectedProduct}
+          dateRange={dateRange}
+          dataDateRange={dataDateRange}
+          validDates={validDates}
+          onLocationChange={setSelectedLocation}
+          onProductChange={setSelectedProduct}
+          onDateRangeChange={setDateRange}
+        />
           </div>
 
           {/* Simulation Settings */}
@@ -1328,6 +1379,7 @@ const Dashboard = () => {
         open={simulationConfigOpen}
         onOpenChange={setSimulationConfigOpen}
         onConfirm={handleSimulationConfirm}
+        validDates={validDates}
       />
     </Layout>
   );

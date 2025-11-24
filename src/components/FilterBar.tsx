@@ -21,6 +21,7 @@ interface FilterBarProps {
   selectedProduct: string;
   dateRange?: DateRange;
   dataDateRange?: {min: Date, max: Date} | null;
+  validDates?: Set<string> | null;
   onLocationChange: (value: string) => void;
   onProductChange: (value: string) => void;
   onDateRangeChange: (range: DateRange | undefined) => void;
@@ -33,6 +34,7 @@ export const FilterBar = ({
   selectedProduct,
   dateRange,
   dataDateRange,
+  validDates,
   onLocationChange,
   onProductChange,
   onDateRangeChange,
@@ -109,14 +111,26 @@ export const FilterBar = ({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
-            <CalendarComponent
-              mode="range"
-              selected={dateRange}
-              onSelect={onDateRangeChange}
-              numberOfMonths={2}
-              defaultMonth={dataDateRange?.min || dateRange?.from}
-              className="pointer-events-auto"
-            />
+            <div className="space-y-2">
+              <CalendarComponent
+                mode="range"
+                selected={dateRange}
+                onSelect={onDateRangeChange}
+                numberOfMonths={2}
+                defaultMonth={dataDateRange?.min || dateRange?.from}
+                disabled={(date) => {
+                  if (!validDates) return false;
+                  const dateStr = format(date, 'yyyy-MM-dd');
+                  return !validDates.has(dateStr);
+                }}
+                className="pointer-events-auto"
+              />
+              {validDates && (
+                <p className="text-xs text-muted-foreground text-center px-3 pb-3">
+                  {validDates.size} days available with complete data
+                </p>
+              )}
+            </div>
           </PopoverContent>
         </Popover>
       </div>
