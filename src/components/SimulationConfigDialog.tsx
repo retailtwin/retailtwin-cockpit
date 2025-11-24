@@ -11,15 +11,16 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar, Play, AlertCircle, Loader2, Info } from "lucide-react";
+import { Calendar, Play, AlertCircle, Loader2, Info, AlertTriangle } from "lucide-react";
 import { format, differenceInMonths } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useCommonScope } from "@/hooks/useCommonScope";
 import { ProductGroupPicker } from "@/components/ProductGroupPicker";
 import { StorePicker } from "@/components/StorePicker";
+import { Progress } from "@/components/ui/progress";
 
 interface SimulationConfigDialogProps {
   open: boolean;
@@ -36,6 +37,9 @@ export interface SimulationConfig {
 
 type PresetType = "quick" | "standard" | "quarter" | "full" | "custom";
 
+const HARD_LIMIT = 91250;
+const WARNING_THRESHOLD = 75000;
+
 const PRESETS = {
   quick: { name: "Quick Test", months: 1, description: "1 month, ideal for testing" },
   standard: { name: "Standard Test", months: 3, description: "3 months, balanced testing" },
@@ -50,7 +54,7 @@ export const SimulationConfigDialog = ({
   onConfirm,
 }: SimulationConfigDialogProps) => {
   const commonScope = useCommonScope();
-  const [selectedPreset, setSelectedPreset] = useState<PresetType>("quick");
+  const [selectedPreset, setSelectedPreset] = useState<PresetType>("full");
   const [location, setLocation] = useState('');
   const [productSKUs, setProductSKUs] = useState<string[] | 'ALL'>('ALL');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -59,6 +63,7 @@ export const SimulationConfigDialog = ({
     recordCount: number;
     estimatedTime: string;
     warning?: string;
+    isBlocked: boolean;
   } | null>(null);
 
   // Initialize defaults when dialog opens and data is loaded
@@ -69,12 +74,11 @@ export const SimulationConfigDialog = ({
         setLocation(commonScope.locations[0].code);
       }
 
-      // Set date range based on preset
+      // Set date range to full year (365 days) by default
       if (commonScope.dateRange && !dateRange) {
         const endDate = new Date(commonScope.dateRange.max);
         const startDate = new Date(endDate);
-        const preset = PRESETS[selectedPreset];
-        startDate.setMonth(endDate.getMonth() - preset.months);
+        startDate.setMonth(endDate.getMonth() - 12); // 12 months = full year
         
         const minDate = new Date(commonScope.dateRange.min);
         if (startDate < minDate) {
@@ -83,8 +87,14 @@ export const SimulationConfigDialog = ({
         
         setDateRange({ from: startDate, to: endDate });
       }
+
+      // Default to 250 products if total products exceed 250
+      if (commonScope.totalProducts > 250 && productSKUs === 'ALL') {
+        const first250SKUs = commonScope.products.slice(0, 250).map(p => p.sku);
+        setProductSKUs(first250SKUs);
+      }
     }
-  }, [open, commonScope.isLoading, commonScope.locations, commonScope.dateRange]);
+  }, [open, commonScope.isLoading, commonScope.locations, commonScope.dateRange, commonScope.totalProducts]);
 
   // Estimate record count when config changes
   useEffect(() => {
@@ -106,16 +116,19 @@ export const SimulationConfigDialog = ({
             : `${Math.ceil(estimatedSeconds / 60)}min`;
 
         let warning: string | undefined;
-        if (recordCount > 200000) {
-          warning = "Large dataset detected. Consider reducing the scope.";
-        } else if (recordCount > 100000) {
-          warning = "Medium-large dataset. Processing may take a while.";
+        let isBlocked = false;
+        
+        if (recordCount > HARD_LIMIT) {
+          warning = "BLOCKED: Exceeds processing limit";
+          isBlocked = true;
+        } else if (recordCount > WARNING_THRESHOLD) {
+          warning = "Approaching limit. Consider reducing scope for optimal performance.";
         }
 
-        setEstimate({ recordCount, estimatedTime, warning });
+        setEstimate({ recordCount, estimatedTime, warning, isBlocked });
       } catch (error) {
         console.error("Error estimating records:", error);
-        setEstimate({ recordCount: 0, estimatedTime: "Unknown", warning: "Could not estimate" });
+        setEstimate({ recordCount: 0, estimatedTime: "Unknown", warning: "Could not estimate", isBlocked: false });
       } finally {
         setEstimating(false);
       }
@@ -313,6 +326,48 @@ export const SimulationConfigDialog = ({
                 <AlertCircle className="h-4 w-4" />
                 Estimated Scope
               </h4>
+              
+              {/* Visual Formula Display */}
+              <div className="mb-4 p-3 bg-background rounded-md border">
+                <div className="text-sm font-mono text-center">
+                  {estimating ? (
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                  ) : (
+                    <>
+                      <span className="font-semibold">{getProductCount()}</span> SKUs × <span className="font-semibold">{getDayCount()}</span> days = <span className={cn(
+                        "font-bold text-lg",
+                        estimate?.isBlocked ? "text-destructive" : estimate?.recordCount && estimate.recordCount > WARNING_THRESHOLD ? "text-yellow-600 dark:text-yellow-500" : "text-primary"
+                      )}>{estimate?.recordCount.toLocaleString() || "0"}</span> / {HARD_LIMIT.toLocaleString()}
+                    </>
+                  )}
+                </div>
+                
+                {/* Progress Bar */}
+                {!estimating && estimate && (
+                  <div className="mt-3 space-y-1">
+                    <Progress 
+                      value={Math.min((estimate.recordCount / HARD_LIMIT) * 100, 100)} 
+                      className={cn(
+                        "h-2",
+                        estimate.isBlocked && "[&>div]:bg-destructive",
+                        !estimate.isBlocked && estimate.recordCount > WARNING_THRESHOLD && "[&>div]:bg-yellow-500"
+                      )}
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>0</span>
+                      <span className={cn(
+                        "font-medium",
+                        estimate.isBlocked && "text-destructive",
+                        !estimate.isBlocked && estimate.recordCount > WARNING_THRESHOLD && "text-yellow-600 dark:text-yellow-500"
+                      )}>
+                        {Math.round((estimate.recordCount / HARD_LIMIT) * 100)}% of limit
+                      </span>
+                      <span>{HARD_LIMIT.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">SKUs:</span>
@@ -320,23 +375,13 @@ export const SimulationConfigDialog = ({
                 </div>
                 <div>
                   <span className="text-muted-foreground">Location:</span>
-                  <p className="font-medium">1 store</p>
+                  <p className="font-medium">1 store (fixed)</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Days:</span>
                   <p className="font-medium">{getDayCount()}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Records:</span>
-                  {estimating ? (
-                    <div className="flex items-center gap-1">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    </div>
-                  ) : (
-                    <p className="font-medium">≈ {estimate?.recordCount.toLocaleString() || "—"}</p>
-                  )}
-                </div>
-                <div className="col-span-2">
                   <span className="text-muted-foreground">Processing Time:</span>
                   {estimating ? (
                     <div className="flex items-center gap-1">
@@ -348,8 +393,28 @@ export const SimulationConfigDialog = ({
                 </div>
               </div>
 
-              {estimate?.warning && (
-                <Alert variant="default" className="mt-4">
+              {/* Blocking Alert */}
+              {estimate?.isBlocked && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Scope Exceeds Processing Limit</AlertTitle>
+                  <AlertDescription className="mt-2 space-y-2">
+                    <p>
+                      To ensure reliable processing and stay within your dataset limit (100,000 total records), 
+                      simulations are capped at <strong>{HARD_LIMIT.toLocaleString()} records</strong>.
+                    </p>
+                    <p className="font-medium">Reduce your scope:</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>Reduce products to <strong>{Math.floor(HARD_LIMIT / getDayCount())}</strong> or fewer</li>
+                      <li>Or reduce time period to <strong>{Math.floor(HARD_LIMIT / getProductCount())} days</strong> or fewer</li>
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Warning Alert */}
+              {estimate?.warning && !estimate.isBlocked && (
+                <Alert variant="default" className="mt-4 border-yellow-500/50 text-yellow-700 dark:text-yellow-500">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>{estimate.warning}</AlertDescription>
                 </Alert>
@@ -362,7 +427,10 @@ export const SimulationConfigDialog = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!dateRange?.from || !dateRange?.to || !location}>
+          <Button 
+            onClick={handleConfirm} 
+            disabled={!dateRange?.from || !dateRange?.to || !location || estimate?.isBlocked}
+          >
             <Play className="mr-2 h-4 w-4" />
             Run Simulation
           </Button>
