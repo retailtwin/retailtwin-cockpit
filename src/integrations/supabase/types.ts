@@ -916,22 +916,39 @@ export type Database = {
         }
         Returns: Json
       }
-      get_top_skus_by_metric: {
-        Args: {
-          p_end_date?: string
-          p_limit?: number
-          p_location_code: string
-          p_metric: string
-          p_start_date?: string
-        }
-        Returns: {
-          avg_inventory: number
-          metric_value: number
-          sku: string
-          sku_name: string
-          units_sold: number
-        }[]
-      }
+      get_top_skus_by_metric:
+        | {
+            Args: {
+              p_end_date?: string
+              p_limit?: number
+              p_location_code: string
+              p_metric?: string
+              p_start_date?: string
+            }
+            Returns: {
+              avg_inventory: number
+              metric_value: number
+              sku: string
+              sku_name: string
+              units_sold: number
+            }[]
+          }
+        | {
+            Args: {
+              p_end_date?: string
+              p_limit?: number
+              p_location_code: string
+              p_metric: string
+              p_start_date?: string
+            }
+            Returns: {
+              avg_inventory: number
+              metric_value: number
+              sku: string
+              sku_name: string
+              units_sold: number
+            }[]
+          }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

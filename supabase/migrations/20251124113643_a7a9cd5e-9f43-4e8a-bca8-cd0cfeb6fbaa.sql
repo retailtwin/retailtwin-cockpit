@@ -1,0 +1,77 @@
+-- Enhance get_top_skus_by_metric to support RIV and cash_impact metrics
+CREATE OR REPLACE FUNCTION get_top_skus_by_metric(
+  p_location_code TEXT,
+  p_metric TEXT DEFAULT 'sales',
+  p_start_date TEXT DEFAULT NULL,
+  p_end_date TEXT DEFAULT NULL,
+  p_limit INTEGER DEFAULT 10
+)
+RETURNS TABLE (
+  sku TEXT,
+  sku_name TEXT,
+  metric_value NUMERIC,
+  units_sold NUMERIC,
+  avg_inventory NUMERIC
+) AS $$
+DECLARE
+  v_start_date DATE;
+  v_end_date DATE;
+BEGIN
+  -- Get date range
+  SELECT COALESCE(p_start_date::DATE, MIN(d)), COALESCE(p_end_date::DATE, MAX(d))
+  INTO v_start_date, v_end_date
+  FROM fact_daily
+  WHERE location_code = p_location_code;
+
+  RETURN QUERY
+  WITH sku_metrics AS (
+    SELECT 
+      fd.sku,
+      p.name as sku_name,
+      SUM(fd.units_sold) as total_units_sold,
+      AVG(fd.on_hand_units) as avg_on_hand,
+      -- MTV: Missing Throughput Value (stockouts)
+      SUM(CASE WHEN fd.on_hand_units = 0 THEN fd.units_sold * p.unit_price ELSE 0 END) as mtv,
+      -- RIV: Redundant Inventory Value (overstock)
+      SUM(
+        CASE 
+          WHEN fd.on_hand_units > COALESCE(ec.economic_units, fd.on_hand_units) 
+          THEN (fd.on_hand_units - COALESCE(ec.economic_units, fd.on_hand_units)) * p.unit_cost
+          ELSE 0
+        END
+      ) as riv,
+      COUNT(CASE WHEN fd.on_hand_units = 0 AND fd.units_sold > 0 THEN 1 END) as stockout_days,
+      -- Inventory turns
+      CASE 
+        WHEN AVG(fd.on_hand_units) > 0 
+        THEN SUM(fd.units_sold) / AVG(fd.on_hand_units)
+        ELSE 0 
+      END as turns
+    FROM fact_daily fd
+    LEFT JOIN products p ON fd.sku = p.sku
+    LEFT JOIN dbm_calculations ec ON fd.sku = ec.sku 
+      AND fd.location_code = ec.location_code 
+      AND fd.d = ec.calculation_date
+    WHERE fd.location_code = p_location_code
+      AND fd.d BETWEEN v_start_date AND v_end_date
+    GROUP BY fd.sku, p.name, p.unit_price, p.unit_cost
+  )
+  SELECT 
+    sm.sku,
+    sm.sku_name,
+    CASE p_metric
+      WHEN 'sales' THEN sm.total_units_sold
+      WHEN 'stockout_days' THEN sm.stockout_days
+      WHEN 'turns' THEN sm.turns
+      WHEN 'mtv' THEN sm.mtv
+      WHEN 'riv' THEN sm.riv
+      WHEN 'cash_impact' THEN sm.mtv + sm.riv
+      ELSE sm.total_units_sold
+    END as metric_value,
+    sm.total_units_sold,
+    sm.avg_on_hand
+  FROM sku_metrics sm
+  ORDER BY metric_value DESC NULLS LAST
+  LIMIT p_limit;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
