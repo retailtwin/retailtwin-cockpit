@@ -80,10 +80,14 @@ const Dashboard = () => {
 
   // Check admin status and load settings
   useEffect(() => {
-    checkAdminStatus();
-    loadSettings();
-    fetchDataDateRange();
-    loadOptimalScope();
+    const initializeData = async () => {
+      checkAdminStatus();
+      loadSettings();
+      // Load optimal scope first, then fetch boundaries
+      await loadOptimalScope();
+      fetchDataDateRange();
+    };
+    initializeData();
   }, []);
 
   const loadOptimalScope = async () => {
@@ -163,14 +167,7 @@ const Dashboard = () => {
         min: minDate,
         max: maxDate
       });
-      
-      // Auto-set date range to full inventory range if not already set
-      if (!dateRange) {
-        setDateRange({
-          from: minDate,
-          to: maxDate
-        });
-      }
+      // Date range is now set by optimal scope detection
     }
   };
 
