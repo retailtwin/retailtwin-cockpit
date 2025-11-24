@@ -15,7 +15,7 @@ const calculatorSchema = z.object({
     .regex(/^(ALL|[A-Z0-9_-]+)$/, 'Invalid location code format')
     .max(50, 'Location code too long'),
   sku: z.string()
-    .regex(/^(ALL|[A-Z0-9 _-]+)$/, 'Invalid SKU format')
+    .regex(/^(ALL|[A-Za-z0-9 _-]+)$/, 'Invalid SKU format')
     .max(100, 'SKU too long'),
   start_date: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (use YYYY-MM-DD)')
