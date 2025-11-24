@@ -668,6 +668,21 @@ const Dashboard = () => {
                   tooltip="Percentage of demand met without stockouts"
                 />
                 <KPICard
+                  title="Avg Inventory"
+                  value={formatCurrency(
+                    kpiData.turns_current > 0
+                      ? kpiData.tcm / kpiData.turns_current
+                      : 0
+                  )}
+                  delta7d={
+                    kpiData.turns_current > 0 && kpiData.turns_sim > 0
+                      ? (((kpiData.tcm / kpiData.turns_sim) / (kpiData.tcm / kpiData.turns_current) - 1) * 100)
+                      : 0
+                  }
+                  tooltip="Average inventory value (at cost) over the period"
+                  invertColors={true}
+                />
+                <KPICard
                   title="Inventory Turns"
                   value={formatNumber(kpiData.turns_current, 1)}
                   delta7d={
@@ -676,6 +691,7 @@ const Dashboard = () => {
                       : 0
                   }
                   tooltip="How many times inventory is sold and replaced over the period"
+                  invertColors={true}
                 />
                 <KPICard
                   title="Days to Cash"
@@ -730,6 +746,8 @@ const Dashboard = () => {
                     100
                   : 0
               }
+              turnsCurrent={kpiData.turns_current}
+              turnsSim={kpiData.turns_sim}
               onAskArchie={handleAskArchie}
               onViewParetoReport={handleViewParetoReport}
             />

@@ -11,6 +11,8 @@ interface ConsultativeInsightsProps {
   stockoutReduction: number;
   onAskArchie?: (prompt: string) => void;
   onViewParetoReport?: () => void;
+  turnsCurrent?: number;
+  turnsSim?: number;
 }
 
 export const ConsultativeInsights = ({ 
@@ -19,10 +21,17 @@ export const ConsultativeInsights = ({
   turnsImprovement, 
   stockoutReduction,
   onAskArchie,
-  onViewParetoReport = () => {}
+  onViewParetoReport = () => {},
+  turnsCurrent = 0,
+  turnsSim = 0,
 }: ConsultativeInsightsProps) => {
   // Parse cash gap value (remove € and K, convert to number)
   const cashGapValue = parseFloat(cashGap.replace(/[€K,]/g, '')) * (cashGap.includes('K') ? 1000 : 1);
+  
+  // Calculate average inventory change (inverse of turns change)
+  const avgInventoryChange = turnsCurrent > 0 && turnsSim > 0 
+    ? ((turnsCurrent / turnsSim - 1) * 100) 
+    : 0;
   
   // Determine if we should show "Ask Archie" button
   const showAskArchie = cashGapValue > 1000 || stockoutReduction > 20 || turnsImprovement > 10;
@@ -53,16 +62,17 @@ export const ConsultativeInsights = ({
         <Alert className="border-success/50 bg-success/10">
           <TrendingUp className="h-4 w-4 text-success" />
           <AlertDescription className="text-sm">
-            <strong>Operational Improvement:</strong> Optimized buffers improve inventory turns by {turnsImprovement.toFixed(1)}% 
-            and service level by {serviceLevelGain.toFixed(1)}%. Stockout reduction of {stockoutReduction.toFixed(0)}% 
-            accelerates cash conversion and maintains availability.
+            <strong>Operational Improvement:</strong> {turnsImprovement < 0 
+              ? `Optimal buffers reduce inventory turns from ${turnsCurrent.toFixed(1)} to ${turnsSim.toFixed(1)}, as the average inventory level increases by ${avgInventoryChange.toFixed(1)}%, while improving service level by ${serviceLevelGain.toFixed(1)}%. Stockout reduction of ${stockoutReduction.toFixed(0)}% accelerates cash conversion and maintains availability.`
+              : `Optimized buffers improve inventory turns from ${turnsCurrent.toFixed(1)} to ${turnsSim.toFixed(1)} and service level by ${serviceLevelGain.toFixed(1)}%. Stockout reduction of ${stockoutReduction.toFixed(0)}% accelerates cash conversion and maintains availability.`
+            }
           </AlertDescription>
         </Alert>
 
         <Alert className="border-destructive/50 bg-destructive/10">
           <AlertTriangle className="h-4 w-4 text-destructive" />
           <AlertDescription className="text-sm">
-            <strong>Cash Gap Analysis ({cashGap}):</strong> Current inventory policy creates a dual loss: 
+            <strong>Cash Gap Analysis ({cashGap}):</strong> For the selected scope, current inventory policy creates a dual loss: 
             Missed Throughput Value from stockouts and Redundant Inventory Value from excess stock. 
             Primary sources include slow-moving SKUs with excessive buffer days and high-demand items with inadequate coverage.
           </AlertDescription>
