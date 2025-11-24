@@ -151,24 +151,42 @@ serve(async (req) => {
 
     console.log('Settings loaded:', settings);
 
-    // Fetch data using RPC function that has access to aifo schema
-    const { data, error } = await supabase.rpc('get_fact_daily_raw', {
-      p_location_code: location_code,
-      p_sku: sku,
-      p_start_date: start_date,
-      p_end_date: end_date
-    });
-    
-    if (error) {
-      console.error('Error fetching fact_daily:', error);
-      throw error;
+    // Fetch data using RPC function with pagination to handle large datasets
+    const pageSize = 1000;
+    let from = 0;
+    let allRows: any[] = [];
+
+    console.log('Starting paginated fetch...');
+    while (true) {
+      const { data: page, error: pageError } = await supabase
+        .rpc('get_fact_daily_raw', {
+          p_location_code: location_code,
+          p_sku: sku,
+          p_start_date: start_date,
+          p_end_date: end_date,
+        })
+        .range(from, from + pageSize - 1);
+
+      if (pageError) {
+        console.error('Error fetching fact_daily page:', { from, pageSize, pageError });
+        throw pageError;
+      }
+
+      if (!page || page.length === 0) break;
+
+      allRows = allRows.concat(page);
+      console.log(`Fetched page: ${from} to ${from + page.length - 1}, total so far: ${allRows.length}`);
+
+      if (page.length < pageSize) break; // last page
+
+      from += pageSize;
     }
 
-    console.log(`Processing ${data?.length || 0} records`);
+    console.log(`Processing ${allRows.length} records`);
 
     // Organize data by SKU-Location and calculate rolling averages
     const salesBySkuLoc = new Map<string, any[]>();
-    (data || []).forEach((row: any) => {
+    allRows.forEach((row: any) => {
       const key = `${row.location_code}_${row.sku}`;
       if (!salesBySkuLoc.has(key)) {
         salesBySkuLoc.set(key, []);
