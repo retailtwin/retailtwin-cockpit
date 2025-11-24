@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Download, FileText, AlertCircle, CheckCircle, Info, AlertTriangle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Upload, Download, FileText, AlertCircle, CheckCircle, Info, AlertTriangle, Loader2, CheckCircle2 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
@@ -50,18 +50,13 @@ export default function DataImport() {
     inventory: null,
   });
 
-  const [uploadedFiles, setUploadedFiles] = useState<Record<ImportType, boolean>>({
-    locations: false,
-    products: false,
-    sales: false,
-    inventory: false,
-  });
+  const [batchUploading, setBatchUploading] = useState(false);
 
-  const [processingStatus, setProcessingStatus] = useState<Record<ImportType, 'idle' | 'uploading' | 'processing' | 'complete'>>({
-    locations: 'idle',
-    products: 'idle',
-    sales: 'idle',
-    inventory: 'idle',
+  const [uploadProgress, setUploadProgress] = useState<Record<ImportType, 'pending' | 'uploading' | 'processing' | 'complete' | 'error'>>({
+    locations: 'pending',
+    products: 'pending',
+    sales: 'pending',
+    inventory: 'pending',
   });
 
   const [existingFilenames, setExistingFilenames] = useState<Record<ImportType, string | null>>({
@@ -230,10 +225,7 @@ export default function DataImport() {
     }
   };
 
-  const pollDatasetUntilComplete = async (
-    datasetId: string,
-    type: ImportType
-  ) => {
+  const pollDatasetUntilComplete = async (datasetId: string) => {
     const pollIntervalMs = 5000;
     const maxAttempts = 60;
 
@@ -248,21 +240,18 @@ export default function DataImport() {
         console.error("Error polling dataset status:", error);
       } else if (data) {
         if (data.status === "active") {
-          setProcessingStatus(prev => ({ ...prev, [type]: "complete" }));
           toast({
             title: "Processing complete",
-            description: `${type} file processed successfully.`,
+            description: "All files processed successfully.",
           });
-
           await ensureUserHasDataset();
           return;
         }
 
         if (data.status === "error") {
-          setProcessingStatus(prev => ({ ...prev, [type]: "idle" }));
           toast({
             title: "Processing failed",
-            description: data.error_message || "There was an error processing the file.",
+            description: data.error_message || "There was an error processing the files.",
             variant: "destructive",
           });
           return;
@@ -272,18 +261,18 @@ export default function DataImport() {
       await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
     }
 
-    setProcessingStatus(prev => ({ ...prev, [type]: "idle" }));
     toast({
       title: "Processing is taking longer than expected",
-      description: "The file is still being processed. Please check back later.",
+      description: "The files are still being processed. Please check back later.",
     });
   };
 
-  const handleUploadAndProcess = async (fileType: ImportType) => {
-    if (!selectedFiles[fileType]) {
+  const handleBatchUploadAndProcess = async () => {
+    const allFiles = Object.values(selectedFiles).every(f => f !== null);
+    if (!allFiles) {
       toast({
-        title: "No file selected",
-        description: `Please select a ${fileType} file first`,
+        title: "Missing files",
+        description: "Please select all 4 files before processing",
         variant: "destructive",
       });
       return;
@@ -298,70 +287,101 @@ export default function DataImport() {
       return;
     }
 
-    setProcessingStatus(prev => ({ ...prev, [fileType]: 'uploading' }));
-
+    setBatchUploading(true);
+    const fileTypes: ImportType[] = ['locations', 'products', 'sales', 'inventory'];
+    
     try {
-      const file = selectedFiles[fileType];
-      const fileName = `${fileType}_${Date.now()}.csv`;
-      const filePath = `${datasetId}/${fileType}/${fileName}`;
+      // Step 1: Upload all files to storage
+      const uploadedPaths: Record<ImportType, string> = {} as any;
+      
+      for (const fileType of fileTypes) {
+        const file = selectedFiles[fileType];
+        if (!file) continue;
 
-      const { error: uploadError } = await supabase.storage
-        .from('dataset-files')
-        .upload(filePath, file!, {
-          upsert: true
-        });
+        setUploadProgress(prev => ({ ...prev, [fileType]: 'uploading' }));
+        
+        const fileName = `${fileType}_${Date.now()}.csv`;
+        const filePath = `${datasetId}/${fileType}/${fileName}`;
 
-      if (uploadError) throw uploadError;
+        const { error: uploadError } = await supabase.storage
+          .from('dataset-files')
+          .upload(filePath, file, {
+            upsert: true
+          });
 
-      const { data: updateData, error: updateError } = await supabase
+        if (uploadError) throw new Error(`Failed to upload ${fileType}: ${uploadError.message}`);
+        
+        uploadedPaths[fileType] = filePath;
+        toast({ description: `${fileType} uploaded` });
+      }
+
+      // Step 2: Update dataset record with all file paths
+      const { error: updateError } = await supabase
         .from('datasets')
         .update({
-          [`${fileType}_filename`]: fileName,
+          locations_filename: uploadedPaths.locations,
+          products_filename: uploadedPaths.products,
+          sales_filename: uploadedPaths.sales,
+          inventory_filename: uploadedPaths.inventory,
           status: 'processing',
           last_updated: new Date().toISOString(),
         })
-        .eq('id', datasetId)
-        .select()
-        .single();
+        .eq('id', datasetId);
 
       if (updateError) throw updateError;
-      
-      if (updateData) {
-        setDataset(updateData);
-        updateExistingFilenames(updateData);
-      }
 
-      setUploadedFiles(prev => ({ ...prev, [fileType]: true }));
-      setProcessingStatus(prev => ({ ...prev, [fileType]: 'processing' }));
+      // Step 3: Trigger processing for each file type
+      for (const fileType of fileTypes) {
+        setUploadProgress(prev => ({ ...prev, [fileType]: 'processing' }));
+        
+        const { error: functionError } = await supabase.functions.invoke(
+          'process-dataset-upload',
+          {
+            body: {
+              datasetId: datasetId,
+              fileType: fileType,
+            },
+          }
+        );
 
-      const { data: functionData, error: functionError } = await supabase.functions.invoke(
-        'process-dataset-upload',
-        {
-          body: {
-            datasetId: datasetId,
-            fileType: fileType,
-          },
+        if (functionError) {
+          console.error(`Processing error for ${fileType}:`, functionError);
+          setUploadProgress(prev => ({ ...prev, [fileType]: 'error' }));
+          toast({
+            description: `${fileType} processing failed`,
+            variant: "destructive",
+          });
         }
-      );
-
-      if (functionError) throw functionError;
+      }
 
       toast({
         title: "Processing started",
-        description: `Your ${fileType} file is being processed`,
+        description: "All files uploaded and processing started",
       });
 
-      pollDatasetUntilComplete(datasetId, fileType);
-      ensureUserHasDataset();
+      // Step 4: Poll for completion
+      await pollDatasetUntilComplete(datasetId);
+      
+      // Refresh dataset info
+      await ensureUserHasDataset();
+      
+      // Mark all as complete
+      setUploadProgress({
+        locations: 'complete',
+        products: 'complete',
+        sales: 'complete',
+        inventory: 'complete',
+      });
 
     } catch (error: any) {
-      console.error(`Error uploading ${fileType}:`, error);
-      setProcessingStatus(prev => ({ ...prev, [fileType]: 'idle' }));
+      console.error("Batch upload error:", error);
       toast({
-        title: "Error",
-        description: error.message || `Failed to upload ${fileType} file`,
+        title: "Upload failed",
+        description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setBatchUploading(false);
     }
   };
 
@@ -496,156 +516,209 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
         </CollapsibleContent>
       </Collapsible>
 
-      {dataset && (
+      <div className="space-y-8">
+        {/* Dataset Information */}
         <Card>
           <CardHeader>
-            <CardTitle>Dataset</CardTitle>
+            <CardTitle>Dataset Information</CardTitle>
+            <CardDescription>
+              Your active dataset for all data imports
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <Label className="text-muted-foreground">Created</Label>
-                <div>{format(new Date(dataset.created_at), 'MMM d, yyyy')}</div>
+            {dataset ? (
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Status:</span>
+                  <span className="font-medium capitalize">{dataset.status}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Records:</span>
+                  <span className="font-medium">
+                    {(dataset.total_locations || 0) + 
+                     (dataset.total_products || 0) + 
+                     (dataset.total_sales_records || 0) + 
+                     (dataset.total_inventory_records || 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Last Updated:</span>
+                  <span className="font-medium">
+                    {dataset.last_updated 
+                      ? format(new Date(dataset.last_updated), 'MMM d, yyyy') 
+                      : 'Never'}
+                  </span>
+                </div>
               </div>
-              <div>
-                <Label className="text-muted-foreground">Last Updated</Label>
-                <div>{format(new Date(dataset.last_updated), 'MMM d, yyyy')}</div>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Status</Label>
-                <div><Badge>{dataset.status}</Badge></div>
-              </div>
-            </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Loading dataset...</p>
+            )}
           </CardContent>
         </Card>
-      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {(['locations', 'products', 'sales', 'inventory'] as ImportType[]).map((type) => (
-          <Card key={type} className="relative">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </CardTitle>
-              <CardDescription>
-                Manage your {type} data
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Warning:</strong> Uploading a new file will replace ALL existing {type} data.
-                </AlertDescription>
-              </Alert>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => downloadTemplate(type)}
-                className="w-full"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download Template
-              </Button>
-
-              {existingFilenames[type] && (
-                <div className="p-3 bg-muted rounded-md">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium mb-1">Current File</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {existingFilenames[type]?.split('/').pop()}
-                      </p>
-                    </div>
+        {/* File Selection Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Select Files to Upload</CardTitle>
+            <CardDescription>
+              Select all 4 required CSV files, then process them together. This will replace all existing data.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(['locations', 'products', 'sales', 'inventory'] as ImportType[]).map(
+              (fileType) => (
+                <div key={fileType} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    {selectedFiles[fileType] ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                    )}
+                    <span className="font-medium capitalize">{fileType}</span>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Input
+                      type="file"
+                      accept=".csv"
+                      onChange={(e) => handleFileSelect(fileType, e.target.files?.[0] || null)}
+                      className="flex-1"
+                      disabled={batchUploading}
+                    />
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        if (existingFilenames[type]) {
-                          const fullPath = `${datasetId}/${type}/${existingFilenames[type]}`;
-                          downloadFile(fullPath, type);
-                        }
-                      }}
+                      onClick={() => downloadTemplate(fileType)}
                     >
-                      <Download className="h-4 w-4" />
+                      <Download className="h-4 w-4 mr-2" />
+                      Template
                     </Button>
                   </div>
-                </div>
-              )}
 
-              <div className="space-y-2">
-                <Input
-                  type="file"
-                  accept=".csv"
-                  onChange={(e) => handleFileSelect(type, e.target.files?.[0] || null)}
-                  disabled={processingStatus[type] === 'uploading' || processingStatus[type] === 'processing'}
-                  className="cursor-pointer"
-                />
-                {selectedFiles[type] && (
-                  <p className="text-sm text-muted-foreground">
-                    Selected: {selectedFiles[type]?.name}
-                  </p>
-                )}
-              </div>
-
-              {csvPreviews[type] && (
-                <Alert className={csvPreviews[type]?.isValid ? "border-green-600/20 bg-green-600/5" : ""}>
-                  {csvPreviews[type]?.isValid ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4" />
-                  )}
-                  <AlertDescription>
-                    <p className="text-sm font-medium mb-1">
-                      {csvPreviews[type]?.isValid ? 'Valid CSV Format ✓' : 'Invalid Format'}
+                  {selectedFiles[fileType] && (
+                    <p className="text-sm text-muted-foreground">
+                      ✓ {selectedFiles[fileType]!.name} ready to upload
                     </p>
-                    {csvPreviews[type]?.error && (
-                      <p className="text-xs text-muted-foreground">{csvPreviews[type]?.error}</p>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              )}
+                  )}
 
+                  {/* CSV Preview */}
+                  {csvPreviews[fileType] && (
+                    <div className="border rounded-md p-4">
+                      <h4 className="text-sm font-medium mb-2">Preview</h4>
+                      {!csvPreviews[fileType]?.isValid && (
+                        <Alert variant="destructive" className="mb-2">
+                          <AlertTitle>Invalid CSV Format</AlertTitle>
+                          <AlertDescription>
+                            {csvPreviews[fileType]?.error}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      <div className="overflow-auto max-h-64">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              {csvPreviews[fileType]!.headers.map((header, i) => (
+                                <th key={i} className="text-left p-2 font-medium">
+                                  {header}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {csvPreviews[fileType]!.rows.slice(0, 3).map((row, i) => (
+                              <tr key={i} className="border-b">
+                                {row.map((cell, j) => (
+                                  <td key={j} className="p-2">
+                                    {cell}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            )}
+
+            {/* Batch Upload Button */}
+            <div className="pt-4">
               <Button
-                onClick={() => handleUploadAndProcess(type)}
-                disabled={
-                  !selectedFiles[type] ||
-                  !csvPreviews[type]?.isValid ||
-                  processingStatus[type] === 'uploading' ||
-                  processingStatus[type] === 'processing'
-                }
+                onClick={handleBatchUploadAndProcess}
+                disabled={!Object.values(selectedFiles).every(f => f !== null) || batchUploading}
                 className="w-full"
+                size="lg"
               >
-                {processingStatus[type] === 'uploading' && (
+                {batchUploading ? (
                   <>
-                    <Upload className="mr-2 h-4 w-4 animate-pulse" />
-                    Uploading...
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Processing All Files...
                   </>
-                )}
-                {processingStatus[type] === 'processing' && (
+                ) : (
                   <>
-                    <Upload className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                )}
-                {processingStatus[type] === 'complete' && (
-                  <>
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Complete
-                  </>
-                )}
-                {processingStatus[type] === 'idle' && (
-                  <>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Upload & Process
+                    <Upload className="mr-2 h-5 w-5" />
+                    Upload & Process All Data
                   </>
                 )}
               </Button>
+            </div>
+
+            {/* Data Replacement Warning */}
+            {Object.values(selectedFiles).some(f => f !== null) && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Data Replacement Warning</AlertTitle>
+                <AlertDescription>
+                  Processing will completely replace all existing data in your dataset with the new files.
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Processing Progress */}
+        {batchUploading && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Processing Progress</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {(['locations', 'products', 'sales', 'inventory'] as ImportType[]).map(
+                  (fileType) => (
+                    <div key={fileType} className="flex items-center gap-3">
+                      {uploadProgress[fileType] === 'pending' && (
+                        <div className="h-4 w-4 rounded-full border-2 border-muted" />
+                      )}
+                      {uploadProgress[fileType] === 'uploading' && (
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                      )}
+                      {uploadProgress[fileType] === 'processing' && (
+                        <Loader2 className="h-4 w-4 animate-spin text-orange-600" />
+                      )}
+                      {uploadProgress[fileType] === 'complete' && (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      )}
+                      {uploadProgress[fileType] === 'error' && (
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                      )}
+                      <span className="capitalize font-medium">{fileType}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {uploadProgress[fileType] === 'pending' && 'Waiting...'}
+                        {uploadProgress[fileType] === 'uploading' && 'Uploading...'}
+                        {uploadProgress[fileType] === 'processing' && 'Processing...'}
+                        {uploadProgress[fileType] === 'complete' && 'Complete'}
+                        {uploadProgress[fileType] === 'error' && 'Failed'}
+                      </span>
+                    </div>
+                  )
+                )}
+              </div>
             </CardContent>
           </Card>
-        ))}
+        )}
       </div>
     </div>
   );
