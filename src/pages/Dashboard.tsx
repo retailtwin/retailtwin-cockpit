@@ -66,6 +66,7 @@ const Dashboard = () => {
   const [dataDateRange, setDataDateRange] = useState<{min: Date, max: Date} | null>(null);
   const [simulationConfigOpen, setSimulationConfigOpen] = useState(false);
   const [simulationScope, setSimulationScope] = useState<SimulationConfig | null>(null);
+  const [simulationStatus, setSimulationStatus] = useState<'idle' | 'running' | 'polling' | 'complete'>('idle');
 
   // Check admin status and load settings
   useEffect(() => {
@@ -279,6 +280,7 @@ const Dashboard = () => {
   const runDBMAnalysis = async (config?: SimulationConfig) => {
     setIsRunningDBM(true);
     setSimulationResult(null);
+    setSimulationStatus('running');
     
     // Use config if provided, otherwise use current filters
     const scopeConfig = config || {
@@ -313,8 +315,18 @@ const Dashboard = () => {
         throw new Error("No data found for selected filters");
       }
 
-      // Call the dbm-calculator Edge Function using scope config
-      const { data: result, error: calcError } = await supabase.functions.invoke('dbm-calculator', {
+      // Show initial toast
+      toast({
+        title: "Simulation Started",
+        description: `Processing ${rawData.length} records using ${scopeConfig.preset}...`,
+      });
+
+      // Call the dbm-calculator Edge Function - don't wait too long
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), 25000)
+      );
+      
+      const functionPromise = supabase.functions.invoke('dbm-calculator', {
         body: {
           location_code: scopeConfig.location,
           sku: skuParam,
@@ -323,43 +335,143 @@ const Dashboard = () => {
         }
       });
 
-      if (calcError) throw calcError;
+      let result: any = null;
+      let timedOut = false;
 
-      setSimulationResult(result);
-      
-      // Extract and store statistics
-      if (result?.summary) {
-        setSimulationStats({
-          totalSkus: result.summary.totalSkus || 0,
-          processedSkus: result.summary.skuWithSales || result.summary.processed || 0,
-          zeroSalesSkus: result.summary.zeroSalesSkus || 0,
-          noInventorySkus: result.summary.noInventorySkus || 0,
-        });
+      try {
+        const { data, error } = await Promise.race([functionPromise, timeoutPromise]) as any;
+        if (error) throw error;
+        result = data;
+      } catch (error: any) {
+        if (error.message === 'timeout') {
+          timedOut = true;
+          console.log("Edge function timed out, starting background polling...");
+        } else {
+          throw error;
+        }
       }
 
-      const processedCount = result?.summary?.processed ?? rawData.length;
-      toast({
-        title: "DBM Simulation Complete!",
-        description: `Processed ${processedCount} records using ${scopeConfig.preset}. Filtered out ${result?.summary?.zeroSalesSkus || 0} zero-sales SKUs.`,
-        duration: 5000,
-      });
+      // If we got a result immediately, process it
+      if (result && !timedOut) {
+        setSimulationResult(result);
+        
+        if (result?.summary) {
+          setSimulationStats({
+            totalSkus: result.summary.totalSkus || 0,
+            processedSkus: result.summary.skuWithSales || result.summary.processed || 0,
+            zeroSalesSkus: result.summary.zeroSalesSkus || 0,
+            noInventorySkus: result.summary.noInventorySkus || 0,
+          });
+        }
 
-      // Reload data
-      const [kpi, facts] = await Promise.all([
-        fetchKPIData(selectedLocation, selectedProduct, startDate, endDate),
-        fetchFactDaily(selectedLocation, selectedProduct, startDate, endDate),
-      ]);
-      setKpiData(kpi);
-      setFactDaily(facts);
+        const processedCount = result?.summary?.processed ?? rawData.length;
+        toast({
+          title: "Simulation Complete!",
+          description: `Processed ${processedCount} records. Filtered out ${result?.summary?.zeroSalesSkus || 0} zero-sales SKUs.`,
+          duration: 5000,
+        });
+
+        setSimulationStatus('complete');
+
+        // Reload data
+        const [kpi, facts] = await Promise.all([
+          fetchKPIData(selectedLocation, selectedProduct, startDate, endDate),
+          fetchFactDaily(selectedLocation, selectedProduct, startDate, endDate),
+        ]);
+        setKpiData(kpi);
+        setFactDaily(facts);
+        setIsRunningDBM(false);
+        
+      } else {
+        // Function timed out, poll for results
+        setSimulationStatus('polling');
+        toast({
+          title: "Simulation Running",
+          description: "Processing in background. Checking for results...",
+        });
+
+        // Poll for updated records
+        let pollAttempts = 0;
+        const maxAttempts = 15; // 15 attempts × 2 seconds = 30 seconds max
+        
+        const pollInterval = setInterval(async () => {
+          pollAttempts++;
+          
+          try {
+            // Check if economic_units have been updated (indicator that simulation ran)
+            const { data: updatedData, error: pollError } = await supabase.rpc('get_fact_daily_raw', {
+              p_location_code: scopeConfig.location,
+              p_sku: skuParam,
+              p_start_date: startDate,
+              p_end_date: endDate
+            });
+
+            if (pollError) throw pollError;
+
+            // Check if any records have economic_units calculated
+            const hasResults = updatedData?.some((row: any) => 
+              row.economic_units !== null && row.economic_units > 0
+            );
+
+            if (hasResults) {
+              clearInterval(pollInterval);
+              
+              const recordsWithEconomic = updatedData?.filter((row: any) => 
+                row.economic_units !== null && row.economic_units > 0
+              ).length || 0;
+
+              toast({
+                title: "Simulation Complete!",
+                description: `Successfully processed ${recordsWithEconomic} records with DBM calculations.`,
+                duration: 5000,
+              });
+
+              setSimulationStatus('complete');
+
+              // Reload data to show updated values
+              const [kpi, facts] = await Promise.all([
+                fetchKPIData(selectedLocation, selectedProduct, startDate, endDate),
+                fetchFactDaily(selectedLocation, selectedProduct, startDate, endDate),
+              ]);
+              setKpiData(kpi);
+              setFactDaily(facts);
+              setIsRunningDBM(false);
+            } else if (pollAttempts >= maxAttempts) {
+              clearInterval(pollInterval);
+              
+              toast({
+                title: "Simulation Timeout",
+                description: "Simulation is taking longer than expected. Please refresh the page in a moment to see results.",
+                variant: "destructive",
+              });
+              
+              setSimulationStatus('idle');
+              setIsRunningDBM(false);
+            }
+          } catch (pollError: any) {
+            console.error("Polling error:", pollError);
+            clearInterval(pollInterval);
+            
+            toast({
+              title: "Polling Error",
+              description: "Failed to check simulation status. Please refresh the page.",
+              variant: "destructive",
+            });
+            
+            setSimulationStatus('idle');
+            setIsRunningDBM(false);
+          }
+        }, 2000); // Poll every 2 seconds
+      }
 
     } catch (error: any) {
       console.error("DBM Simulation Error:", error);
+      setSimulationStatus('idle');
       toast({
         title: "Simulation Failed",
         description: error.message || "Failed to run DBM simulation",
         variant: "destructive",
       });
-    } finally {
       setIsRunningDBM(false);
     }
   };
@@ -601,6 +713,7 @@ const Dashboard = () => {
                 productionLeadTime={productionLeadTime}
                 shippingLeadTime={shippingLeadTime}
                 orderDays={orderDays}
+                simulationStatus={simulationStatus}
               />
               
               <div className="flex justify-end gap-2">
