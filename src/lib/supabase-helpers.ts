@@ -322,49 +322,33 @@ export async function getContiguousValidDateRange(
     return null;
   }
   
-  // Find inventory bounds (first and last date with inventory > 0)
-  const inventoryDates = data
-    .filter((row: any) => row.on_hand_units > 0)
-    .map((row: any) => row.d)
-    .sort();
+  // Aggregate by date: sum inventory and sales per day across all SKUs
+  const dailyAggregates = data.reduce((acc: any, row: any) => {
+    if (!acc[row.d]) {
+      acc[row.d] = { totalInventory: 0, totalSales: 0 };
+    }
+    acc[row.d].totalInventory += row.on_hand_units || 0;
+    acc[row.d].totalSales += row.units_sold || 0;
+    return acc;
+  }, {});
   
-  // Find sales bounds (first and last date with sales > 0)
-  const salesDates = data
-    .filter((row: any) => row.units_sold > 0)
-    .map((row: any) => row.d)
-    .sort();
-  
-  if (inventoryDates.length === 0 || salesDates.length === 0) {
-    console.error('No dates found with inventory or sales');
-    return null;
-  }
-  
-  // Calculate intersection: latest start date and earliest end date
-  const firstInventoryDate = inventoryDates[0];
-  const lastInventoryDate = inventoryDates[inventoryDates.length - 1];
-  const firstSalesDate = salesDates[0];
-  const lastSalesDate = salesDates[salesDates.length - 1];
-  
-  const startDate = firstInventoryDate > firstSalesDate ? firstInventoryDate : firstSalesDate;
-  const endDate = lastInventoryDate < lastSalesDate ? lastInventoryDate : lastSalesDate;
-  
-  // Verify we have a valid range
-  if (startDate > endDate) {
-    console.error('No overlapping date range between inventory and sales');
-    return null;
-  }
-  
-  // Within this range, find dates with BOTH sales AND inventory
-  const validDatesArray = data
-    .filter((row: any) => 
-      row.d >= startDate && 
-      row.d <= endDate && 
-      row.on_hand_units > 0 && 
-      row.units_sold > 0
+  // Filter to dates where BOTH aggregate inventory > 0 AND aggregate sales > 0
+  // This means: on this day, ANY SKU had inventory AND ANY SKU had sales
+  const validDatesArray = Object.entries(dailyAggregates)
+    .filter(([date, metrics]: [string, any]) => 
+      metrics.totalInventory > 0 && metrics.totalSales > 0
     )
-    .map((row: any) => row.d)
-    .filter((date: string, index: number, self: string[]) => self.indexOf(date) === index) // unique dates
+    .map(([date]) => date)
     .sort();
+  
+  if (validDatesArray.length === 0) {
+    console.error('No dates found with both aggregate inventory and sales');
+    return null;
+  }
+  
+  // Get first and last valid dates
+  const startDate = validDatesArray[0];
+  const endDate = validDatesArray[validDatesArray.length - 1];
   
   const validDatesSet: Set<string> = new Set(validDatesArray);
   
