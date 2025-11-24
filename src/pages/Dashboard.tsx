@@ -283,7 +283,7 @@ const Dashboard = () => {
     // Use config if provided, otherwise use current filters
     const scopeConfig = config || {
       location: selectedLocation,
-      product: selectedProduct,
+      productSKUs: selectedProduct === 'ALL' ? 'ALL' : [selectedProduct],
       dateRange: dateRange || { from: dataDateRange?.min, to: dataDateRange?.max },
       preset: "Current Filters"
     };
@@ -296,10 +296,13 @@ const Dashboard = () => {
         ? format(scopeConfig.dateRange.to, "yyyy-MM-dd")
         : (dataDateRange ? format(dataDateRange.max, "yyyy-MM-dd") : "2023-12-31");
 
+      // Determine SKU parameter for RPC call
+      const skuParam = scopeConfig.productSKUs === 'ALL' ? 'ALL' : scopeConfig.productSKUs[0] || 'ALL';
+
       // Fetch raw fact_daily data using scope config
       const { data: rawData, error: fetchError } = await supabase.rpc('get_fact_daily_raw', {
         p_location_code: scopeConfig.location,
-        p_sku: scopeConfig.product,
+        p_sku: skuParam,
         p_start_date: startDate,
         p_end_date: endDate
       });
@@ -314,7 +317,7 @@ const Dashboard = () => {
       const { data: result, error: calcError } = await supabase.functions.invoke('dbm-calculator', {
         body: {
           location_code: scopeConfig.location,
-          sku: scopeConfig.product,
+          sku: skuParam,
           start_date: startDate,
           end_date: endDate
         }
@@ -655,7 +658,9 @@ const Dashboard = () => {
                           <> • {format(simulationScope.dateRange.from, "MMM d")} - {format(simulationScope.dateRange.to, "MMM d, yyyy")}</>
                         )}
                         {simulationScope.location !== "ALL" && <> • {simulationScope.location}</>}
-                        {simulationScope.product !== "ALL" && <> • {simulationScope.product}</>}
+                        {simulationScope.productSKUs !== "ALL" && simulationScope.productSKUs.length > 0 && (
+                          <> • {simulationScope.productSKUs.length} SKU{simulationScope.productSKUs.length > 1 ? 's' : ''}</>
+                        )}
                       </p>
                     )}
                   </div>
@@ -897,14 +902,6 @@ const Dashboard = () => {
         open={simulationConfigOpen}
         onOpenChange={setSimulationConfigOpen}
         onConfirm={handleSimulationConfirm}
-        locations={locations}
-        products={products}
-        dataDateRange={dataDateRange}
-        currentFilters={{
-          location: selectedLocation,
-          product: selectedProduct,
-          dateRange: dateRange,
-        }}
       />
     </Layout>
   );

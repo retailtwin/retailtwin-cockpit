@@ -77,20 +77,6 @@ export default function DataImport() {
     inventory: null,
   });
 
-  const [scopeConfig, setScopeConfig] = useState<{
-    startDate: string;
-    endDate: string;
-    locations: 'ALL' | string[];
-    products: 'ALL' | string[];
-  }>({
-    startDate: '',
-    endDate: '',
-    locations: 'ALL',
-    products: 'ALL',
-  });
-
-  const [showScopeConfig, setShowScopeConfig] = useState(false);
-
   useEffect(() => {
     ensureUserHasDataset();
   }, []);
@@ -503,20 +489,6 @@ export default function DataImport() {
       return;
     }
 
-    // Warn for large date ranges
-    if (scopeConfig.startDate && scopeConfig.endDate) {
-      const start = new Date(scopeConfig.startDate);
-      const end = new Date(scopeConfig.endDate);
-      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (days > 365) {
-        const confirmed = window.confirm(
-          `⚠️ You're about to process ${days} days of data (>1 year). This may take 10+ minutes. Consider starting with 3 months for testing. Continue?`
-        );
-        if (!confirmed) return;
-      }
-    }
-
     setBatchUploading(true);
     const fileTypes: ImportType[] = ['locations', 'products', 'sales', 'inventory'];
     const failedTypes: string[] = [];
@@ -566,7 +538,7 @@ export default function DataImport() {
 
       if (updateError) throw updateError;
 
-      // Step 3: Trigger processing for each file type with scope
+      // Step 3: Trigger processing for each file type
       for (const fileType of fileTypes) {
         setUploadProgress(prev => ({ ...prev, [fileType]: 'processing' }));
         
@@ -576,12 +548,6 @@ export default function DataImport() {
             body: {
               datasetId: datasetId,
               fileType: fileType,
-              scope: {
-                startDate: scopeConfig.startDate || null,
-                endDate: scopeConfig.endDate || null,
-                locations: scopeConfig.locations,
-                products: scopeConfig.products,
-              },
             },
           }
         );
