@@ -23,12 +23,14 @@ import {
   fetchDBMCalculations,
   fetchLocationOrderDays,
   getDataDateRange,
+  findOptimalSimulationScope,
   formatCurrency,
   formatNumber,
   Location,
   Product,
   KPIData,
   FactDaily,
+  OptimalScope,
 } from "@/lib/supabase-helpers";
 import { useToast } from "@/hooks/use-toast";
 import { DateRange } from "react-day-picker";
@@ -73,13 +75,42 @@ const Dashboard = () => {
     daysWithData: number;
     avgDailySales: number;
   } | null>(null);
+  const [optimalScope, setOptimalScope] = useState<OptimalScope | null>(null);
+  const [isLoadingOptimalScope, setIsLoadingOptimalScope] = useState(false);
 
   // Check admin status and load settings
   useEffect(() => {
     checkAdminStatus();
     loadSettings();
     fetchDataDateRange();
+    loadOptimalScope();
   }, []);
+
+  const loadOptimalScope = async () => {
+    setIsLoadingOptimalScope(true);
+    try {
+      const optimal = await findOptimalSimulationScope();
+      if (optimal) {
+        setOptimalScope(optimal);
+        
+        // Auto-select optimal date range and location
+        setDateRange({
+          from: new Date(optimal.dateRange.start),
+          to: new Date(optimal.dateRange.end)
+        });
+        setSelectedLocation(optimal.location);
+        
+        toast({
+          title: "Optimal Scope Auto-Selected",
+          description: `Found best period: ${optimal.metrics.dataCompleteness}% data coverage, ${optimal.metrics.totalSales.toLocaleString()} units sold`,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading optimal scope:", error);
+    } finally {
+      setIsLoadingOptimalScope(false);
+    }
+  };
 
   const checkAdminStatus = async () => {
     try {
@@ -323,6 +354,10 @@ const Dashboard = () => {
       const uniqueSkus = new Set(rawData.map((row: any) => row.sku)).size;
       const daysWithData = new Set(rawData.map((row: any) => row.d)).size;
       const avgDailySales = daysWithData > 0 ? totalSales / daysWithData : 0;
+      
+      // Calculate data completeness
+      const expectedDays = Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
+      const dataCompleteness = expectedDays > 0 ? (daysWithData / expectedDays) * 100 : 0;
 
       setPeriodStats({
         totalSkus: uniqueSkus,
@@ -340,6 +375,20 @@ const Dashboard = () => {
           duration: 10000,
         });
         return false;
+      }
+
+      // Compare with optimal scope if available
+      if (optimalScope) {
+        const qualityDrop = optimalScope.metrics.dataCompleteness - dataCompleteness;
+        const salesDrop = ((optimalScope.metrics.totalSales - totalSales) / optimalScope.metrics.totalSales) * 100;
+        
+        if (qualityDrop > 20 || salesDrop > 50) {
+          toast({
+            title: "Sub-Optimal Period Selected",
+            description: `Current selection has ${dataCompleteness.toFixed(0)}% data quality vs. optimal ${optimalScope.metrics.dataCompleteness}%. Consider using the auto-selected optimal period for best results.`,
+            duration: 8000,
+          });
+        }
       }
 
       // Warn if very low sales
@@ -912,6 +961,47 @@ const Dashboard = () => {
 
           {/* Run Simulation Button */}
           <div className="space-y-4">
+            {/* Optimal Scope Info Panel */}
+            {optimalScope && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    📊 Optimal Scope Auto-Selected
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div>
+                        <div className="text-muted-foreground text-xs">Period</div>
+                        <div className="font-medium">{format(new Date(optimalScope.dateRange.start), "MMM d")} - {format(new Date(optimalScope.dateRange.end), "MMM d, yyyy")}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">Location</div>
+                        <div className="font-medium">{optimalScope.location}</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">Data Quality</div>
+                        <div className="font-medium text-green-600">{optimalScope.metrics.dataCompleteness}% complete</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground text-xs">SKU Overlap</div>
+                        <div className="font-medium text-green-600">{optimalScope.metrics.overlapScore}%</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground text-xs mb-1">Top Products</div>
+                      <div className="font-medium">{optimalScope.topSkus.length} SKUs • {optimalScope.metrics.totalSales.toLocaleString()} units sold</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {optimalScope.topSkus.slice(0, 3).map(s => s.sku).join(', ')}
+                        {optimalScope.topSkus.length > 3 && ` +${optimalScope.topSkus.length - 3} more`}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
             {/* Period Statistics */}
             {periodStats && (
               <Card>
