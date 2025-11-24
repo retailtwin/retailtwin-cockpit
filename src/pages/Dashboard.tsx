@@ -291,6 +291,9 @@ const Dashboard = () => {
     };
     
     try {
+      console.log("=== SIMULATION DEBUG START ===");
+      console.log("Scope config:", scopeConfig);
+      
       const startDate = scopeConfig.dateRange?.from
         ? format(scopeConfig.dateRange.from, "yyyy-MM-dd")
         : (dataDateRange ? format(dataDateRange.min, "yyyy-MM-dd") : "2023-01-01");
@@ -300,14 +303,36 @@ const Dashboard = () => {
 
       // Determine SKU parameter for RPC call
       const skuParam = scopeConfig.productSKUs === 'ALL' ? 'ALL' : scopeConfig.productSKUs[0] || 'ALL';
+      
+      console.log("Parameters:", { 
+        location: scopeConfig.location, 
+        sku: skuParam, 
+        startDate, 
+        endDate 
+      });
+      
+      // Check auth state
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log("User authenticated:", !!user, "User ID:", user?.id);
+      
+      if (user) {
+        const { data: isAdmin } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin'
+        });
+        console.log("Is admin:", isAdmin);
+      }
 
       // Fetch raw fact_daily data using scope config
+      console.log("Fetching raw data via RPC...");
       const { data: rawData, error: fetchError } = await supabase.rpc('get_fact_daily_raw', {
         p_location_code: scopeConfig.location,
         p_sku: skuParam,
         p_start_date: startDate,
         p_end_date: endDate
       });
+
+      console.log("RPC response - Data count:", rawData?.length, "Error:", fetchError);
 
       if (fetchError) throw fetchError;
 
@@ -322,6 +347,7 @@ const Dashboard = () => {
       });
 
       // Call the dbm-calculator Edge Function - don't wait too long
+      console.log("Invoking dbm-calculator edge function...");
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('timeout')), 25000)
       );
@@ -340,6 +366,7 @@ const Dashboard = () => {
 
       try {
         const { data, error } = await Promise.race([functionPromise, timeoutPromise]) as any;
+        console.log("Edge function response - Data:", data, "Error:", error);
         if (error) throw error;
         result = data;
       } catch (error: any) {
@@ -347,6 +374,7 @@ const Dashboard = () => {
           timedOut = true;
           console.log("Edge function timed out, starting background polling...");
         } else {
+          console.error("Edge function error:", error);
           throw error;
         }
       }
@@ -465,7 +493,13 @@ const Dashboard = () => {
       }
 
     } catch (error: any) {
-      console.error("DBM Simulation Error:", error);
+      console.error("=== SIMULATION ERROR ===");
+      console.error("Error type:", error?.constructor?.name);
+      console.error("Error message:", error?.message);
+      console.error("Error details:", error);
+      console.error("Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      console.error("Stack:", error?.stack);
+      
       setSimulationStatus('idle');
       toast({
         title: "Simulation Failed",
@@ -473,6 +507,61 @@ const Dashboard = () => {
         variant: "destructive",
       });
       setIsRunningDBM(false);
+    }
+  };
+
+  // Test function to call edge function directly
+  const testSimulation = async () => {
+    try {
+      console.log("=== TEST: Calling dbm-calculator ===");
+      const { data, error } = await supabase.functions.invoke('dbm-calculator', {
+        body: {
+          location_code: "STORE001",
+          sku: "ALL",
+          start_date: "2022-01-11",
+          end_date: "2022-02-10"
+        }
+      });
+      console.log("TEST: Response data:", data);
+      console.log("TEST: Response error:", error);
+      toast({
+        title: "Test Complete",
+        description: error ? `Error: ${error.message}` : "Check console for results",
+      });
+    } catch (e: any) {
+      console.error("TEST: Exception:", e);
+      toast({
+        title: "Test Failed",
+        description: e.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Test RPC function availability
+  const testRPC = async () => {
+    try {
+      console.log("=== TEST: Calling get_fact_daily_raw RPC ===");
+      const { data, error } = await supabase.rpc('get_fact_daily_raw', {
+        p_location_code: 'STORE001',
+        p_sku: 'ALL',
+        p_start_date: '2022-01-11',
+        p_end_date: '2022-02-10'
+      });
+      console.log("RPC Test - Data count:", data?.length);
+      console.log("RPC Test - First record:", data?.[0]);
+      console.log("RPC Test - Error:", error);
+      toast({
+        title: "RPC Test Complete",
+        description: error ? `Error: ${error.message}` : `Found ${data?.length || 0} records`,
+      });
+    } catch (e: any) {
+      console.error("RPC TEST: Exception:", e);
+      toast({
+        title: "RPC Test Failed",
+        description: e.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -736,25 +825,47 @@ const Dashboard = () => {
           </Card>
 
           {/* Run Simulation Button */}
-          <div className="flex justify-center">
-            <Button
-              onClick={handleOpenSimulationConfig}
-              disabled={isRunningDBM}
-              size="lg"
-              className="gap-2 w-full max-w-md"
-            >
-              {isRunningDBM ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Running Simulation...
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  Configure & Run Simulation
-                </>
-              )}
-            </Button>
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <Button
+                onClick={handleOpenSimulationConfig}
+                disabled={isRunningDBM}
+                size="lg"
+                className="gap-2 w-full max-w-md"
+              >
+                {isRunningDBM ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Running Simulation...
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-4 w-4" />
+                    Configure & Run Simulation
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {/* Diagnostic Test Buttons */}
+            <div className="flex justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={testSimulation}
+                disabled={isRunningDBM}
+              >
+                Test Edge Function
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={testRPC}
+                disabled={isRunningDBM}
+              >
+                Test RPC
+              </Button>
+            </div>
           </div>
 
           {/* Simulation Results Display */}
