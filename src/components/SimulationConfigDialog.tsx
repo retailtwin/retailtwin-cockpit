@@ -26,6 +26,7 @@ interface SimulationConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: (config: SimulationConfig) => void;
+  validDates?: Set<string> | null;
 }
 
 export interface SimulationConfig {
@@ -52,6 +53,7 @@ export const SimulationConfigDialog = ({
   open,
   onOpenChange,
   onConfirm,
+  validDates,
 }: SimulationConfigDialogProps) => {
   const commonScope = useCommonScope();
   const [selectedPreset, setSelectedPreset] = useState<PresetType>("full");
@@ -292,22 +294,36 @@ export const SimulationConfigDialog = ({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="range"
-                  selected={dateRange}
-                  onSelect={(range) => {
-                    setDateRange(range);
-                    setSelectedPreset("custom");
-                  }}
-                  numberOfMonths={2}
-                  defaultMonth={commonScope.dateRange ? new Date(commonScope.dateRange.min) : undefined}
-                  disabled={(date) =>
-                    commonScope.dateRange
-                      ? date < new Date(commonScope.dateRange.min) || date > new Date(commonScope.dateRange.max)
-                      : false
-                  }
-                  className="pointer-events-auto"
-                />
+                <div className="space-y-2">
+                  <CalendarComponent
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={(range) => {
+                      setDateRange(range);
+                      setSelectedPreset("custom");
+                    }}
+                    numberOfMonths={2}
+                    defaultMonth={commonScope.dateRange ? new Date(commonScope.dateRange.min) : undefined}
+                    disabled={(date) => {
+                      // First check date range boundaries
+                      if (commonScope.dateRange) {
+                        if (date < new Date(commonScope.dateRange.min) || date > new Date(commonScope.dateRange.max)) {
+                          return true;
+                        }
+                      }
+                      // Then check if date has valid data
+                      if (!validDates) return false;
+                      const dateStr = format(date, 'yyyy-MM-dd');
+                      return !validDates.has(dateStr);
+                    }}
+                    className="pointer-events-auto"
+                  />
+                  {validDates && (
+                    <p className="text-xs text-muted-foreground text-center px-3 pb-3">
+                      {validDates.size} days available with complete data
+                    </p>
+                  )}
+                </div>
               </PopoverContent>
             </Popover>
           </div>

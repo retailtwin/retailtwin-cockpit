@@ -282,6 +282,37 @@ export interface OptimalScope {
   };
 }
 
+/**
+ * Get valid dates that have both sales and inventory data
+ * Used to disable date picker dates without complete data
+ */
+export async function getValidDates(
+  locationCode?: string,
+  sku?: string
+): Promise<Set<string>> {
+  const { data, error } = await supabase.rpc('get_fact_daily_raw', {
+    p_location_code: locationCode || 'ALL',
+    p_sku: sku || 'ALL',
+    p_start_date: null,
+    p_end_date: null
+  });
+  
+  if (error || !data) {
+    console.error("Error fetching valid dates:", error);
+    return new Set();
+  }
+  
+  // Only include dates with BOTH sales AND inventory
+  const validDates = data
+    .filter((row: any) => 
+      row.on_hand_units > 0 && 
+      row.units_sold > 0
+    )
+    .map((row: any) => row.d);
+  
+  return new Set(validDates);
+}
+
 export async function findOptimalSimulationScope(): Promise<OptimalScope | null> {
   try {
     // Get all locations
