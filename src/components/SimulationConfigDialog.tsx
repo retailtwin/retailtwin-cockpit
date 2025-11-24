@@ -67,6 +67,14 @@ export const SimulationConfigDialog = ({
       setIsLoadingRange(true);
       try {
         const range = await getContiguousValidDateRange(location || undefined, undefined);
+        console.log('🔍 DEBUG - Contiguous Range:', {
+          startDate: range?.startDate,
+          endDate: range?.endDate,
+          validDaysCount: range?.validDaysCount,
+          totalDays: range?.totalDays,
+          completeness: range?.completeness,
+          validDatesSetSize: range?.validDates?.size || 0
+        });
         setContiguousRange(range);
         
         // Initialize location if not set
@@ -284,11 +292,24 @@ export const SimulationConfigDialog = ({
                     selected={dateRange}
                     onSelect={setDateRange}
                     numberOfMonths={2}
-                    defaultMonth={contiguousRange ? new Date(contiguousRange.endDate) : undefined}
+                    defaultMonth={contiguousRange ? (() => {
+                      // Show last 3 months of valid data by default
+                      const end = new Date(contiguousRange.endDate);
+                      const start = new Date(end);
+                      start.setMonth(start.getMonth() - 2); // Go back 2 months to show last 3
+                      return start;
+                    })() : undefined}
                     fromDate={contiguousRange ? new Date(contiguousRange.startDate) : undefined}
                     toDate={contiguousRange ? new Date(contiguousRange.endDate) : undefined}
                     fromMonth={contiguousRange ? new Date(contiguousRange.startDate) : undefined}
-                    toMonth={contiguousRange ? new Date(contiguousRange.endDate) : undefined}
+                    toMonth={contiguousRange ? (() => {
+                      // Restrict navigation to the month before the end date's month
+                      // This prevents showing months beyond the valid range
+                      const endDate = new Date(contiguousRange.endDate);
+                      const lastValidMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+                      lastValidMonth.setMonth(lastValidMonth.getMonth() - 1);
+                      return lastValidMonth;
+                    })() : undefined}
                     disabled={(date) => {
                       if (!contiguousRange) return true;
                       const dateStr = format(date, 'yyyy-MM-dd');
