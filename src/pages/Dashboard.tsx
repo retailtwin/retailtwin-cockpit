@@ -298,9 +298,10 @@ const Dashboard = () => {
 
       setSimulationResult(result);
 
+      const processedCount = result?.summary?.processed ?? rawData.length;
       toast({
         title: "DBM Simulation Complete!",
-        description: `Processed ${rawData.length} records.`,
+        description: `Processed ${processedCount} records.`,
         duration: 5000,
       });
 
@@ -613,19 +614,19 @@ const Dashboard = () => {
                 <div className="flex gap-6 text-sm">
                   <div>
                     <span className="font-semibold">Total Records:</span>{" "}
-                    {simulationResult.results?.length || 0}
+                    {simulationResult.summary?.processed || 0}
                   </div>
                   <div>
                     <span className="font-semibold">Increases:</span>{" "}
-                    <span className="text-green-600">{simulationResult.increases || 0}</span>
+                    <span className="text-green-600">{simulationResult.summary?.increases || 0}</span>
                   </div>
                   <div>
                     <span className="font-semibold">Decreases:</span>{" "}
-                    <span className="text-orange-600">{simulationResult.decreases || 0}</span>
+                    <span className="text-orange-600">{simulationResult.summary?.decreases || 0}</span>
                   </div>
                   <div>
                     <span className="font-semibold">Unchanged:</span>{" "}
-                    {simulationResult.unchanged || 0}
+                    {(simulationResult.summary?.processed || 0) - (simulationResult.summary?.increases || 0) - (simulationResult.summary?.decreases || 0) - (simulationResult.summary?.new_items || 0)}
                   </div>
                 </div>
 
