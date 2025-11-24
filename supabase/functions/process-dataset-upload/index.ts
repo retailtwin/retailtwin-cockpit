@@ -276,7 +276,7 @@ async function processFileInBackground(
             throw new Error(`Missing required columns: store_code and name must be present`);
           }
           
-          record.store_code = values[storeCodeIdx]?.trim();
+          record.code = values[storeCodeIdx]?.trim();
           record.name = values[nameIdx]?.trim();
           record.production_lead_time = prodLtIdx !== undefined ? (parseInt(values[prodLtIdx]) || 0) : 0;
           record.shipping_lead_time = shipLtIdx !== undefined ? (parseInt(values[shipLtIdx]) || 0) : 0;
@@ -299,10 +299,10 @@ async function processFileInBackground(
             throw new Error(`Missing required columns: product_code and name must be present`);
           }
           
-          record.product_code = values[productCodeIdx]?.trim();
+          record.sku = values[productCodeIdx]?.trim();
           record.name = values[nameIdx]?.trim();
-          record.cost_price = costIdx !== undefined ? parseFloat(values[costIdx]) : 0;
-          record.sales_price = priceIdx !== undefined ? parseFloat(values[priceIdx]) : 0;
+          record.unit_cost = costIdx !== undefined ? parseFloat(values[costIdx]) : 0;
+          record.unit_price = priceIdx !== undefined ? parseFloat(values[priceIdx]) : 0;
           record.pack_size = packIdx !== undefined ? (parseInt(values[packIdx]) || 1) : 1;
           record.minimum_order_quantity = moqIdx !== undefined ? (parseInt(values[moqIdx]) || 1) : 1;
           record.group_1 = g1Idx !== undefined ? values[g1Idx]?.trim() : null;
@@ -321,10 +321,10 @@ async function processFileInBackground(
             throw new Error(`Missing required columns: day, store, product, units must be present`);
           }
           
-          record.day = normalizeDate(values[dayIdx]?.trim());
-          record.store = values[storeIdx]?.trim();
-          record.product = values[productIdx]?.trim();
-          record.units = parseFloat(values[unitsIdx]) || 0;
+          record.d = normalizeDate(values[dayIdx]?.trim());
+          record.location_code = values[storeIdx]?.trim();
+          record.sku = values[productIdx]?.trim();
+          record.units_sold = parseFloat(values[unitsIdx]) || 0;
           break;
         }
         
@@ -340,12 +340,12 @@ async function processFileInBackground(
             throw new Error(`Missing required columns: day, store, product must be present`);
           }
           
-          record.day = normalizeDate(values[dayIdx]?.trim());
-          record.store = values[storeIdx]?.trim();
-          record.product = values[productIdx]?.trim();
-          record.units_on_hand = onHandIdx !== undefined ? (parseFloat(values[onHandIdx]) || 0) : 0;
-          record.units_on_order = onOrderIdx !== undefined ? (parseInt(values[onOrderIdx]) || 0) : 0;
-          record.units_in_transit = inTransitIdx !== undefined ? (parseInt(values[inTransitIdx]) || 0) : 0;
+          record.d = normalizeDate(values[dayIdx]?.trim());
+          record.location_code = values[storeIdx]?.trim();
+          record.sku = values[productIdx]?.trim();
+          record.on_hand_units = onHandIdx !== undefined ? (parseFloat(values[onHandIdx]) || 0) : 0;
+          record.on_order_units = onOrderIdx !== undefined ? (parseInt(values[onOrderIdx]) || 0) : 0;
+          record.in_transit_units = inTransitIdx !== undefined ? (parseInt(values[inTransitIdx]) || 0) : 0;
           break;
         }
       }
@@ -407,20 +407,15 @@ async function processFileInBackground(
         throw new Error(`Unknown file type: ${fileType}`);
     }
 
-    // Insert records in batches using RPC (replace functions now handle all at once)
-    const batchSize = 500;
-    for (let i = 0; i < dedupedRecords.length; i += batchSize) {
-      const batch = dedupedRecords.slice(i, i + batchSize);
-      
-      const { error: rpcError } = await supabase.rpc(rpcFunction, {
-        records: batch,
-      });
- 
-      if (rpcError) {
-        throw new Error(`Failed to process batch: ${rpcError.message}`);
-      }
+    // Send all records in one RPC call (replace_* functions TRUNCATE on every call)
+    console.log(`Inserting ${dedupedRecords.length} records via ${rpcFunction}`);
+    
+    const { error: rpcError } = await supabase.rpc(rpcFunction, {
+      records: dedupedRecords,
+    });
 
-      console.log(`Processed batch ${i / batchSize + 1} of ${Math.ceil(dedupedRecords.length / batchSize)}`);
+    if (rpcError) {
+      throw new Error(`Failed to insert records: ${rpcError.message}`);
     }
 
     // Update dataset with record count and date range
