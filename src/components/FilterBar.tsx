@@ -118,6 +118,14 @@ export const FilterBar = ({
                 onSelect={onDateRangeChange}
                 numberOfMonths={2}
                 defaultMonth={dataDateRange?.min || dateRange?.from}
+                fromDate={validDates && validDates.size > 0 
+                  ? new Date(Math.min(...Array.from(validDates).map(d => new Date(d).getTime())))
+                  : dataDateRange?.min
+                }
+                toDate={validDates && validDates.size > 0
+                  ? new Date(Math.max(...Array.from(validDates).map(d => new Date(d).getTime())))
+                  : dataDateRange?.max
+                }
                 disabled={(date) => {
                   if (!validDates) return false;
                   const dateStr = format(date, 'yyyy-MM-dd');
