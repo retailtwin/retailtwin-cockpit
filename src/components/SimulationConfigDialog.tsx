@@ -66,7 +66,7 @@ export const SimulationConfigDialog = ({
     const loadContiguousRange = async () => {
       setIsLoadingRange(true);
       try {
-        const range = await getContiguousValidDateRange(location || undefined, undefined);
+        const range = await getContiguousValidDateRange(); // Get full dataset range
         console.log('🔍 DEBUG - Contiguous Range:', {
           startDate: range?.startDate,
           endDate: range?.endDate,
@@ -110,7 +110,7 @@ export const SimulationConfigDialog = ({
     };
 
     loadContiguousRange();
-  }, [open, location]);
+  }, [open]); // Only reload when dialog opens, not when location changes
 
   // Estimate record count based on valid days in contiguous range
   useEffect(() => {
@@ -302,14 +302,7 @@ export const SimulationConfigDialog = ({
                     fromDate={contiguousRange ? new Date(contiguousRange.startDate) : undefined}
                     toDate={contiguousRange ? new Date(contiguousRange.endDate) : undefined}
                     fromMonth={contiguousRange ? new Date(contiguousRange.startDate) : undefined}
-                    toMonth={contiguousRange ? (() => {
-                      // Restrict navigation to the month before the end date's month
-                      // This prevents showing months beyond the valid range
-                      const endDate = new Date(contiguousRange.endDate);
-                      const lastValidMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
-                      lastValidMonth.setMonth(lastValidMonth.getMonth() - 1);
-                      return lastValidMonth;
-                    })() : undefined}
+                    toMonth={contiguousRange ? new Date(contiguousRange.endDate) : undefined}
                     disabled={(date) => {
                       if (!contiguousRange) return true;
                       const dateStr = format(date, 'yyyy-MM-dd');

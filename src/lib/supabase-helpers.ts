@@ -317,6 +317,14 @@ export async function getContiguousValidDateRange(
   
   const { data, error } = await query;
   
+  console.log('📊 getContiguousValidDateRange query results:', {
+    locationFilter: locationCode,
+    skuFilter: sku,
+    rowCount: data?.length || 0,
+    hasError: !!error,
+    errorMessage: error?.message
+  });
+  
   if (error || !data || data.length === 0) {
     console.error("Error fetching valid dates:", error);
     return null;
