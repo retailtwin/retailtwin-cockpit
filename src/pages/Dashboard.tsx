@@ -53,6 +53,12 @@ const Dashboard = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [showResultDetails, setShowResultDetails] = useState(false);
+  const [simulationStats, setSimulationStats] = useState<{
+    totalSkus: number;
+    processedSkus: number;
+    zeroSalesSkus: number;
+    noInventorySkus: number;
+  } | null>(null);
   const [productionLeadTime, setProductionLeadTime] = useState<number | undefined>();
   const [shippingLeadTime, setShippingLeadTime] = useState<number | undefined>();
   const [orderDays, setOrderDays] = useState<string | undefined>();
@@ -297,11 +303,21 @@ const Dashboard = () => {
       if (calcError) throw calcError;
 
       setSimulationResult(result);
+      
+      // Extract and store statistics
+      if (result?.summary) {
+        setSimulationStats({
+          totalSkus: result.summary.totalSkus || 0,
+          processedSkus: result.summary.skuWithSales || result.summary.processed || 0,
+          zeroSalesSkus: result.summary.zeroSalesSkus || 0,
+          noInventorySkus: result.summary.noInventorySkus || 0,
+        });
+      }
 
       const processedCount = result?.summary?.processed ?? rawData.length;
       toast({
         title: "DBM Simulation Complete!",
-        description: `Processed ${processedCount} records.`,
+        description: `Processed ${processedCount} records. Filtered out ${result?.summary?.zeroSalesSkus || 0} zero-sales SKUs.`,
         duration: 5000,
       });
 
@@ -723,7 +739,7 @@ const Dashboard = () => {
 
           {/* Graph and Table Grid */}
           <div className="grid lg:grid-cols-2 gap-6">
-            <InventoryGraph data={inventoryFlowData} />
+            <InventoryGraph data={inventoryFlowData} stats={simulationStats} />
             <KPITable data={tableData} summaryMetrics={summaryMetrics} />
           </div>
 
