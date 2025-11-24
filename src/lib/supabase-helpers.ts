@@ -282,14 +282,23 @@ export interface OptimalScope {
   };
 }
 
+export interface ContiguousDateRange {
+  startDate: string;
+  endDate: string;
+  validDates: Set<string>;
+  totalDays: number;
+  validDaysCount: number;
+  completeness: number; // percentage of days with complete data
+}
+
 /**
- * Get valid dates that have both sales and inventory data
- * Used to disable date picker dates without complete data
+ * Find the longest contiguous date range with high data completeness
+ * A contiguous range is defined as a period where at least 70% of days have both sales and inventory
  */
-export async function getValidDates(
+export async function getContiguousValidDateRange(
   locationCode?: string,
   sku?: string
-): Promise<Set<string>> {
+): Promise<ContiguousDateRange | null> {
   const { data, error } = await supabase.rpc('get_fact_daily_raw', {
     p_location_code: locationCode || 'ALL',
     p_sku: sku || 'ALL',
@@ -297,20 +306,115 @@ export async function getValidDates(
     p_end_date: null
   });
   
-  if (error || !data) {
+  if (error || !data || data.length === 0) {
     console.error("Error fetching valid dates:", error);
-    return new Set();
+    return null;
   }
   
-  // Only include dates with BOTH sales AND inventory
-  const validDates = data
-    .filter((row: any) => 
-      row.on_hand_units > 0 && 
-      row.units_sold > 0
-    )
-    .map((row: any) => row.d);
+  // Get all dates with BOTH sales AND inventory
+  const validDatesArray = data
+    .filter((row: any) => row.on_hand_units > 0 && row.units_sold > 0)
+    .map((row: any) => row.d)
+    .sort();
   
-  return new Set(validDates);
+  if (validDatesArray.length === 0) {
+    return null;
+  }
+  
+  const validDatesSet = new Set(validDatesArray);
+  
+  // Find the longest contiguous period with at least 70% completeness
+  const minCompleteness = 0.70;
+  const minWindowDays = 30; // Minimum window size to consider
+  
+  let bestRange: ContiguousDateRange | null = null;
+  let bestScore = 0;
+  
+  // Start from the earliest valid date
+  const startDate = new Date(validDatesArray[0]);
+  const endDate = new Date(validDatesArray[validDatesArray.length - 1]);
+  
+  // Slide a window across the date range
+  let currentStart = new Date(startDate);
+  
+  while (currentStart <= endDate) {
+    // Try different window sizes from minWindowDays to remaining days
+    const remainingDays = Math.floor((endDate.getTime() - currentStart.getTime()) / (1000 * 60 * 60 * 24));
+    const maxWindowSize = Math.min(remainingDays + 1, 365); // Cap at 1 year
+    
+    for (let windowDays = minWindowDays; windowDays <= maxWindowSize; windowDays += 7) {
+      const currentEnd = new Date(currentStart);
+      currentEnd.setDate(currentEnd.getDate() + windowDays - 1);
+      
+      if (currentEnd > endDate) break;
+      
+      // Count valid days in this window
+      let validCount = 0;
+      const windowStart = currentStart.toISOString().split('T')[0];
+      const windowEnd = currentEnd.toISOString().split('T')[0];
+      
+      for (const dateStr of validDatesSet) {
+        if (dateStr >= windowStart && dateStr <= windowEnd) {
+          validCount++;
+        }
+      }
+      
+      const completeness = validCount / windowDays;
+      
+      // Score based on completeness and window size (prefer longer periods with good completeness)
+      if (completeness >= minCompleteness) {
+        const score = completeness * windowDays; // Weighted score
+        
+        if (score > bestScore) {
+          bestScore = score;
+          bestRange = {
+            startDate: windowStart,
+            endDate: windowEnd,
+            validDates: validDatesSet,
+            totalDays: windowDays,
+            validDaysCount: validCount,
+            completeness: Math.round(completeness * 100)
+          };
+        }
+      }
+    }
+    
+    // Move window by 7 days
+    currentStart.setDate(currentStart.getDate() + 7);
+  }
+  
+  // If no window meets the criteria, return the full date range with whatever completeness we have
+  if (!bestRange && validDatesArray.length > 0) {
+    const firstDate = validDatesArray[0];
+    const lastDate = validDatesArray[validDatesArray.length - 1];
+    const totalDays = Math.floor(
+      (new Date(lastDate).getTime() - new Date(firstDate).getTime()) / (1000 * 60 * 60 * 24)
+    ) + 1;
+    
+    return {
+      startDate: firstDate,
+      endDate: lastDate,
+      validDates: validDatesSet,
+      totalDays,
+      validDaysCount: validDatesArray.length,
+      completeness: Math.round((validDatesArray.length / totalDays) * 100)
+    };
+  }
+  
+  return bestRange;
+}
+
+/**
+ * Get valid dates that have both sales and inventory data
+ * Used to disable date picker dates without complete data
+ * @deprecated Use getContiguousValidDateRange for better date range handling
+ */
+export async function getValidDates(
+  locationCode?: string,
+  sku?: string
+): Promise<Set<string>> {
+  const result = await getContiguousValidDateRange(locationCode, sku);
+  return result?.validDates || new Set();
 }
 
 export async function findOptimalSimulationScope(): Promise<OptimalScope | null> {
