@@ -9,41 +9,27 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar, Play, AlertCircle, Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { Calendar, Play, AlertCircle, Loader2, Info } from "lucide-react";
+import { format, differenceInMonths } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
-import { Location, Product } from "@/lib/supabase-helpers";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useCommonScope } from "@/hooks/useCommonScope";
+import { ProductGroupPicker } from "@/components/ProductGroupPicker";
+import { StorePicker } from "@/components/StorePicker";
 
 interface SimulationConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: (config: SimulationConfig) => void;
-  locations: Location[];
-  products: Product[];
-  dataDateRange: { min: Date; max: Date } | null;
-  currentFilters: {
-    location: string;
-    product: string;
-    dateRange?: DateRange;
-  };
 }
 
 export interface SimulationConfig {
   location: string;
-  product: string;
+  productSKUs: string[] | 'ALL';
   dateRange: DateRange;
   preset: string;
 }
@@ -62,15 +48,12 @@ export const SimulationConfigDialog = ({
   open,
   onOpenChange,
   onConfirm,
-  locations,
-  products,
-  dataDateRange,
-  currentFilters,
 }: SimulationConfigDialogProps) => {
-  const [selectedPreset, setSelectedPreset] = useState<PresetType>("standard");
-  const [location, setLocation] = useState(currentFilters.location);
-  const [product, setProduct] = useState(currentFilters.product);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(currentFilters.dateRange);
+  const commonScope = useCommonScope();
+  const [selectedPreset, setSelectedPreset] = useState<PresetType>("quick");
+  const [location, setLocation] = useState('');
+  const [productSKUs, setProductSKUs] = useState<string[] | 'ALL'>('ALL');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [estimating, setEstimating] = useState(false);
   const [estimate, setEstimate] = useState<{
     recordCount: number;
@@ -78,44 +61,45 @@ export const SimulationConfigDialog = ({
     warning?: string;
   } | null>(null);
 
-  // Set smart defaults based on data date range
+  // Initialize defaults when dialog opens and data is loaded
   useEffect(() => {
-    if (open && dataDateRange) {
-      // Calculate smart defaults based on preset
-      const endDate = dataDateRange.max;
-      const startDate = new Date(endDate);
-      
-      if (selectedPreset !== "custom") {
+    if (open && !commonScope.isLoading && commonScope.locations.length > 0) {
+      // Set first location as default
+      if (!location) {
+        setLocation(commonScope.locations[0].code);
+      }
+
+      // Set date range based on preset
+      if (commonScope.dateRange && !dateRange) {
+        const endDate = new Date(commonScope.dateRange.max);
+        const startDate = new Date(endDate);
         const preset = PRESETS[selectedPreset];
         startDate.setMonth(endDate.getMonth() - preset.months);
         
-        // Ensure we don't go before data start date
-        if (startDate < dataDateRange.min) {
-          startDate.setTime(dataDateRange.min.getTime());
+        const minDate = new Date(commonScope.dateRange.min);
+        if (startDate < minDate) {
+          startDate.setTime(minDate.getTime());
         }
+        
+        setDateRange({ from: startDate, to: endDate });
       }
-
-      setDateRange({ from: startDate, to: endDate });
     }
-  }, [open, selectedPreset, dataDateRange]);
+  }, [open, commonScope.isLoading, commonScope.locations, commonScope.dateRange]);
 
   // Estimate record count when config changes
   useEffect(() => {
-    if (!open || !dateRange?.from || !dateRange?.to) return;
+    if (!open || !dateRange?.from || !dateRange?.to || !location) return;
 
     const estimateRecords = async () => {
       setEstimating(true);
       try {
-        // Calculate days in range
         const diffTime = Math.abs(dateRange.to!.getTime() - dateRange.from!.getTime());
         const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         
-        // Calculate approximate record count
-        const locationCount = location === "ALL" ? locations.length : 1;
-        const productCount = product === "ALL" ? products.length : 1;
-        const recordCount = days * locationCount * productCount;
+        const productCount = productSKUs === 'ALL' ? commonScope.totalProducts : productSKUs.length;
+        const recordCount = days * 1 * productCount;
 
-        const estimatedSeconds = Math.ceil(recordCount / 1000); // ~1K records/second
+        const estimatedSeconds = Math.ceil(recordCount / 1000);
         const estimatedTime =
           estimatedSeconds < 60
             ? `${estimatedSeconds}s`
@@ -138,18 +122,33 @@ export const SimulationConfigDialog = ({
     };
 
     estimateRecords();
-  }, [open, location, product, dateRange, locations.length, products.length]);
+  }, [open, location, productSKUs, dateRange, commonScope.totalProducts]);
 
   const handlePresetChange = (preset: PresetType) => {
     setSelectedPreset(preset);
+    
+    // Update date range based on preset
+    if (preset !== "custom" && commonScope.dateRange) {
+      const endDate = new Date(commonScope.dateRange.max);
+      const startDate = new Date(endDate);
+      const presetConfig = PRESETS[preset];
+      startDate.setMonth(endDate.getMonth() - presetConfig.months);
+      
+      const minDate = new Date(commonScope.dateRange.min);
+      if (startDate < minDate) {
+        startDate.setTime(minDate.getTime());
+      }
+      
+      setDateRange({ from: startDate, to: endDate });
+    }
   };
 
   const handleConfirm = () => {
-    if (!dateRange?.from || !dateRange?.to) return;
+    if (!dateRange?.from || !dateRange?.to || !location) return;
 
     onConfirm({
       location,
-      product,
+      productSKUs,
       dateRange,
       preset: PRESETS[selectedPreset].name,
     });
@@ -163,25 +162,72 @@ export const SimulationConfigDialog = ({
     return diffDays + 1;
   };
 
-  const getLocationCount = () => (location === "ALL" ? locations.length : 1);
-  const getProductCount = () => (product === "ALL" ? products.length : 1);
+  const getProductCount = () => productSKUs === 'ALL' ? commonScope.totalProducts : productSKUs.length;
+  
+  const getMonthCount = () => {
+    if (!dateRange?.from || !dateRange?.to) return 0;
+    return differenceInMonths(dateRange.to, dateRange.from) + 1;
+  };
+
+  if (commonScope.isLoading) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="ml-2">Loading available data...</span>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configure Simulation Scope</DialogTitle>
           <DialogDescription>
-            Select the data scope for your DBM simulation. Start with a smaller scope for faster testing.
+            Select what portion of your data to simulate. Start small for quick testing, then expand.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Presets */}
+          {/* Common Scope Display */}
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="pt-4">
+              <div className="flex items-start gap-2">
+                <Info className="h-5 w-5 text-primary mt-0.5" />
+                <div className="flex-1 space-y-1 text-sm">
+                  <p className="font-semibold text-primary">Available Data</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Period:</span>
+                      <p className="font-medium">
+                        {commonScope.dateRange 
+                          ? `${format(new Date(commonScope.dateRange.min), 'MMM d, yyyy')} → ${format(new Date(commonScope.dateRange.max), 'MMM d, yyyy')} (${differenceInMonths(new Date(commonScope.dateRange.max), new Date(commonScope.dateRange.min)) + 1} months)`
+                          : 'Loading...'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Locations:</span>
+                      <p className="font-medium">{commonScope.locations.length} store{commonScope.locations.length !== 1 ? 's' : ''}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Products:</span>
+                      <p className="font-medium">{commonScope.totalProducts} SKUs across {commonScope.productGroups.size} categories</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Presets */}
           <div className="space-y-2">
-            <Label>Scope Preset</Label>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-              {(Object.keys(PRESETS) as PresetType[]).map((preset) => (
+            <Label>Quick Presets</Label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {(Object.keys(PRESETS) as PresetType[]).filter(p => p !== 'custom').map((preset) => (
                 <Button
                   key={preset}
                   variant={selectedPreset === preset ? "default" : "outline"}
@@ -189,16 +235,23 @@ export const SimulationConfigDialog = ({
                   onClick={() => handlePresetChange(preset)}
                   className="flex flex-col h-auto py-2"
                 >
-                  <span className="font-medium">{PRESETS[preset].name}</span>
+                  <span className="font-medium text-xs">{PRESETS[preset].name}</span>
                   <span className="text-xs opacity-70">{PRESETS[preset].description}</span>
                 </Button>
               ))}
             </div>
           </div>
 
+          {/* Store Picker */}
+          <StorePicker
+            locations={commonScope.locations}
+            selectedLocation={location}
+            onLocationChange={setLocation}
+          />
+
           {/* Date Range */}
           <div className="space-y-2">
-            <Label>Date Range</Label>
+            <Label>Select Time Period</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -213,6 +266,9 @@ export const SimulationConfigDialog = ({
                     dateRange.to ? (
                       <>
                         {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ({getDayCount()} days, {getMonthCount()} month{getMonthCount() !== 1 ? 's' : ''})
+                        </span>
                       </>
                     ) : (
                       format(dateRange.from, "MMM d, yyyy")
@@ -231,10 +287,10 @@ export const SimulationConfigDialog = ({
                     setSelectedPreset("custom");
                   }}
                   numberOfMonths={2}
-                  defaultMonth={dataDateRange?.min || dateRange?.from}
+                  defaultMonth={commonScope.dateRange ? new Date(commonScope.dateRange.min) : undefined}
                   disabled={(date) =>
-                    dataDateRange
-                      ? date < dataDateRange.min || date > dataDateRange.max
+                    commonScope.dateRange
+                      ? date < new Date(commonScope.dateRange.min) || date > new Date(commonScope.dateRange.max)
                       : false
                   }
                   className="pointer-events-auto"
@@ -243,82 +299,51 @@ export const SimulationConfigDialog = ({
             </Popover>
           </div>
 
-          {/* Location */}
-          <div className="space-y-2">
-            <Label>Location</Label>
-            <Select value={location} onValueChange={setLocation}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select location" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Locations ({locations.length})</SelectItem>
-                {locations.map((loc) => (
-                  <SelectItem key={loc.code} value={loc.code}>
-                    {loc.name || loc.code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Product Group Picker */}
+          <ProductGroupPicker
+            products={commonScope.products}
+            selectedSKUs={productSKUs}
+            onSelectionChange={setProductSKUs}
+          />
 
-          {/* Product */}
-          <div className="space-y-2">
-            <Label>Product (SKU)</Label>
-            <Select value={product} onValueChange={setProduct}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select product" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Products ({products.length})</SelectItem>
-                {products.map((prod) => (
-                  <SelectItem key={prod.sku} value={prod.sku}>
-                    {prod.name || prod.sku}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Preview Panel */}
+          {/* Estimation Preview */}
           <Card className="bg-muted/50">
             <CardContent className="pt-6">
               <h4 className="font-semibold mb-3 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4" />
-                Simulation Preview
+                Estimated Scope
               </h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Locations:</span>
-                  <p className="font-medium">{getLocationCount()}</p>
+                  <span className="text-muted-foreground">SKUs:</span>
+                  <p className="font-medium">{getProductCount()}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Products:</span>
-                  <p className="font-medium">{getProductCount()}</p>
+                  <span className="text-muted-foreground">Location:</span>
+                  <p className="font-medium">1 store</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Days:</span>
                   <p className="font-medium">{getDayCount()}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Estimated Records:</span>
+                  <span className="text-muted-foreground">Records:</span>
                   {estimating ? (
                     <div className="flex items-center gap-1">
                       <Loader2 className="h-3 w-3 animate-spin" />
-                      <span className="text-xs">Calculating...</span>
                     </div>
                   ) : (
-                    <p className="font-medium">{estimate?.recordCount.toLocaleString() || "—"}</p>
+                    <p className="font-medium">≈ {estimate?.recordCount.toLocaleString() || "—"}</p>
                   )}
                 </div>
                 <div className="col-span-2">
-                  <span className="text-muted-foreground">Estimated Processing Time:</span>
+                  <span className="text-muted-foreground">Processing Time:</span>
                   {estimating ? (
                     <div className="flex items-center gap-1">
                       <Loader2 className="h-3 w-3 animate-spin" />
-                      <span className="text-xs">Calculating...</span>
                     </div>
                   ) : (
-                    <p className="font-medium">{estimate?.estimatedTime || "—"}</p>
+                    <p className="font-medium">~{estimate?.estimatedTime || "—"}</p>
                   )}
                 </div>
               </div>
@@ -337,7 +362,7 @@ export const SimulationConfigDialog = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!dateRange?.from || !dateRange?.to}>
+          <Button onClick={handleConfirm} disabled={!dateRange?.from || !dateRange?.to || !location}>
             <Play className="mr-2 h-4 w-4" />
             Run Simulation
           </Button>
