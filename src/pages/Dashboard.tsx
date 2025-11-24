@@ -9,6 +9,7 @@ import { ArchieChatDock } from "@/components/ArchieChatDock";
 import { ArchieFloatingButton } from "@/components/ArchieFloatingButton";
 import { ParetoReportModal } from "@/components/ParetoReportModal";
 import { SimulationStatusBar } from "@/components/SimulationStatusBar";
+import { SimulationConfigDialog, SimulationConfig } from "@/components/SimulationConfigDialog";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, Play, Settings, ChevronDown, ChevronUp } from "lucide-react";
 import archieLogo from "@/assets/archie-logo.png";
@@ -63,6 +64,8 @@ const Dashboard = () => {
   const [shippingLeadTime, setShippingLeadTime] = useState<number | undefined>();
   const [orderDays, setOrderDays] = useState<string | undefined>();
   const [dataDateRange, setDataDateRange] = useState<{min: Date, max: Date} | null>(null);
+  const [simulationConfigOpen, setSimulationConfigOpen] = useState(false);
+  const [simulationScope, setSimulationScope] = useState<SimulationConfig | null>(null);
 
   // Check admin status and load settings
   useEffect(() => {
@@ -264,22 +267,39 @@ const Dashboard = () => {
     }
   };
 
-  const runDBMAnalysis = async () => {
+  const handleOpenSimulationConfig = () => {
+    setSimulationConfigOpen(true);
+  };
+
+  const handleSimulationConfirm = (config: SimulationConfig) => {
+    setSimulationScope(config);
+    runDBMAnalysis(config);
+  };
+
+  const runDBMAnalysis = async (config?: SimulationConfig) => {
     setIsRunningDBM(true);
     setSimulationResult(null);
     
+    // Use config if provided, otherwise use current filters
+    const scopeConfig = config || {
+      location: selectedLocation,
+      product: selectedProduct,
+      dateRange: dateRange || { from: dataDateRange?.min, to: dataDateRange?.max },
+      preset: "Current Filters"
+    };
+    
     try {
-      const startDate = dateRange?.from
-        ? format(dateRange.from, "yyyy-MM-dd")
+      const startDate = scopeConfig.dateRange?.from
+        ? format(scopeConfig.dateRange.from, "yyyy-MM-dd")
         : (dataDateRange ? format(dataDateRange.min, "yyyy-MM-dd") : "2023-01-01");
-      const endDate = dateRange?.to
-        ? format(dateRange.to, "yyyy-MM-dd")
+      const endDate = scopeConfig.dateRange?.to
+        ? format(scopeConfig.dateRange.to, "yyyy-MM-dd")
         : (dataDateRange ? format(dataDateRange.max, "yyyy-MM-dd") : "2023-12-31");
 
-      // Fetch raw fact_daily data
+      // Fetch raw fact_daily data using scope config
       const { data: rawData, error: fetchError } = await supabase.rpc('get_fact_daily_raw', {
-        p_location_code: selectedLocation,
-        p_sku: selectedProduct,
+        p_location_code: scopeConfig.location,
+        p_sku: scopeConfig.product,
         p_start_date: startDate,
         p_end_date: endDate
       });
@@ -290,11 +310,11 @@ const Dashboard = () => {
         throw new Error("No data found for selected filters");
       }
 
-      // Call the dbm-calculator Edge Function
+      // Call the dbm-calculator Edge Function using scope config
       const { data: result, error: calcError } = await supabase.functions.invoke('dbm-calculator', {
         body: {
-          location_code: selectedLocation,
-          sku: selectedProduct,
+          location_code: scopeConfig.location,
+          sku: scopeConfig.product,
           start_date: startDate,
           end_date: endDate
         }
@@ -317,7 +337,7 @@ const Dashboard = () => {
       const processedCount = result?.summary?.processed ?? rawData.length;
       toast({
         title: "DBM Simulation Complete!",
-        description: `Processed ${processedCount} records. Filtered out ${result?.summary?.zeroSalesSkus || 0} zero-sales SKUs.`,
+        description: `Processed ${processedCount} records using ${scopeConfig.preset}. Filtered out ${result?.summary?.zeroSalesSkus || 0} zero-sales SKUs.`,
         duration: 5000,
       });
 
@@ -602,7 +622,7 @@ const Dashboard = () => {
           {/* Run Simulation Button */}
           <div className="flex justify-center">
             <Button
-              onClick={runDBMAnalysis}
+              onClick={handleOpenSimulationConfig}
               disabled={isRunningDBM}
               size="lg"
               className="gap-2 w-full max-w-md"
@@ -615,7 +635,7 @@ const Dashboard = () => {
               ) : (
                 <>
                   <Play className="h-4 w-4" />
-                  Run Simulation
+                  Configure & Run Simulation
                 </>
               )}
             </Button>
@@ -626,7 +646,19 @@ const Dashboard = () => {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Simulation Results</CardTitle>
+                  <div>
+                    <CardTitle className="text-lg">Simulation Results</CardTitle>
+                    {simulationScope && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Scope: {simulationScope.preset} 
+                        {simulationScope.dateRange?.from && simulationScope.dateRange?.to && (
+                          <> • {format(simulationScope.dateRange.from, "MMM d")} - {format(simulationScope.dateRange.to, "MMM d, yyyy")}</>
+                        )}
+                        {simulationScope.location !== "ALL" && <> • {simulationScope.location}</>}
+                        {simulationScope.product !== "ALL" && <> • {simulationScope.product}</>}
+                      </p>
+                    )}
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -858,6 +890,21 @@ const Dashboard = () => {
               }
             : undefined
         }
+      />
+      
+      {/* Simulation Config Dialog */}
+      <SimulationConfigDialog
+        open={simulationConfigOpen}
+        onOpenChange={setSimulationConfigOpen}
+        onConfirm={handleSimulationConfirm}
+        locations={locations}
+        products={products}
+        dataDateRange={dataDateRange}
+        currentFilters={{
+          location: selectedLocation,
+          product: selectedProduct,
+          dateRange: dateRange,
+        }}
       />
     </Layout>
   );
