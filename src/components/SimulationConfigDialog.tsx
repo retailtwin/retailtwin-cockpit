@@ -34,21 +34,10 @@ export interface SimulationConfig {
   location: string;
   productSKUs: string[] | 'ALL';
   dateRange: DateRange;
-  preset: string;
 }
-
-type PresetType = "quick" | "standard" | "quarter" | "full" | "custom";
 
 const HARD_LIMIT = 91250;
 const WARNING_THRESHOLD = 75000;
-
-const PRESETS = {
-  quick: { name: "Quick Test", months: 1, description: "1 month, ideal for testing" },
-  standard: { name: "Standard Test", months: 3, description: "3 months, balanced testing" },
-  quarter: { name: "Quarter Analysis", months: 3, description: "3 months, all data" },
-  full: { name: "Full Year", months: 12, description: "12 months, complete analysis" },
-  custom: { name: "Custom", months: 0, description: "Define your own scope" },
-};
 
 export const SimulationConfigDialog = ({
   open,
@@ -57,7 +46,6 @@ export const SimulationConfigDialog = ({
   validDates,
 }: SimulationConfigDialogProps) => {
   const commonScope = useCommonScope();
-  const [selectedPreset, setSelectedPreset] = useState<PresetType>("full");
   const [location, setLocation] = useState('');
   const [productSKUs, setProductSKUs] = useState<string[] | 'ALL'>('ALL');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
@@ -86,11 +74,11 @@ export const SimulationConfigDialog = ({
           setLocation(commonScope.locations[0].code);
         }
         
-        // Initialize date range to last 12 months of contiguous range
+        // Initialize date range to last 3 months of contiguous range
         if (range && !dateRange) {
           const end = new Date(range.endDate);
           const start = new Date(end);
-          start.setMonth(start.getMonth() - 12);
+          start.setMonth(start.getMonth() - 3);
           
           const rangeStart = new Date(range.startDate);
           const finalStart = start < rangeStart ? rangeStart : start;
@@ -165,22 +153,6 @@ export const SimulationConfigDialog = ({
     estimateRecords();
   }, [open, location, productSKUs, dateRange, commonScope.totalProducts, contiguousRange]);
 
-  const handlePresetChange = (preset: PresetType) => {
-    setSelectedPreset(preset);
-    
-    if (preset !== "custom" && contiguousRange) {
-      const endDate = new Date(contiguousRange.endDate);
-      const startDate = new Date(endDate);
-      const presetConfig = PRESETS[preset];
-      startDate.setMonth(endDate.getMonth() - presetConfig.months);
-    
-      const rangeStart = new Date(contiguousRange.startDate);
-      const finalStart = startDate < rangeStart ? rangeStart : startDate;
-      
-      setDateRange({ from: finalStart, to: endDate });
-    }
-  };
-
   const handleConfirm = () => {
     if (!dateRange?.from || !dateRange?.to || !location) return;
 
@@ -188,7 +160,6 @@ export const SimulationConfigDialog = ({
       location,
       productSKUs,
       dateRange,
-      preset: PRESETS[selectedPreset].name,
     });
     onOpenChange(false);
   };
@@ -270,25 +241,6 @@ export const SimulationConfigDialog = ({
             </CardContent>
           </Card>
 
-          {/* Quick Presets */}
-          <div className="space-y-2">
-            <Label>Quick Presets</Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {(Object.keys(PRESETS) as PresetType[]).filter(p => p !== 'custom').map((preset) => (
-                <Button
-                  key={preset}
-                  variant={selectedPreset === preset ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handlePresetChange(preset)}
-                  className="flex flex-col h-auto py-2"
-                >
-                  <span className="font-medium text-xs">{PRESETS[preset].name}</span>
-                  <span className="text-xs opacity-70">{PRESETS[preset].description}</span>
-                </Button>
-              ))}
-            </div>
-          </div>
-
           {/* Store Picker */}
           <StorePicker
             locations={commonScope.locations}
@@ -330,14 +282,13 @@ export const SimulationConfigDialog = ({
                   <CalendarComponent
                     mode="range"
                     selected={dateRange}
-                    onSelect={(range) => {
-                      setDateRange(range);
-                      setSelectedPreset("custom");
-                    }}
+                    onSelect={setDateRange}
                     numberOfMonths={2}
-                    defaultMonth={contiguousRange ? new Date(contiguousRange.startDate) : undefined}
+                    defaultMonth={contiguousRange ? new Date(contiguousRange.endDate) : undefined}
                     fromDate={contiguousRange ? new Date(contiguousRange.startDate) : undefined}
                     toDate={contiguousRange ? new Date(contiguousRange.endDate) : undefined}
+                    fromMonth={contiguousRange ? new Date(contiguousRange.startDate) : undefined}
+                    toMonth={contiguousRange ? new Date(contiguousRange.endDate) : undefined}
                     disabled={(date) => {
                       if (!contiguousRange) return true;
                       const dateStr = format(date, 'yyyy-MM-dd');

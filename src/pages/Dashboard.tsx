@@ -525,7 +525,7 @@ const Dashboard = () => {
       // Show initial toast
       toast({
         title: "Simulation Started",
-        description: `Processing ${rawData.length} records using ${scopeConfig.preset}...`,
+        description: `Processing ${rawData.length} records...`,
       });
 
       // Call the dbm-calculator Edge Function - don't wait too long
@@ -1137,9 +1137,8 @@ const Dashboard = () => {
                     <CardTitle className="text-lg">Simulation Results</CardTitle>
                     {simulationScope && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        Scope: {simulationScope.preset} 
                         {simulationScope.dateRange?.from && simulationScope.dateRange?.to && (
-                          <> • {format(simulationScope.dateRange.from, "MMM d")} - {format(simulationScope.dateRange.to, "MMM d, yyyy")}</>
+                          <>{format(simulationScope.dateRange.from, "MMM d")} - {format(simulationScope.dateRange.to, "MMM d, yyyy")}</>
                         )}
                         {simulationScope.location !== "ALL" && <> • {simulationScope.location}</>}
                         {simulationScope.productSKUs !== "ALL" && simulationScope.productSKUs.length > 0 && (
