@@ -311,41 +311,62 @@ export async function getContiguousValidDateRange(
     return null;
   }
   
-  // Aggregate by date to get total sales and inventory per day
-  const dateAggregates = new Map<string, { totalSales: number; totalInventory: number }>();
-  
-  data.forEach((row: any) => {
-    const existing = dateAggregates.get(row.d) || { totalSales: 0, totalInventory: 0 };
-    dateAggregates.set(row.d, {
-      totalSales: existing.totalSales + (row.units_sold || 0),
-      totalInventory: existing.totalInventory + (row.on_hand_units || 0)
-    });
-  });
-  
-  // Get all dates where BOTH aggregated sales AND aggregated inventory > 0
-  const validDatesArray = Array.from(dateAggregates.entries())
-    .filter(([_, agg]) => agg.totalSales > 0 && agg.totalInventory > 0)
-    .map(([date, _]) => date)
+  // Find inventory bounds (first and last date with inventory > 0)
+  const inventoryDates = data
+    .filter((row: any) => row.on_hand_units > 0)
+    .map((row: any) => row.d)
     .sort();
   
-  if (validDatesArray.length === 0) {
+  // Find sales bounds (first and last date with sales > 0)
+  const salesDates = data
+    .filter((row: any) => row.units_sold > 0)
+    .map((row: any) => row.d)
+    .sort();
+  
+  if (inventoryDates.length === 0 || salesDates.length === 0) {
+    console.error('No dates found with inventory or sales');
     return null;
   }
   
+  // Calculate intersection: latest start date and earliest end date
+  const firstInventoryDate = inventoryDates[0];
+  const lastInventoryDate = inventoryDates[inventoryDates.length - 1];
+  const firstSalesDate = salesDates[0];
+  const lastSalesDate = salesDates[salesDates.length - 1];
+  
+  const startDate = firstInventoryDate > firstSalesDate ? firstInventoryDate : firstSalesDate;
+  const endDate = lastInventoryDate < lastSalesDate ? lastInventoryDate : lastSalesDate;
+  
+  // Verify we have a valid range
+  if (startDate > endDate) {
+    console.error('No overlapping date range between inventory and sales');
+    return null;
+  }
+  
+  // Within this range, find dates with BOTH sales AND inventory
+  const validDatesArray = data
+    .filter((row: any) => 
+      row.d >= startDate && 
+      row.d <= endDate && 
+      row.on_hand_units > 0 && 
+      row.units_sold > 0
+    )
+    .map((row: any) => row.d)
+    .filter((date: string, index: number, self: string[]) => self.indexOf(date) === index) // unique dates
+    .sort();
+  
   const validDatesSet = new Set(validDatesArray);
   
-  // Simply use first and last dates with valid data
-  const startDate = new Date(validDatesArray[0]);
-  const endDate = new Date(validDatesArray[validDatesArray.length - 1]);
-  
   // Calculate total days in the span
-  const totalDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const totalDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
   const validDaysCount = validDatesArray.length;
   const completeness = (validDaysCount / totalDays) * 100;
   
   return {
-    startDate: validDatesArray[0],
-    endDate: validDatesArray[validDatesArray.length - 1],
+    startDate,
+    endDate,
     validDates: validDatesSet,
     totalDays,
     validDaysCount,
