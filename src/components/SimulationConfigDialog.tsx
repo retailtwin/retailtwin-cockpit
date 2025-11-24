@@ -68,6 +68,17 @@ export const SimulationConfigDialog = ({
     isBlocked: boolean;
   } | null>(null);
 
+  // Calculate valid date range from validDates
+  const getValidDateRange = () => {
+    if (!validDates || validDates.size === 0) return null;
+    
+    const dates = Array.from(validDates).map(d => new Date(d).getTime());
+    return {
+      min: new Date(Math.min(...dates)),
+      max: new Date(Math.max(...dates))
+    };
+  };
+
   // Initialize defaults when dialog opens and data is loaded
   useEffect(() => {
     if (open && !commonScope.isLoading && commonScope.locations.length > 0) {
@@ -76,18 +87,33 @@ export const SimulationConfigDialog = ({
         setLocation(commonScope.locations[0].code);
       }
 
-      // Set date range to full year (365 days) by default
-      if (commonScope.dateRange && !dateRange) {
-        const endDate = new Date(commonScope.dateRange.max);
-        const startDate = new Date(endDate);
-        startDate.setMonth(endDate.getMonth() - 12); // 12 months = full year
-        
-        const minDate = new Date(commonScope.dateRange.min);
-        if (startDate < minDate) {
-          startDate.setTime(minDate.getTime());
+      // Set date range to valid dates (or full year of valid data) by default
+      if (!dateRange) {
+        const validRange = getValidDateRange();
+        if (validRange) {
+          const endDate = validRange.max;
+          const startDate = new Date(endDate);
+          startDate.setMonth(endDate.getMonth() - 12); // Try 12 months
+          
+          // Ensure we stay within valid range
+          if (startDate < validRange.min) {
+            startDate.setTime(validRange.min.getTime());
+          }
+          
+          setDateRange({ from: startDate, to: endDate });
+        } else if (commonScope.dateRange) {
+          // Fallback to commonScope if no valid dates
+          const endDate = new Date(commonScope.dateRange.max);
+          const startDate = new Date(endDate);
+          startDate.setMonth(endDate.getMonth() - 12);
+          
+          const minDate = new Date(commonScope.dateRange.min);
+          if (startDate < minDate) {
+            startDate.setTime(minDate.getTime());
+          }
+          
+          setDateRange({ from: startDate, to: endDate });
         }
-        
-        setDateRange({ from: startDate, to: endDate });
       }
 
       // Default to 250 products if total products exceed 250
@@ -96,7 +122,7 @@ export const SimulationConfigDialog = ({
         setProductSKUs(first250SKUs);
       }
     }
-  }, [open, commonScope.isLoading, commonScope.locations, commonScope.dateRange, commonScope.totalProducts]);
+  }, [open, commonScope.isLoading, commonScope.locations, commonScope.dateRange, commonScope.totalProducts, validDates]);
 
   // Estimate record count when config changes
   useEffect(() => {
@@ -142,19 +168,24 @@ export const SimulationConfigDialog = ({
   const handlePresetChange = (preset: PresetType) => {
     setSelectedPreset(preset);
     
-    // Update date range based on preset
-    if (preset !== "custom" && commonScope.dateRange) {
-      const endDate = new Date(commonScope.dateRange.max);
-      const startDate = new Date(endDate);
-      const presetConfig = PRESETS[preset];
-      startDate.setMonth(endDate.getMonth() - presetConfig.months);
+    // Update date range based on preset, using valid date range
+    if (preset !== "custom") {
+      const validRange = getValidDateRange();
+      const effectiveRange = validRange || commonScope.dateRange;
       
-      const minDate = new Date(commonScope.dateRange.min);
-      if (startDate < minDate) {
-        startDate.setTime(minDate.getTime());
+      if (effectiveRange) {
+        const endDate = new Date(effectiveRange.max);
+        const startDate = new Date(endDate);
+        const presetConfig = PRESETS[preset];
+        startDate.setMonth(endDate.getMonth() - presetConfig.months);
+      
+        const minDate = new Date(effectiveRange.min);
+        if (startDate < minDate) {
+          startDate.setTime(minDate.getTime());
+        }
+        
+        setDateRange({ from: startDate, to: endDate });
       }
-      
-      setDateRange({ from: startDate, to: endDate });
     }
   };
 
@@ -219,10 +250,21 @@ export const SimulationConfigDialog = ({
                     <div>
                       <span className="text-muted-foreground">Period:</span>
                       <p className="font-medium">
-                        {commonScope.dateRange 
-                          ? `${format(new Date(commonScope.dateRange.min), 'MMM d, yyyy')} → ${format(new Date(commonScope.dateRange.max), 'MMM d, yyyy')} (${differenceInMonths(new Date(commonScope.dateRange.max), new Date(commonScope.dateRange.min)) + 1} months)`
-                          : 'Loading...'}
+                        {(() => {
+                          const validRange = getValidDateRange();
+                          if (validRange) {
+                            return `${format(validRange.min, 'MMM d, yyyy')} → ${format(validRange.max, 'MMM d, yyyy')} (${differenceInMonths(validRange.max, validRange.min) + 1} months)`;
+                          } else if (commonScope.dateRange) {
+                            return `${format(new Date(commonScope.dateRange.min), 'MMM d, yyyy')} → ${format(new Date(commonScope.dateRange.max), 'MMM d, yyyy')} (${differenceInMonths(new Date(commonScope.dateRange.max), new Date(commonScope.dateRange.min)) + 1} months)`;
+                          }
+                          return 'Loading...';
+                        })()}
                       </p>
+                      {validDates && validDates.size > 0 && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {validDates.size} days with complete data
+                        </p>
+                      )}
                     </div>
                     <div>
                       <span className="text-muted-foreground">Locations:</span>
