@@ -67,6 +67,12 @@ const Dashboard = () => {
   const [simulationConfigOpen, setSimulationConfigOpen] = useState(false);
   const [simulationScope, setSimulationScope] = useState<SimulationConfig | null>(null);
   const [simulationStatus, setSimulationStatus] = useState<'idle' | 'running' | 'polling' | 'complete'>('idle');
+  const [periodStats, setPeriodStats] = useState<{
+    totalSkus: number;
+    totalSales: number;
+    daysWithData: number;
+    avgDailySales: number;
+  } | null>(null);
 
   // Check admin status and load settings
   useEffect(() => {
@@ -272,9 +278,89 @@ const Dashboard = () => {
     setSimulationConfigOpen(true);
   };
 
-  const handleSimulationConfirm = (config: SimulationConfig) => {
+  const handleSimulationConfirm = async (config: SimulationConfig) => {
     setSimulationScope(config);
-    runDBMAnalysis(config);
+    
+    // Validate scope before running
+    const isValid = await validateSimulationScope(config);
+    if (isValid) {
+      runDBMAnalysis(config);
+    }
+  };
+
+  const validateSimulationScope = async (config: SimulationConfig): Promise<boolean> => {
+    try {
+      const startDate = config.dateRange?.from
+        ? format(config.dateRange.from, "yyyy-MM-dd")
+        : (dataDateRange ? format(dataDateRange.min, "yyyy-MM-dd") : "2023-01-01");
+      const endDate = config.dateRange?.to
+        ? format(config.dateRange.to, "yyyy-MM-dd")
+        : (dataDateRange ? format(dataDateRange.max, "yyyy-MM-dd") : "2023-12-31");
+
+      const skuParam = config.productSKUs === 'ALL' ? 'ALL' : config.productSKUs[0] || 'ALL';
+
+      // Query for period statistics
+      const { data: rawData, error } = await supabase.rpc('get_fact_daily_raw', {
+        p_location_code: config.location,
+        p_sku: skuParam,
+        p_start_date: startDate,
+        p_end_date: endDate
+      });
+
+      if (error) throw error;
+
+      if (!rawData || rawData.length === 0) {
+        toast({
+          title: "No Data Available",
+          description: "Selected period has no inventory data. Please choose a different date range.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Calculate statistics
+      const totalSales = rawData.reduce((sum: number, row: any) => sum + (row.units_sold || 0), 0);
+      const uniqueSkus = new Set(rawData.map((row: any) => row.sku)).size;
+      const daysWithData = new Set(rawData.map((row: any) => row.d)).size;
+      const avgDailySales = daysWithData > 0 ? totalSales / daysWithData : 0;
+
+      setPeriodStats({
+        totalSkus: uniqueSkus,
+        totalSales,
+        daysWithData,
+        avgDailySales
+      });
+
+      // Warn if no sales
+      if (totalSales === 0) {
+        toast({
+          title: "No Sales Data",
+          description: `Selected period (${startDate} to ${endDate}) has ZERO sales${skuParam !== 'ALL' ? ` for SKU ${skuParam}` : ''}. Simulation will show 0% variance. Try selecting "All Products" or a different date range like Q1 2022 (Jan-Mar 2022).`,
+          variant: "destructive",
+          duration: 10000,
+        });
+        return false;
+      }
+
+      // Warn if very low sales
+      if (avgDailySales < 1) {
+        toast({
+          title: "Low Sales Activity",
+          description: `Selected period has minimal sales (${totalSales.toFixed(0)} units total, ${avgDailySales.toFixed(2)} per day). Results may show small variances. Consider selecting a busier period.`,
+          duration: 8000,
+        });
+      }
+
+      return true;
+    } catch (error: any) {
+      console.error("Validation error:", error);
+      toast({
+        title: "Validation Error",
+        description: error.message || "Could not validate simulation scope",
+        variant: "destructive",
+      });
+      return false;
+    }
   };
 
   const runDBMAnalysis = async (config?: SimulationConfig) => {
@@ -826,6 +912,35 @@ const Dashboard = () => {
 
           {/* Run Simulation Button */}
           <div className="space-y-4">
+            {/* Period Statistics */}
+            {periodStats && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Selected Period Statistics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <div className="text-muted-foreground">SKUs</div>
+                      <div className="text-2xl font-semibold">{periodStats.totalSkus}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Total Sales</div>
+                      <div className="text-2xl font-semibold">{periodStats.totalSales.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Days</div>
+                      <div className="text-2xl font-semibold">{periodStats.daysWithData}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Avg Daily Sales</div>
+                      <div className="text-2xl font-semibold">{periodStats.avgDailySales.toFixed(1)}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
             <div className="flex justify-center">
               <Button
                 onClick={handleOpenSimulationConfig}
