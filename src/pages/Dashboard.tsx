@@ -899,18 +899,25 @@ const Dashboard = () => {
         serviceLevelSimulated: "0.0",
       };
 
-  // Prepare graph data with target units
-  const inventoryFlowData = factDaily.map((row) => ({
-    day: new Date(row.d).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    }),
-    sales: Number(row.units_sold),
-    inventory: Number(row.on_hand_units ?? 0),
-    inventorySimulated: Number(row.on_hand_units_sim ?? 0),
-    targetUnits: Number(row.target_units ?? 0),
-    economicUnits: Number(row.economic_units ?? 0),
-  }));
+  // Prepare graph data with target units - filter to only valid dates
+  const inventoryFlowData = factDaily
+    .filter((row) => {
+      // Only include dates with both sales and inventory data
+      if (!validDates) return true; // If no filter, show all
+      return validDates.has(row.d);
+    })
+    .map((row) => ({
+      day: new Date(row.d).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+      sales: Number(row.units_sold),
+      inventory: Number(row.on_hand_units ?? 0),
+      inventorySimulated: Number(row.on_hand_units_sim ?? 0),
+      targetUnits: Number(row.target_units ?? 0),
+      economicUnits: Number(row.economic_units ?? 0),
+    }));
 
   if (loading) {
     return (
