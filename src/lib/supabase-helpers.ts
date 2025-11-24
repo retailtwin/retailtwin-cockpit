@@ -299,12 +299,23 @@ export async function getContiguousValidDateRange(
   locationCode?: string,
   sku?: string
 ): Promise<ContiguousDateRange | null> {
-  const { data, error } = await supabase.rpc('get_fact_daily_raw', {
-    p_location_code: locationCode || 'ALL',
-    p_sku: sku || 'ALL',
-    p_start_date: null,
-    p_end_date: null
-  });
+  // Query fact_daily directly instead of using the RPC
+  // Note: Using 'as any' because TypeScript doesn't have types for the aifo schema
+  let query = (supabase as any)
+    .schema('aifo')
+    .from('fact_daily')
+    .select('d, on_hand_units, units_sold');
+  
+  // Apply filters if provided
+  if (locationCode && locationCode !== 'ALL') {
+    query = query.eq('location_code', locationCode);
+  }
+  
+  if (sku && sku !== 'ALL') {
+    query = query.eq('sku', sku);
+  }
+  
+  const { data, error } = await query;
   
   if (error || !data || data.length === 0) {
     console.error("Error fetching valid dates:", error);
@@ -355,7 +366,7 @@ export async function getContiguousValidDateRange(
     .filter((date: string, index: number, self: string[]) => self.indexOf(date) === index) // unique dates
     .sort();
   
-  const validDatesSet = new Set(validDatesArray);
+  const validDatesSet: Set<string> = new Set(validDatesArray);
   
   // Calculate total days in the span
   const start = new Date(startDate);
