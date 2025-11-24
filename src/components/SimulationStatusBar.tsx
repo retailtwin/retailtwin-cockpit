@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Settings } from "lucide-react";
+import { Settings, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface SimulationStatusBarProps {
@@ -8,6 +8,7 @@ interface SimulationStatusBarProps {
   shippingLeadTime?: number;
   orderDays?: string;
   onViewSettings?: () => void;
+  simulationStatus?: 'idle' | 'running' | 'polling' | 'complete';
 }
 
 export const SimulationStatusBar = ({
@@ -16,6 +17,7 @@ export const SimulationStatusBar = ({
   shippingLeadTime,
   orderDays,
   onViewSettings,
+  simulationStatus = 'idle',
 }: SimulationStatusBarProps) => {
   // Calculate total lead time and format shipping frequency
   const totalLeadTime = (productionLeadTime || 0) + (shippingLeadTime || 0);
@@ -51,6 +53,24 @@ export const SimulationStatusBar = ({
         <Badge variant="default" className="gap-1">
           DBM
         </Badge>
+        {simulationStatus === 'running' && (
+          <Badge variant="secondary" className="gap-1 animate-pulse">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Running...
+          </Badge>
+        )}
+        {simulationStatus === 'polling' && (
+          <Badge variant="secondary" className="gap-1 animate-pulse">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Checking results...
+          </Badge>
+        )}
+        {simulationStatus === 'complete' && (
+          <Badge variant="default" className="gap-1 bg-success text-success-foreground">
+            <CheckCircle2 className="h-3 w-3" />
+            Complete!
+          </Badge>
+        )}
         <div className="flex items-center gap-2">
           {totalLeadTime > 0 && (
             <Badge variant="secondary" className="font-normal">
