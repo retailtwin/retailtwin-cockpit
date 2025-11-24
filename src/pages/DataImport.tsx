@@ -6,15 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, Download, MapPin, Package, TrendingUp, Archive, Info, CheckCircle2 } from "lucide-react";
+import { Loader2, Upload, Download, MapPin, Package, TrendingUp, Archive, Info, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/Layout";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useDataset } from "@/contexts/DatasetContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type ImportType = 'locations' | 'products' | 'sales' | 'inventory';
+
+interface CSVPreview {
+  headers: string[];
+  rows: string[][];
+  isValid: boolean;
+  error?: string;
+}
 
 interface Dataset {
   id: string;
@@ -61,6 +69,12 @@ export default function DataImport() {
     inventory: null,
   });
   const [showInstructions, setShowInstructions] = useState(false);
+  const [csvPreviews, setCsvPreviews] = useState<Record<ImportType, CSVPreview | null>>({
+    locations: null,
+    products: null,
+    sales: null,
+    inventory: null,
+  });
   const { toast } = useToast();
   const navigate = useNavigate();
   const { refreshDatasets } = useDataset();
@@ -292,8 +306,104 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
     }
   };
 
-  const handleFileSelect = (type: ImportType, file: File | null) => {
+  const getExpectedHeaders = (type: ImportType): string[] => {
+    switch (type) {
+      case 'locations':
+        return ['store_code', 'name', 'production_lead_time', 'shipping_lead_time', 'order_days'];
+      case 'products':
+        return ['product_code', 'name', 'cost_price', 'sales_price', 'pack_size', 'minimum_order_quantity', 'group_1', 'group_2', 'group_3'];
+      case 'sales':
+        return ['day', 'store', 'product', 'units'];
+      case 'inventory':
+        return ['day', 'store', 'product', 'units_on_hand', 'units_on_order', 'units_in_transit'];
+      default:
+        return [];
+    }
+  };
+
+  const validateCSVHeaders = (headers: string[], expectedHeaders: string[]): boolean => {
+    // Normalize headers (trim, lowercase)
+    const normalizedHeaders = headers.map(h => h.trim().toLowerCase());
+    const normalizedExpected = expectedHeaders.map(h => h.toLowerCase());
+    
+    // Check if all expected headers are present
+    return normalizedExpected.every(expected => normalizedHeaders.includes(expected));
+  };
+
+  const parseCSVPreview = async (file: File, type: ImportType): Promise<CSVPreview> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        const lines = text.split('\n').filter(line => line.trim());
+        
+        if (lines.length === 0) {
+          resolve({
+            headers: [],
+            rows: [],
+            isValid: false,
+            error: 'CSV file is empty'
+          });
+          return;
+        }
+
+        // Parse headers (first line)
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, ''));
+        
+        // Parse first 3 data rows for preview
+        const rows = lines.slice(1, 4).map(line => {
+          // Simple CSV parsing (handles basic cases)
+          return line.split(',').map(cell => cell.trim().replace(/^["']|["']$/g, ''));
+        });
+
+        const expectedHeaders = getExpectedHeaders(type);
+        const isValid = validateCSVHeaders(headers, expectedHeaders);
+        
+        let error: string | undefined;
+        if (!isValid) {
+          error = `Invalid headers. Expected: ${expectedHeaders.join(', ')}`;
+        }
+
+        resolve({
+          headers,
+          rows,
+          isValid,
+          error
+        });
+      };
+
+      reader.onerror = () => {
+        resolve({
+          headers: [],
+          rows: [],
+          isValid: false,
+          error: 'Failed to read file'
+        });
+      };
+
+      reader.readAsText(file);
+    });
+  };
+
+  const handleFileSelect = async (type: ImportType, file: File | null) => {
     setSelectedFiles(prev => ({ ...prev, [type]: file }));
+    
+    if (file) {
+      // Parse and validate CSV
+      const preview = await parseCSVPreview(file, type);
+      setCsvPreviews(prev => ({ ...prev, [type]: preview }));
+      
+      if (!preview.isValid) {
+        toast({
+          variant: "destructive",
+          title: "Invalid CSV Format",
+          description: preview.error || "The selected file doesn't match the expected format",
+        });
+      }
+    } else {
+      setCsvPreviews(prev => ({ ...prev, [type]: null }));
+    }
   };
 
   const pollDatasetUntilComplete = async (
@@ -356,7 +466,19 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
 
   const handleUploadAndProcess = async (type: ImportType) => {
     const file = selectedFiles[type];
+    const preview = csvPreviews[type];
+    
     if (!file || !currentDatasetId) return;
+
+    // Prevent upload if validation failed
+    if (!preview?.isValid) {
+      toast({
+        variant: "destructive",
+        title: "Cannot Upload",
+        description: preview?.error || "Please select a valid CSV file with correct headers",
+      });
+      return;
+    }
 
     setProcessingStatus(prev => ({ ...prev, [type]: 'uploading' }));
 
@@ -768,9 +890,68 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                         )}
                       </div>
 
+                      {/* CSV Preview */}
+                      {csvPreviews[type] && (
+                        <div className="space-y-2">
+                          {csvPreviews[type]?.isValid ? (
+                            <Alert className="border-green-600/20 bg-green-600/5">
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              <AlertDescription>
+                                <p className="text-sm font-medium mb-2">Valid CSV Format ✓</p>
+                                <div className="text-xs">
+                                  <p className="mb-1">Headers: {csvPreviews[type]?.headers.join(', ')}</p>
+                                  {csvPreviews[type]?.rows && csvPreviews[type]!.rows.length > 0 && (
+                                    <div className="mt-2 border rounded-md overflow-hidden">
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow>
+                                            {csvPreviews[type]?.headers.map((header, idx) => (
+                                              <TableHead key={idx} className="text-xs py-1 px-2 h-auto">
+                                                {header}
+                                              </TableHead>
+                                            ))}
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {csvPreviews[type]?.rows.slice(0, 3).map((row, rowIdx) => (
+                                            <TableRow key={rowIdx}>
+                                              {row.map((cell, cellIdx) => (
+                                                <TableCell key={cellIdx} className="text-xs py-1 px-2 h-auto">
+                                                  {cell.length > 20 ? cell.substring(0, 20) + '...' : cell}
+                                                </TableCell>
+                                              ))}
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                      <p className="text-xs text-muted-foreground p-2 bg-muted/50">
+                                        Showing first {Math.min(3, csvPreviews[type]?.rows.length || 0)} rows
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              </AlertDescription>
+                            </Alert>
+                          ) : (
+                            <Alert variant="destructive">
+                              <AlertTriangle className="h-4 w-4" />
+                              <AlertDescription>
+                                <p className="text-sm font-medium mb-1">Invalid CSV Format</p>
+                                <p className="text-xs">{csvPreviews[type]?.error}</p>
+                                {csvPreviews[type]?.headers && csvPreviews[type]!.headers.length > 0 && (
+                                  <p className="text-xs mt-2">
+                                    Found headers: {csvPreviews[type]?.headers.join(', ')}
+                                  </p>
+                                )}
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </div>
+                      )}
+
                       <Button
                         onClick={() => handleUploadAndProcess(type)}
-                        disabled={!file || status === 'uploading' || status === 'processing' || status === 'complete'}
+                        disabled={!file || !csvPreviews[type]?.isValid || status === 'uploading' || status === 'processing' || status === 'complete'}
                         className="w-full"
                       >
                         {status === 'uploading' && (
