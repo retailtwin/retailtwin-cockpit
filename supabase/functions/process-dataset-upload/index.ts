@@ -222,9 +222,19 @@ const deduplicateRecords = (type: string, items: any[]): any[] => {
 // Background processing function
 async function processFileInBackground(
   supabase: any,
-  params: { datasetId: string; fileType: string; filePath: string }
+  params: { 
+    datasetId: string; 
+    fileType: string; 
+    filePath: string;
+    scope?: {
+      startDate: string | null;
+      endDate: string | null;
+      locations: 'ALL' | string[];
+      products: 'ALL' | string[];
+    };
+  }
 ) {
-  const { datasetId, fileType, filePath } = params;
+  const { datasetId, fileType, filePath, scope } = params;
 
   try {
     console.log(`Starting background processing for dataset ${datasetId}, type ${fileType}`);
@@ -321,9 +331,21 @@ async function processFileInBackground(
             throw new Error(`Missing required columns: day, store, product, units must be present`);
           }
           
-          record.d = normalizeDate(values[dayIdx]?.trim());
-          record.location_code = values[storeIdx]?.trim();
-          record.sku = values[productIdx]?.trim();
+          const dateStr = normalizeDate(values[dayIdx]?.trim());
+          const locationCode = values[storeIdx]?.trim();
+          const sku = values[productIdx]?.trim();
+          
+          // Apply scope filters
+          if (scope) {
+            if (scope.startDate && dateStr < scope.startDate) continue;
+            if (scope.endDate && dateStr > scope.endDate) continue;
+            if (scope.locations !== 'ALL' && !scope.locations.includes(locationCode)) continue;
+            if (scope.products !== 'ALL' && !scope.products.includes(sku)) continue;
+          }
+          
+          record.d = dateStr;
+          record.location_code = locationCode;
+          record.sku = sku;
           record.units_sold = parseFloat(values[unitsIdx]) || 0;
           break;
         }
@@ -340,9 +362,21 @@ async function processFileInBackground(
             throw new Error(`Missing required columns: day, store, product must be present`);
           }
           
-          record.d = normalizeDate(values[dayIdx]?.trim());
-          record.location_code = values[storeIdx]?.trim();
-          record.sku = values[productIdx]?.trim();
+          const dateStr = normalizeDate(values[dayIdx]?.trim());
+          const locationCode = values[storeIdx]?.trim();
+          const sku = values[productIdx]?.trim();
+          
+          // Apply scope filters
+          if (scope) {
+            if (scope.startDate && dateStr < scope.startDate) continue;
+            if (scope.endDate && dateStr > scope.endDate) continue;
+            if (scope.locations !== 'ALL' && !scope.locations.includes(locationCode)) continue;
+            if (scope.products !== 'ALL' && !scope.products.includes(sku)) continue;
+          }
+          
+          record.d = dateStr;
+          record.location_code = locationCode;
+          record.sku = sku;
           record.on_hand_units = onHandIdx !== undefined ? (parseFloat(values[onHandIdx]) || 0) : 0;
           record.on_order_units = onOrderIdx !== undefined ? (parseInt(values[onOrderIdx]) || 0) : 0;
           record.in_transit_units = inTransitIdx !== undefined ? (parseInt(values[inTransitIdx]) || 0) : 0;
@@ -529,13 +563,16 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { datasetId, fileType } = await req.json();
+    const { datasetId, fileType, scope } = await req.json();
 
     if (!datasetId || !fileType) {
       throw new Error('Missing required parameters: datasetId and fileType');
     }
 
     console.log(`Received request to process ${fileType} for dataset ${datasetId}`);
+    if (scope) {
+      console.log(`Scope: ${scope.startDate || 'all'} to ${scope.endDate || 'all'}`);
+    }
 
     // Fetch dataset info
     const { data: dataset, error: datasetError } = await supabase
@@ -576,12 +613,13 @@ serve(async (req) => {
       })
       .eq('id', datasetId);
 
-    // Start processing in background
+    // Start processing in background with scope
     EdgeRuntime.waitUntil(
       processFileInBackground(supabase, {
         datasetId,
         fileType,
-        filePath
+        filePath,
+        scope
       })
     );
 
