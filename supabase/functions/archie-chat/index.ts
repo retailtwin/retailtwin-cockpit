@@ -333,14 +333,26 @@ When answering:
 You have access to analytical tools:
 1. get_pareto_analysis - Pareto curve showing which SKUs drive most sales (80/20 rule). Use for "Pareto distribution", "top performers", "sales concentration"
 2. get_sku_details - detailed metrics for specific SKUs
-3. get_top_skus_by_metric - top/bottom performers by metrics
+3. get_top_skus_by_metric - top/bottom performers by metrics including RIV and cash_impact
 4. get_mtv_by_sku_style - MTV by SKU style prefix
 5. calculate_inventory_pipeline - inventory in supply chain (on-order, in-transit)
 6. get_inventory_snapshot - current inventory position with freshness check
 7. analyze_inventory_by_metric - problem area analysis (slow-moving, overstocked)
+8. get_daily_fact_data - day-by-day granular data for specific SKU/location showing sales, inventory levels, targets, and buffer zones
 
 Use these tools proactively when users ask analytical questions. Always cite specific numbers from the data.
 PRIORITY: When data is already provided in "Current Context Available" section, reference that data directly first. Only call tools for additional analysis or different filters.
+
+**Cash Impact Analysis:**
+When users ask about cash impact, cost, or "which items are costing me money":
+- Use 'cash_impact' metric with get_top_skus_by_metric to rank SKUs by total cash impact (MTV + RIV)
+- MTV = cash lost from stockouts (too little inventory causing missed sales)
+- RIV = cash wasted on overstock (too much inventory above economic levels)
+- Always explain BOTH components when discussing cash impact
+- Use get_daily_fact_data to drill into timeline and explain root causes
+- Example response: "SKU 10272 costs €23K total: €15K from 45 stockout days (MTV) + €8K from 90 days of overstock above economic levels (RIV)"
+- When analyzing RIV, reference days when on_hand_units > economic_units
+- When analyzing MTV, reference stockout days and missed sales opportunities
 
 **CRITICAL - Pareto Analysis:**
 When user asks about "Pareto distribution", "Pareto analysis", or "show me Pareto":
@@ -356,12 +368,14 @@ You have access to a curated knowledge base of inventory management best practic
 - The knowledge base is your second source after analytical data
 
 Key Terminology (use these terms naturally):
-- MTV (Missed Throughput Value) = Lost revenue from stockouts. This is opportunity cost.
-- RIV (Redundant Inventory Value) = Cash tied up in slow-moving stock. This is working capital waste.
-- Cash Gap = MTV + RIV = Total opportunity to improve cash flow
+- MTV (Missed Throughput Value) = Lost revenue from stockouts. This is opportunity cost - cash lost from too little inventory.
+- RIV (Redundant Inventory Value) = Cash tied up in overstock above economic levels. This is working capital waste - cash lost from too much inventory.
+- Cash Impact = MTV + RIV = Total cash opportunity from both stockouts and overstock. Always explain both components.
 - Service Level = % of demand met without stockouts (target: 95%+)
 - Turns = How many times inventory sells through per year (higher is better)
 - TCM (Total Contribution Margin) = Gross profit from sales
+- Economic Units = Optimal inventory buffer level (target zone)
+- Target Units = Replenishment trigger point
 
 Current Context Available:
 ${context ? `
@@ -448,15 +462,15 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
         type: "function",
         function: {
           name: "get_top_skus_by_metric",
-          description: "Get top N SKUs ranked by a specific metric. Use when user asks 'show me top 5', 'which SKUs need attention', or wants to identify problem areas.",
+          description: "Get top N SKUs ranked by a specific metric. Use when user asks 'show me top 5', 'which SKUs need attention', 'which items are costing me money', or wants to identify problem areas. For cash impact questions, use 'cash_impact' metric to show total cash opportunity from both stockouts (MTV) and overstock (RIV).",
           parameters: {
             type: "object",
             properties: {
               location_code: { type: "string" },
               metric: { 
                 type: "string",
-                enum: ["sales", "stockout_days", "turns", "mtv"],
-                description: "Metric to rank by: 'sales' for top sellers, 'stockout_days' for items with most stockouts, 'turns' for inventory turnover, 'mtv' for missed revenue opportunities"
+                enum: ["sales", "stockout_days", "turns", "mtv", "riv", "cash_impact"],
+                description: "Metric to rank by: 'sales' for top sellers, 'stockout_days' for items with most stockouts, 'turns' for inventory turnover, 'mtv' for missed revenue from stockouts, 'riv' for cash wasted on overstock, 'cash_impact' for total cash impact (MTV + RIV)"
               },
               limit: { 
                 type: "number",
@@ -473,6 +487,35 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
               }
             },
             required: ["location_code", "metric"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "get_daily_fact_data",
+          description: "Get day-by-day detailed data for a specific SKU and location. Shows daily sales, inventory levels (on_hand_units), simulated levels (on_hand_units_sim), target_units, economic_units, and economic_overstock_units. Use when user asks: 'what happened on [date]', 'show me daily data', 'why did we stock out', 'when was inventory too high', 'explain the timeline', or needs day-by-day root cause analysis. Essential for understanding RIV (days when on_hand > economic) and MTV (stockout days) at granular level.",
+          parameters: {
+            type: "object",
+            properties: {
+              location_code: { 
+                type: "string",
+                description: "Location code (e.g., '98274')"
+              },
+              sku: { 
+                type: "string",
+                description: "SKU code"
+              },
+              start_date: { 
+                type: "string",
+                description: "Start date in YYYY-MM-DD format"
+              },
+              end_date: { 
+                type: "string",
+                description: "End date in YYYY-MM-DD format"
+              }
+            },
+            required: ["location_code", "sku", "start_date", "end_date"]
           }
         }
       },
@@ -707,7 +750,10 @@ Remember: Be direct, use specific numbers, use your analytical tools when needed
           console.info(`📊 Executing ${functionName} with args:`, functionArgs);
           
           try {
-            const { data, error } = await supabase.rpc(functionName, {
+            // Special handling for get_daily_fact_data which calls get_fact_daily_raw
+            const rpcName = functionName === 'get_daily_fact_data' ? 'get_fact_daily_raw' : functionName;
+            
+            const { data, error } = await supabase.rpc(rpcName, {
               p_location_code: functionArgs.location_code,
               p_sku: functionArgs.sku,
               p_metric: functionArgs.metric,
