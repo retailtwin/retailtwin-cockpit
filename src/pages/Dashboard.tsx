@@ -413,15 +413,15 @@ const Dashboard = () => {
         avgDailySales
       });
 
-      // Warn if no sales
+      // Warn if no sales (but don't block)
       if (totalSales === 0) {
         toast({
-          title: "No Sales Data",
-          description: `Selected period (${startDate} to ${endDate}) has ZERO sales${skuParam !== 'ALL' ? ` for SKU ${skuParam}` : ''}. Simulation will show 0% variance. Try selecting "All Products" or a different date range like Q1 2022 (Jan-Mar 2022).`,
-          variant: "destructive",
-          duration: 10000,
+          title: "Low Sales Warning",
+          description: `Selected period (${startDate} to ${endDate}) has zero or minimal sales${skuParam !== 'ALL' ? ` for SKU ${skuParam}` : ''}. Simulation will proceed but may show limited variance. For more dynamic results, try "All Products" or Q1 2022 (Jan-Mar 2022).`,
+          variant: "default",
+          duration: 8000,
         });
-        return false;
+        // Don't return false - let simulation proceed!
       }
 
       // Compare with optimal scope if available
