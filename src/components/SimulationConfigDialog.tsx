@@ -304,13 +304,15 @@ export const SimulationConfigDialog = ({
                     }}
                     numberOfMonths={2}
                     defaultMonth={commonScope.dateRange ? new Date(commonScope.dateRange.min) : undefined}
+                    fromDate={validDates && validDates.size > 0 
+                      ? new Date(Math.min(...Array.from(validDates).map(d => new Date(d).getTime())))
+                      : commonScope.dateRange ? new Date(commonScope.dateRange.min) : undefined
+                    }
+                    toDate={validDates && validDates.size > 0
+                      ? new Date(Math.max(...Array.from(validDates).map(d => new Date(d).getTime())))
+                      : commonScope.dateRange ? new Date(commonScope.dateRange.max) : undefined
+                    }
                     disabled={(date) => {
-                      // First check date range boundaries
-                      if (commonScope.dateRange) {
-                        if (date < new Date(commonScope.dateRange.min) || date > new Date(commonScope.dateRange.max)) {
-                          return true;
-                        }
-                      }
                       // Then check if date has valid data
                       if (!validDates) return false;
                       const dateStr = format(date, 'yyyy-MM-dd');
