@@ -33,12 +33,10 @@ import { useToast } from "@/hooks/use-toast";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDataset } from "@/contexts/DatasetContext";
 
 const Dashboard = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { activeDataset } = useDataset();
   const [locations, setLocations] = useState<Location[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>("");

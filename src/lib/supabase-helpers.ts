@@ -50,19 +50,11 @@ export interface DBMCalculation {
   created_at?: string;
 }
 
-export async function fetchLocations(datasetId?: string): Promise<Location[]> {
-  if (!datasetId) {
-    console.warn("fetchLocations called without datasetId - returning empty array");
-    return [];
-  }
-
-  const { data, error } = await supabase.rpc("get_locations" as any, {
-    p_dataset_id: datasetId
-  });
+export async function fetchLocations(): Promise<Location[]> {
+  const { data, error } = await supabase.rpc("get_locations");
 
   if (error) {
     console.error("Error fetching locations:", error);
-    console.error("Full error object:", JSON.stringify(error, null, 2));
     return [];
   }
   return (data as any) || [];
@@ -91,19 +83,11 @@ export async function fetchLocationOrderDays(locationCode: string): Promise<stri
   return "mon,tue,wed,thu,fri,sat,sun";
 }
 
-export async function fetchProducts(datasetId?: string): Promise<Product[]> {
-  if (!datasetId) {
-    console.warn("fetchProducts called without datasetId - returning empty array");
-    return [];
-  }
-
-  const { data, error } = await supabase.rpc("get_products" as any, {
-    p_dataset_id: datasetId
-  });
+export async function fetchProducts(): Promise<Product[]> {
+  const { data, error } = await supabase.rpc("get_products");
 
   if (error) {
     console.error("Error fetching products:", error);
-    console.error("Full error object:", JSON.stringify(error, null, 2));
     return [];
   }
   return (data as any) || [];
@@ -113,8 +97,7 @@ export async function fetchKPIData(
   locationCode: string,
   sku: string,
   startDate?: string,
-  endDate?: string,
-  datasetId?: string
+  endDate?: string
 ): Promise<KPIData | null> {
   let finalStartDate = startDate;
   let finalEndDate = endDate;
@@ -140,23 +123,11 @@ export async function fetchKPIData(
     p_start_date: finalStartDate || null,
     p_end_date: finalEndDate || null,
   };
-  
-  if (datasetId) {
-    params.p_dataset_id = datasetId;
-  }
 
   const { data, error } = await supabase.rpc(rpcName as any, params);
 
   if (error) {
     console.error("Error fetching KPI data:", error);
-    console.error("Full error object:", JSON.stringify(error, null, 2));
-    console.error("RPC name used:", rpcName);
-    console.error("Parameters:", {
-      p_location_code: locationCode,
-      p_sku: sku,
-      p_start_date: startDate || null,
-      p_end_date: endDate || null,
-    });
     return null;
   }
   const result = data as any;
@@ -167,8 +138,7 @@ export async function fetchFactDaily(
   locationCode: string,
   sku: string,
   startDate?: string,
-  endDate?: string,
-  datasetId?: string
+  endDate?: string
 ): Promise<FactDaily[]> {
   let finalStartDate = startDate;
   let finalEndDate = endDate;
@@ -194,23 +164,11 @@ export async function fetchFactDaily(
     p_start_date: finalStartDate || null,
     p_end_date: finalEndDate || null,
   };
-  
-  if (datasetId) {
-    params.p_dataset_id = datasetId;
-  }
 
   const { data, error } = await supabase.rpc(rpcName as any, params);
 
   if (error) {
     console.error("Error fetching fact daily:", error);
-    console.error("Full error object:", JSON.stringify(error, null, 2));
-    console.error("RPC name used:", rpcName);
-    console.error("Parameters:", {
-      p_location_code: locationCode,
-      p_sku: sku,
-      p_start_date: startDate || null,
-      p_end_date: endDate || null,
-    });
     return [];
   }
   return (data as any) || [];
@@ -220,17 +178,12 @@ export async function fetchDBMCalculations(
   locationCode?: string,
   sku?: string,
   startDate?: string,
-  endDate?: string,
-  datasetId?: string
+  endDate?: string
 ): Promise<DBMCalculation[]> {
   let query = supabase
     .from("dbm_calculations")
     .select("*")
     .order("calculation_date", { ascending: false });
-
-  if (datasetId) {
-    query = query.eq("dataset_id", datasetId);
-  }
 
   if (locationCode && locationCode !== "ALL") {
     query = query.eq("location_code", locationCode);
@@ -252,7 +205,6 @@ export async function fetchDBMCalculations(
 
   if (error) {
     console.error("Error fetching DBM calculations:", error);
-    console.error("Full error object:", JSON.stringify(error, null, 2));
     return [];
   }
 

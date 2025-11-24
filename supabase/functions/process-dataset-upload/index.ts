@@ -389,32 +389,31 @@ async function processFileInBackground(
     switch (fileType) {
       case 'locations':
         countField = 'total_locations';
-        rpcFunction = 'upsert_locations_for_dataset';
+        rpcFunction = 'replace_locations';
         break;
       case 'products':
         countField = 'total_products';
-        rpcFunction = 'upsert_products_for_dataset';
+        rpcFunction = 'replace_products';
         break;
       case 'sales':
         countField = 'total_sales_records';
-        rpcFunction = 'insert_sales_for_dataset';
+        rpcFunction = 'replace_sales';
         break;
       case 'inventory':
         countField = 'total_inventory_records';
-        rpcFunction = 'upsert_inventory_for_dataset';
+        rpcFunction = 'replace_inventory';
         break;
       default:
         throw new Error(`Unknown file type: ${fileType}`);
     }
 
-    // Insert records in batches using RPC
+    // Insert records in batches using RPC (replace functions now handle all at once)
     const batchSize = 500;
     for (let i = 0; i < dedupedRecords.length; i += batchSize) {
       const batch = dedupedRecords.slice(i, i + batchSize);
       
       const { error: rpcError } = await supabase.rpc(rpcFunction, {
         records: batch,
-        p_dataset_id: datasetId,
       });
  
       if (rpcError) {
@@ -429,6 +428,7 @@ async function processFileInBackground(
       [countField]: dedupedRecords.length,
       status: 'active',
       processed_at: new Date().toISOString(),
+      last_updated: new Date().toISOString(),
     };
  
     // Calculate date range for sales/inventory
