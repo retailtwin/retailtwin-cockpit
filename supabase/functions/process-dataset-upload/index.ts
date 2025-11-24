@@ -497,56 +497,69 @@ serve(async (req) => {
     const { datasetId, fileType } = await req.json();
 
     if (!datasetId || !fileType) {
-      throw new Error('Missing datasetId or fileType');
+      throw new Error('Missing required parameters: datasetId and fileType');
     }
 
-    // Get dataset and verify ownership
+    console.log(`Received request to process ${fileType} for dataset ${datasetId}`);
+
+    // Fetch dataset info
     const { data: dataset, error: datasetError } = await supabase
       .from('datasets')
       .select('*')
       .eq('id', datasetId)
-      .eq('user_id', user.id)
+      .eq('user_id', user.id) // Verify ownership
       .single();
 
     if (datasetError || !dataset) {
       throw new Error('Dataset not found or access denied');
     }
 
-    // Get the file path from dataset
-    const fileField = `${fileType}_filename`;
-    const filePath = dataset[fileField];
-
+    // Get file path from dataset
+    let filePath = dataset[`${fileType}_filename` as keyof typeof dataset] as string;
+    
     if (!filePath) {
-      throw new Error(`No ${fileType} file uploaded for this dataset`);
+      throw new Error(`No file uploaded for ${fileType}`);
     }
 
-    // Set dataset status to 'processing'
+    // Handle both old format (filename only) and new format (full path)
+    // Old format: "locations_123.csv"
+    // New format: "{datasetId}/locations/locations_123.csv"
+    if (!filePath.includes('/')) {
+      // Old format - construct full path
+      filePath = `${datasetId}/${fileType}/${filePath}`;
+      console.log(`Converted old format filename to full path: ${filePath}`);
+    }
+
+    console.log(`Processing ${fileType} file: ${filePath}`);
+
+    // Update status to processing
     await supabase
       .from('datasets')
-      .update({ status: 'processing' })
+      .update({ 
+        status: 'processing',
+        error_message: null 
+      })
       .eq('id', datasetId);
 
-    // Schedule background processing
+    // Start processing in background
     EdgeRuntime.waitUntil(
-      processFileInBackground(supabase, { datasetId, fileType, filePath })
+      processFileInBackground(supabase, {
+        datasetId,
+        fileType,
+        filePath
+      })
     );
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: "Processing started. You can continue using the app.",
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: true, message: `${fileType} processing started` }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
   } catch (error: any) {
-    console.error('Error scheduling dataset processing:', error);
+    console.error('Edge function error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
-      { 
-        status: error.message === 'Unauthorized' ? 401 : 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
   }
 });
