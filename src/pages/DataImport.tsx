@@ -903,12 +903,12 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                 {batchUploading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Processing All Files...
+                    Uploading All Files...
                   </>
                 ) : (
                   <>
                     <Upload className="mr-2 h-5 w-5" />
-                    Upload & Process All Data
+                    Upload All Data
                   </>
                 )}
               </Button>
@@ -929,7 +929,7 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Data Replacement Warning</AlertTitle>
                 <AlertDescription>
-                  Processing will completely replace all existing data in your dataset with the new files.
+                  Uploading will completely replace all existing data in your dataset with the new files.
                 </AlertDescription>
               </Alert>
             )}
