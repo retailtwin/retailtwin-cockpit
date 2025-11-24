@@ -12,11 +12,11 @@ const corsHeaders = {
 // Input validation schema
 const calculatorSchema = z.object({
   location_code: z.string()
-    .regex(/^[A-Z0-9_-]+$|^ALL$/, 'Invalid location code format')
+    .regex(/^(ALL|[A-Z0-9_-]+)$/, 'Invalid location code format')
     .max(50, 'Location code too long'),
   sku: z.string()
-    .regex(/^[A-Z0-9_-]+$|^ALL$/, 'Invalid SKU format')
-    .max(50, 'SKU too long'),
+    .regex(/^(ALL|[A-Z0-9 _-]+)$/, 'Invalid SKU format')
+    .max(100, 'SKU too long'),
   start_date: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (use YYYY-MM-DD)')
     .refine(date => {
