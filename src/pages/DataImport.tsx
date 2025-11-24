@@ -158,6 +158,13 @@ export default function DataImport() {
 
   const parseExcelWorkbook = async (file: File): Promise<Record<ImportType, File>> => {
     return new Promise((resolve, reject) => {
+      // Validate file size (max 50MB)
+      const maxSize = 50 * 1024 * 1024;
+      if (file.size > maxSize) {
+        reject(new Error(`File size ${(file.size / 1024 / 1024).toFixed(2)}MB exceeds maximum of 50MB`));
+        return;
+      }
+
       const reader = new FileReader();
       
       reader.onload = (e) => {
@@ -165,30 +172,57 @@ export default function DataImport() {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: 'array' });
           
-          // Map worksheet names to import types
+          // Map worksheet names to import types (case-insensitive)
           const worksheetMap: Record<string, ImportType> = {
-            'Stores': 'locations',
-            'Products': 'products',
-            'Inventory': 'inventory',
-            'Sales': 'sales'
+            'stores': 'locations',
+            'products': 'products',
+            'inventory': 'inventory',
+            'sales': 'sales'
           };
           
           const csvFiles: Partial<Record<ImportType, File>> = {};
+          const missingSheets: string[] = [];
+          const emptySheets: string[] = [];
+          
+          // Get actual sheet names (case-insensitive comparison)
+          const availableSheets = workbook.SheetNames.map(name => name.toLowerCase());
           
           // Extract each worksheet and convert to CSV
           for (const [sheetName, importType] of Object.entries(worksheetMap)) {
-            const worksheet = workbook.Sheets[sheetName];
+            const actualSheetName = workbook.SheetNames.find(
+              name => name.toLowerCase() === sheetName.toLowerCase()
+            );
             
-            if (!worksheet) {
-              reject(new Error(`Missing worksheet: ${sheetName}`));
-              return;
+            if (!actualSheetName) {
+              missingSheets.push(sheetName.charAt(0).toUpperCase() + sheetName.slice(1));
+              continue;
             }
             
-            // Convert worksheet to CSV
+            const worksheet = workbook.Sheets[actualSheetName];
+            
+            // Check if worksheet is empty
             const csv = XLSX.utils.sheet_to_csv(worksheet);
+            const lines = csv.trim().split('\n').filter(line => line.trim());
+            
+            if (lines.length < 2) {
+              emptySheets.push(actualSheetName);
+              continue;
+            }
+            
             const blob = new Blob([csv], { type: 'text/csv' });
             const csvFile = new File([blob], `${importType}.csv`, { type: 'text/csv' });
             csvFiles[importType] = csvFile;
+          }
+          
+          // Provide helpful error messages
+          if (missingSheets.length > 0) {
+            reject(new Error(`Missing worksheet(s): ${missingSheets.join(', ')}. Found sheets: ${workbook.SheetNames.join(', ')}`));
+            return;
+          }
+          
+          if (emptySheets.length > 0) {
+            reject(new Error(`Empty worksheet(s): ${emptySheets.join(', ')}. Each worksheet must have at least a header row and one data row.`));
+            return;
           }
           
           // Verify all 4 worksheets were found
@@ -384,11 +418,25 @@ export default function DataImport() {
   };
 
   const handleBatchUploadAndProcess = async () => {
+    // Pre-upload validation
     const allFiles = Object.values(selectedFiles).every(f => f !== null);
     if (!allFiles) {
       toast({
         title: "Missing files",
         description: "Please select all 4 files before processing",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate CSV previews
+    const invalidPreviews = (Object.keys(csvPreviews) as ImportType[])
+      .filter(type => csvPreviews[type] && !csvPreviews[type]!.isValid);
+    
+    if (invalidPreviews.length > 0) {
+      toast({
+        title: "Invalid file format",
+        description: `Please fix errors in: ${invalidPreviews.join(', ')}`,
         variant: "destructive",
       });
       return;
@@ -405,6 +453,7 @@ export default function DataImport() {
 
     setBatchUploading(true);
     const fileTypes: ImportType[] = ['locations', 'products', 'sales', 'inventory'];
+    const failedTypes: string[] = [];
     
     try {
       // Step 1: Upload all files to storage
@@ -425,10 +474,15 @@ export default function DataImport() {
             upsert: true
           });
 
-        if (uploadError) throw new Error(`Failed to upload ${fileType}: ${uploadError.message}`);
+        if (uploadError) {
+          failedTypes.push(fileType);
+          throw new Error(`Failed to upload ${fileType}: ${uploadError.message}`);
+        }
         
         uploadedPaths[fileType] = filePath;
-        toast({ description: `${fileType} uploaded` });
+        toast({ 
+          description: `${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully` 
+        });
       }
 
       // Step 2: Update dataset record with all file paths
@@ -463,39 +517,64 @@ export default function DataImport() {
         if (functionError) {
           console.error(`Processing error for ${fileType}:`, functionError);
           setUploadProgress(prev => ({ ...prev, [fileType]: 'error' }));
+          failedTypes.push(fileType);
           toast({
-            description: `${fileType} processing failed`,
+            title: "Processing failed",
+            description: `Failed to process ${fileType}: ${functionError.message}`,
             variant: "destructive",
           });
         }
       }
 
-      toast({
-        title: "Processing started",
-        description: "All files uploaded and processing started",
-      });
+      if (failedTypes.length === 0) {
+        toast({
+          title: "Processing started",
+          description: "All files uploaded and processing started successfully",
+        });
 
-      // Step 4: Poll for completion
-      await pollDatasetUntilComplete(datasetId);
-      
-      // Refresh dataset info
-      await ensureUserHasDataset();
-      
-      // Mark all as complete
-      setUploadProgress({
-        locations: 'complete',
-        products: 'complete',
-        sales: 'complete',
-        inventory: 'complete',
-      });
+        // Step 4: Poll for completion
+        await pollDatasetUntilComplete(datasetId);
+        
+        // Refresh dataset info
+        await ensureUserHasDataset();
+        
+        // Mark all as complete
+        setUploadProgress({
+          locations: 'complete',
+          products: 'complete',
+          sales: 'complete',
+          inventory: 'complete',
+        });
+      } else {
+        toast({
+          title: "Partial failure",
+          description: `Failed files: ${failedTypes.join(', ')}. Please retry.`,
+          variant: "destructive",
+        });
+      }
 
     } catch (error: any) {
       console.error("Batch upload error:", error);
+      
+      // Show specific error with failed worksheet if available
+      const errorMessage = failedTypes.length > 0
+        ? `Failed on ${failedTypes[failedTypes.length - 1]}: ${error.message}`
+        : error.message;
+      
       toast({
         title: "Upload failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
+      
+      // Mark failed types as error
+      if (failedTypes.length > 0) {
+        const newProgress = { ...uploadProgress };
+        failedTypes.forEach(type => {
+          newProgress[type as ImportType] = 'error';
+        });
+        setUploadProgress(newProgress);
+      }
     } finally {
       setBatchUploading(false);
     }
@@ -812,7 +891,7 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
             </div>
 
             {/* Batch Upload Button */}
-            <div className="pt-4">
+            <div className="pt-4 space-y-2">
               <Button
                 onClick={handleBatchUploadAndProcess}
                 disabled={!Object.values(selectedFiles).every(f => f !== null) || batchUploading}
@@ -831,6 +910,15 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                   </>
                 )}
               </Button>
+              
+              {/* File size info */}
+              {Object.values(selectedFiles).some(f => f !== null) && (
+                <p className="text-sm text-muted-foreground text-center">
+                  Total size: {(Object.values(selectedFiles)
+                    .filter(f => f !== null)
+                    .reduce((sum, f) => sum + (f?.size || 0), 0) / 1024 / 1024).toFixed(2)} MB
+                </p>
+              )}
             </div>
 
             {/* Data Replacement Warning */}
@@ -851,39 +939,70 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
           <Card>
             <CardHeader>
               <CardTitle>Processing Progress</CardTitle>
+              <CardDescription>
+                Uploading and processing your data files
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 {(['locations', 'products', 'sales', 'inventory'] as ImportType[]).map(
-                  (fileType) => (
-                    <div key={fileType} className="flex items-center gap-3">
-                      {uploadProgress[fileType] === 'pending' && (
-                        <div className="h-4 w-4 rounded-full border-2 border-muted" />
-                      )}
-                      {uploadProgress[fileType] === 'uploading' && (
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                      )}
-                      {uploadProgress[fileType] === 'processing' && (
-                        <Loader2 className="h-4 w-4 animate-spin text-orange-600" />
-                      )}
-                      {uploadProgress[fileType] === 'complete' && (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      )}
-                      {uploadProgress[fileType] === 'error' && (
-                        <AlertCircle className="h-4 w-4 text-red-600" />
-                      )}
-                      <span className="capitalize font-medium">{fileType}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {uploadProgress[fileType] === 'pending' && 'Waiting...'}
-                        {uploadProgress[fileType] === 'uploading' && 'Uploading...'}
-                        {uploadProgress[fileType] === 'processing' && 'Processing...'}
-                        {uploadProgress[fileType] === 'complete' && 'Complete'}
-                        {uploadProgress[fileType] === 'error' && 'Failed'}
-                      </span>
-                    </div>
-                  )
+                  (fileType) => {
+                    const file = selectedFiles[fileType];
+                    const recordCount = file ? (
+                      csvPreviews[fileType]?.rows.length ? 
+                      `~${csvPreviews[fileType]!.rows.length * 100} records` : 
+                      ''
+                    ) : '';
+                    
+                    return (
+                      <div key={fileType} className="flex items-center gap-3">
+                        {uploadProgress[fileType] === 'pending' && (
+                          <div className="h-4 w-4 rounded-full border-2 border-muted" />
+                        )}
+                        {uploadProgress[fileType] === 'uploading' && (
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                        )}
+                        {uploadProgress[fileType] === 'processing' && (
+                          <Loader2 className="h-4 w-4 animate-spin text-orange-600" />
+                        )}
+                        {uploadProgress[fileType] === 'complete' && (
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        )}
+                        {uploadProgress[fileType] === 'error' && (
+                          <AlertCircle className="h-4 w-4 text-red-600" />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="capitalize font-medium">{fileType}</span>
+                            {recordCount && (
+                              <span className="text-xs text-muted-foreground">
+                                {recordCount}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {uploadProgress[fileType] === 'pending' && 'Waiting...'}
+                            {uploadProgress[fileType] === 'uploading' && 'Uploading to storage...'}
+                            {uploadProgress[fileType] === 'processing' && 'Processing data...'}
+                            {uploadProgress[fileType] === 'complete' && '✓ Complete'}
+                            {uploadProgress[fileType] === 'error' && 'Failed - please retry'}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
                 )}
               </div>
+              
+              {Object.values(uploadProgress).some(status => status === 'error') && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Some files failed to process</AlertTitle>
+                  <AlertDescription>
+                    Check the error messages above and try uploading again. Make sure your files match the template format.
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
         )}

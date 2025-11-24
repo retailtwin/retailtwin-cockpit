@@ -408,32 +408,40 @@ async function processFileInBackground(
     }
 
     // Batch large datasets to avoid payload size limits
-    const BATCH_SIZE = 500;
+    const BATCH_SIZE = 1000; // Increased from 500 for better performance
     console.log(`Inserting ${dedupedRecords.length} records via ${rpcFunction}`);
     
     if (fileType === 'sales' || fileType === 'inventory') {
-      // For sales/inventory, batch the inserts
-      // First clear existing data
+      // For sales/inventory, use new clear + batch insert approach
+      // Step 1: Clear existing data ONCE at the start
+      const clearFunction = fileType === 'sales' ? 'clear_sales_data' : 'clear_inventory_data';
       console.log(`Clearing existing ${fileType} data...`);
-      const { error: clearError } = await supabase.rpc(rpcFunction, { records: [] });
+      
+      const { error: clearError } = await supabase.rpc(clearFunction);
       if (clearError) {
         throw new Error(`Failed to clear ${fileType} data: ${clearError.message}`);
       }
       
-      // Then insert in batches
+      // Step 2: Insert in batches (without deleting each time)
+      const insertFunction = fileType === 'sales' ? 'insert_sales_batch' : 'insert_inventory_batch';
+      
       for (let i = 0; i < dedupedRecords.length; i += BATCH_SIZE) {
         const batch = dedupedRecords.slice(i, i + BATCH_SIZE);
-        console.log(`Inserting batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(dedupedRecords.length / BATCH_SIZE)} (${batch.length} records)`);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(dedupedRecords.length / BATCH_SIZE);
         
-        // Use RPC function for batch insert (respects schema)
-        const { error: insertError } = await supabase.rpc(rpcFunction, {
+        console.log(`Inserting batch ${batchNum}/${totalBatches} (${batch.length} records)`);
+        
+        const { error: insertError } = await supabase.rpc(insertFunction, {
           records: batch
         });
         
         if (insertError) {
-          throw new Error(`Failed to insert batch: ${insertError.message}`);
+          throw new Error(`Failed to insert batch ${batchNum}/${totalBatches}: ${insertError.message}`);
         }
       }
+      
+      console.log(`Successfully loaded all ${dedupedRecords.length} ${fileType} records`);
     } else {
       // For locations/products, use the RPC function directly (smaller datasets)
       const { error: rpcError } = await supabase.rpc(rpcFunction, {
