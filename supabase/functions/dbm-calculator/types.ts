@@ -8,6 +8,7 @@ export interface SkuLocDate {
   unit_on_order: number;
   unit_in_transit: number;
   unit_sales: number;
+  on_hand_units_sim?: number;
   
   // Settings
   lead_time: number;
