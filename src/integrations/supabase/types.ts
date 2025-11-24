@@ -482,6 +482,8 @@ export type Database = {
         }
         Returns: number
       }
+      clear_inventory_data: { Args: never; Returns: undefined }
+      clear_sales_data: { Args: never; Returns: undefined }
       export_inventory_data:
         | {
             Args: { p_dataset_id: string }
@@ -659,6 +661,13 @@ export type Database = {
               units_sold: number
             }[]
           }
+      get_inventory_date_range: {
+        Args: never
+        Returns: {
+          end_date: string
+          start_date: string
+        }[]
+      }
       get_inventory_pipeline: {
         Args: {
           p_end_date?: string
@@ -930,6 +939,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      insert_inventory_batch: { Args: { records: Json }; Returns: undefined }
+      insert_sales_batch: { Args: { records: Json }; Returns: undefined }
       insert_sales_for_dataset: {
         Args: { p_dataset_id: string; records: Json }
         Returns: undefined
