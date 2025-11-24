@@ -311,10 +311,21 @@ export async function getContiguousValidDateRange(
     return null;
   }
   
-  // Get all dates with BOTH sales AND inventory
-  const validDatesArray = data
-    .filter((row: any) => row.on_hand_units > 0 && row.units_sold > 0)
-    .map((row: any) => row.d)
+  // Aggregate by date to get total sales and inventory per day
+  const dateAggregates = new Map<string, { totalSales: number; totalInventory: number }>();
+  
+  data.forEach((row: any) => {
+    const existing = dateAggregates.get(row.d) || { totalSales: 0, totalInventory: 0 };
+    dateAggregates.set(row.d, {
+      totalSales: existing.totalSales + (row.units_sold || 0),
+      totalInventory: existing.totalInventory + (row.on_hand_units || 0)
+    });
+  });
+  
+  // Get all dates where BOTH aggregated sales AND aggregated inventory > 0
+  const validDatesArray = Array.from(dateAggregates.entries())
+    .filter(([_, agg]) => agg.totalSales > 0 && agg.totalInventory > 0)
+    .map(([date, _]) => date)
     .sort();
   
   if (validDatesArray.length === 0) {
