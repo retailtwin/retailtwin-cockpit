@@ -576,6 +576,17 @@ export type Database = {
               units_sold: number
             }[]
           }
+      get_contiguous_date_range: {
+        Args: never
+        Returns: {
+          completeness: number
+          end_date: string
+          start_date: string
+          total_days: number
+          valid_dates: string[]
+          valid_days_count: number
+        }[]
+      }
       get_data_date_range: {
         Args: never
         Returns: {

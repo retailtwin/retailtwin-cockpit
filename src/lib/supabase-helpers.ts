@@ -299,81 +299,49 @@ export async function getContiguousValidDateRange(
   locationCode?: string,
   sku?: string
 ): Promise<ContiguousDateRange | null> {
-  // Query fact_daily directly instead of using the RPC
-  // Note: Using 'as any' because TypeScript doesn't have types for the aifo schema
-  let query = (supabase as any)
-    .schema('aifo')
-    .from('fact_daily')
-    .select('d, on_hand_units, units_sold');
+  console.log('🔍 DEBUG - getContiguousValidDateRange called with:', { locationCode, sku });
   
-  // Apply filters if provided
-  if (locationCode && locationCode !== 'ALL') {
-    query = query.eq('location_code', locationCode);
-  }
+  // Call the RPC function to get contiguous date range
+  const { data, error } = await supabase.rpc('get_contiguous_date_range');
   
-  if (sku && sku !== 'ALL') {
-    query = query.eq('sku', sku);
-  }
-  
-  const { data, error } = await query;
-  
-  console.log('📊 getContiguousValidDateRange query results:', {
-    locationFilter: locationCode,
-    skuFilter: sku,
-    rowCount: data?.length || 0,
+  console.log('📊 getContiguousValidDateRange RPC results:', {
+    hasData: !!data,
+    dataLength: data?.length || 0,
     hasError: !!error,
-    errorMessage: error?.message
+    errorMessage: error?.message,
+    rawData: data
   });
   
-  if (error || !data || data.length === 0) {
-    console.error("Error fetching valid dates:", error);
+  if (error) {
+    console.error("Error fetching contiguous date range:", error);
     return null;
   }
   
-  // Aggregate by date: sum inventory and sales per day across all SKUs
-  const dailyAggregates = data.reduce((acc: any, row: any) => {
-    if (!acc[row.d]) {
-      acc[row.d] = { totalInventory: 0, totalSales: 0 };
-    }
-    acc[row.d].totalInventory += row.on_hand_units || 0;
-    acc[row.d].totalSales += row.units_sold || 0;
-    return acc;
-  }, {});
-  
-  // Filter to dates where BOTH aggregate inventory > 0 AND aggregate sales > 0
-  // This means: on this day, ANY SKU had inventory AND ANY SKU had sales
-  const validDatesArray = Object.entries(dailyAggregates)
-    .filter(([date, metrics]: [string, any]) => 
-      metrics.totalInventory > 0 && metrics.totalSales > 0
-    )
-    .map(([date]) => date)
-    .sort();
-  
-  if (validDatesArray.length === 0) {
-    console.error('No dates found with both aggregate inventory and sales');
+  if (!data || data.length === 0) {
+    console.error('No data returned from get_contiguous_date_range');
     return null;
   }
   
-  // Get first and last valid dates
-  const startDate = validDatesArray[0];
-  const endDate = validDatesArray[validDatesArray.length - 1];
+  const result = data[0];
   
-  const validDatesSet: Set<string> = new Set(validDatesArray);
+  // Convert valid_dates array to Set
+  const validDatesSet = new Set<string>(result.valid_dates || []);
   
-  // Calculate total days in the span
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const totalDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  const validDaysCount = validDatesArray.length;
-  const completeness = (validDaysCount / totalDays) * 100;
+  console.log('✅ Successfully parsed contiguous range:', {
+    startDate: result.start_date,
+    endDate: result.end_date,
+    validDaysCount: result.valid_days_count,
+    totalDays: result.total_days,
+    completeness: `${result.completeness}%`
+  });
   
   return {
-    startDate,
-    endDate,
+    startDate: result.start_date,
+    endDate: result.end_date,
     validDates: validDatesSet,
-    totalDays,
-    validDaysCount,
-    completeness: Math.round(completeness)
+    totalDays: result.total_days,
+    validDaysCount: result.valid_days_count,
+    completeness: result.completeness
   };
 }
 
