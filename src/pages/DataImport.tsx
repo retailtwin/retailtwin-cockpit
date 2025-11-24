@@ -668,11 +668,11 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
           </Collapsible>
         </div>
 
-        {isLoadingDatasets ? (
+{isLoadingDatasets ? (
           <div className="flex justify-center items-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : !currentDatasetId ? (
+        ) : (
           <Card>
             <CardHeader>
               <CardTitle>Select or Create Dataset</CardTitle>
@@ -681,7 +681,7 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {existingDatasets.length > 0 && !showCreateNew && (
+              {!showCreateNew ? (
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="dataset-select">Select Existing Dataset</Label>
@@ -701,90 +701,70 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                       <SelectContent>
                         {existingDatasets.map((dataset) => (
                           <SelectItem key={dataset.id} value={dataset.id}>
-                            <div className="flex items-center justify-between w-full">
-                              <span>{dataset.dataset_name}</span>
-                              <span className="ml-2 text-xs text-muted-foreground">
-                                ({dataset.status === 'active' ? '✓ Active' : 'Pending'})
-                              </span>
-                            </div>
+                            {dataset.dataset_name} {dataset.is_template ? "(Template)" : ""} - {dataset.status}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                   </div>
-                   {currentDatasetId && (
-                     <Alert className="mt-2">
-                       <Info className="h-4 w-4" />
-                       <AlertDescription>
-                         {existingDatasets.find(d => d.id === currentDatasetId)?.status === 'active'
-                           ? 'This dataset is already active. You can add or update files.'
-                           : 'This dataset is pending. Upload all required files to activate it.'}
-                       </AlertDescription>
-                     </Alert>
-                   )}
-                   <div className="flex items-center gap-2">
-                    <div className="flex-1 border-t" />
-                    <span className="text-sm text-muted-foreground">or</span>
-                    <div className="flex-1 border-t" />
                   </div>
-                  <Button variant="outline" onClick={() => setShowCreateNew(true)} className="w-full">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowCreateNew(true)}
+                    className="w-full"
+                  >
                     Create New Dataset
                   </Button>
                 </>
-              )}
-
-              {(showCreateNew || existingDatasets.length === 0) && (
+              ) : (
                 <>
-                  {showCreateNew && (
-                    <Button variant="ghost" onClick={() => setShowCreateNew(false)} className="w-full">
-                      ← Back to Selection
-                    </Button>
-                  )}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="dataset-name">Dataset Name *</Label>
-                      <Input
-                        id="dataset-name"
-                        placeholder="e.g., Q1 2024 Sales Data"
-                        value={datasetName}
-                        onChange={(e) => setDatasetName(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description (Optional)</Label>
-                      <Textarea
-                        id="description"
-                        placeholder="Describe this dataset..."
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="datasetName">Dataset Name *</Label>
+                    <Input
+                      id="datasetName"
+                      placeholder="e.g., Q1 2024 Sales Data"
+                      value={datasetName}
+                      onChange={(e) => setDatasetName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description (Optional)</Label>
+                    <Textarea
+                      id="description"
+                      placeholder="Describe this dataset..."
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex gap-2">
                     <Button onClick={handleCreateDataset}>
                       Create Dataset
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setShowCreateNew(false);
+                        setDatasetName("");
+                        setDescription("");
+                      }}
+                    >
+                      Cancel
                     </Button>
                   </div>
                 </>
               )}
             </CardContent>
           </Card>
-        ) : (
+        )}
+
+        {currentDatasetId && (
           <>
             <Alert>
               <Info className="h-4 w-4" />
-              <AlertDescription className="flex items-center justify-between">
-                <span>
-                  Dataset selected: <strong>{existingDatasets.find(d => d.id === currentDatasetId)?.dataset_name || "Dataset"}</strong>. Upload your CSV files below in any order.
-                </span>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => {
-                    setCurrentDatasetId(null);
-                    setShowCreateNew(false);
-                  }}
-                >
-                  Switch Dataset
-                </Button>
+              <AlertDescription>
+                {existingDatasets.find(d => d.id === currentDatasetId)?.status === 'active'
+                  ? 'This dataset is already active. You can add or update files.'
+                  : 'This dataset is pending. Upload all required files to activate it.'}
               </AlertDescription>
             </Alert>
 
