@@ -39,12 +39,9 @@ const Report = () => {
 
   // Fetch inventory zones data
   useEffect(() => {
-    if (!activeDataset) return;
-    
     const fetchInventoryZones = async () => {
       setIsLoading(true);
       const { data, error } = await supabase.rpc("get_inventory_zones_report", {
-        p_dataset_id: activeDataset.id,
         p_location_code: selectedLocation,
         p_start_date: format(dateRange.from, "yyyy-MM-dd"),
         p_end_date: format(dateRange.to, "yyyy-MM-dd"),
@@ -61,7 +58,7 @@ const Report = () => {
     };
 
     fetchInventoryZones();
-  }, [selectedLocation, dateRange, activeDataset]);
+  }, [selectedLocation, dateRange]);
 
   return (
     <Layout>

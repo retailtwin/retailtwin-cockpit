@@ -42,7 +42,6 @@ export const ParetoReportModal = ({
   onAskArchie,
   kpiData,
 }: ParetoReportModalProps) => {
-  const { activeDataset } = useDataset();
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [archieAnalysis, setArchieAnalysis] = useState<string>("");
@@ -62,12 +61,9 @@ export const ParetoReportModal = ({
   }, [data, isOpen]);
 
   const fetchParetoData = async () => {
-    if (!activeDataset) return;
-    
     setIsLoading(true);
     try {
       const { data: paretoData, error } = await supabase.rpc('get_pareto_analysis', {
-        p_dataset_id: activeDataset.id,
         p_location_code: location,
         p_sku: sku,
         p_date: endDate,

@@ -37,35 +37,8 @@ export const FilterBar = ({
   onProductChange,
   onDateRangeChange,
 }: FilterBarProps) => {
-  const { datasets, activeDataset, setActiveDataset } = useDataset();
-
   return (
     <div className="flex flex-wrap gap-4 p-4 bg-card rounded-2xl shadow-md border">
-      <div className="flex-1 min-w-[200px]">
-        <label className="text-sm font-medium text-muted-foreground mb-2 block">
-          Dataset
-        </label>
-        <Select 
-          value={activeDataset?.id || ""} 
-          onValueChange={(value) => {
-            const selected = datasets.find(d => d.id === value);
-            if (selected) setActiveDataset(selected);
-          }}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select dataset" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover z-50">
-            {datasets.map((dataset) => (
-              <SelectItem key={dataset.id} value={dataset.id}>
-                {dataset.dataset_name}
-                {dataset.is_active && <span className="ml-2 text-xs text-primary">(Active)</span>}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
       <div className="flex-1 min-w-[200px]">
         <label className="text-sm font-medium text-muted-foreground mb-2 block">
           Location

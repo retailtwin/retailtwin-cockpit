@@ -11,7 +11,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Layout } from "@/components/Layout";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useDataset } from "@/contexts/DatasetContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -30,7 +29,6 @@ interface Dataset {
   description: string | null;
   created_at: string;
   status: string;
-  is_template: boolean | null;
   locations_filename: string | null;
   products_filename: string | null;
   sales_filename: string | null;
@@ -77,7 +75,6 @@ export default function DataImport() {
   });
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { refreshDatasets } = useDataset();
 
   useEffect(() => {
     fetchExistingDatasets();
@@ -189,8 +186,8 @@ export default function DataImport() {
 
       const { data, error } = await supabase
         .from('datasets')
-        .select('id, dataset_name, description, created_at, status, is_template, locations_filename, products_filename, sales_filename, inventory_filename')
-        .or(`user_id.eq.${user.id},is_template.eq.true`)
+        .select('id, dataset_name, description, created_at, status, locations_filename, products_filename, sales_filename, inventory_filename')
+        .eq('user_id', user.id)
         .in('status', ['pending', 'active'])
         .order('created_at', { ascending: false });
 
@@ -433,7 +430,6 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
 
           // Refresh dataset lists & counts
           await fetchExistingDatasets();
-          await refreshDatasets();
           return;
         }
 
@@ -701,7 +697,7 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                       <SelectContent>
                         {existingDatasets.map((dataset) => (
                           <SelectItem key={dataset.id} value={dataset.id}>
-                            {dataset.dataset_name} {dataset.is_template ? "(Template)" : ""} - {dataset.status}
+                            {dataset.dataset_name} - {dataset.status}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -828,21 +824,8 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                           <Info className="h-4 w-4" />
                           <AlertDescription className="flex items-center justify-between gap-2">
                             <span className="text-sm">
-                              {existingDatasets.find(d => d.id === currentDatasetId)?.is_template 
-                                ? 'Template dataset - export from database to download' 
-                                : 'No file uploaded yet. Select a CSV file to upload.'}
+                              No file uploaded yet. Select a CSV file to upload.
                             </span>
-                            {existingDatasets.find(d => d.id === currentDatasetId)?.is_template && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleExportAndDownload(type)}
-                                className="flex-shrink-0"
-                              >
-                                <Download className="h-4 w-4 mr-2" />
-                                Export
-                              </Button>
-                            )}
                           </AlertDescription>
                         </Alert>
                       )}
@@ -969,10 +952,7 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
               <Button variant="outline" onClick={() => navigate('/dashboard')}>
                 Skip for Now
               </Button>
-              <Button onClick={() => {
-                refreshDatasets();
-                navigate('/dashboard');
-              }}>
+              <Button onClick={() => navigate('/dashboard')}>
                 Done - Go to Dashboard
               </Button>
             </div>

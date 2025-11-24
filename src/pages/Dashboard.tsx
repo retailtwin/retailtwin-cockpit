@@ -116,20 +116,13 @@ const Dashboard = () => {
     }
   };
 
-  // Load locations and products when active dataset changes
+  // Load locations and products on mount
   useEffect(() => {
     const loadInitialData = async () => {
-      if (!activeDataset) {
-        setLocations([]);
-        setProducts([]);
-        setLoading(false);
-        return;
-      }
-
       try {
         const [locsData, prodsData] = await Promise.all([
-          fetchLocations(activeDataset.id),
-          fetchProducts(activeDataset.id),
+          fetchLocations(),
+          fetchProducts(),
         ]);
 
         setLocations(locsData);
@@ -154,11 +147,11 @@ const Dashboard = () => {
     };
 
     loadInitialData();
-  }, [activeDataset, toast]);
+  }, [toast]);
 
   // Load KPI and fact data when filters change
   useEffect(() => {
-    if (!selectedLocation || !selectedProduct || !activeDataset) return;
+    if (!selectedLocation || !selectedProduct) return;
 
     const loadData = async () => {
       try {
@@ -170,14 +163,13 @@ const Dashboard = () => {
           : undefined;
 
         const [kpi, facts] = await Promise.all([
-          fetchKPIData(selectedLocation, selectedProduct, startDate, endDate, activeDataset.id),
-          fetchFactDaily(selectedLocation, selectedProduct, startDate, endDate, activeDataset.id),
+          fetchKPIData(selectedLocation, selectedProduct, startDate, endDate),
+          fetchFactDaily(selectedLocation, selectedProduct, startDate, endDate),
         ]);
 
         console.log("📊 KPI Data:", kpi);
         console.log("💰 MTV:", kpi?.mtv, "RIV:", kpi?.riv);
         console.log("📅 Date Range:", startDate, "to", endDate);
-        console.log("📦 Dataset:", activeDataset.dataset_name);
 
         setKpiData(kpi);
         setFactDaily(facts);
@@ -193,7 +185,7 @@ const Dashboard = () => {
     };
 
     loadData();
-  }, [selectedLocation, selectedProduct, dateRange, activeDataset, toast]);
+  }, [selectedLocation, selectedProduct, dateRange, toast]);
 
   // Load order days when location changes
   useEffect(() => {
@@ -221,8 +213,6 @@ const Dashboard = () => {
   };
 
   const fetchDBMCalculations = async () => {
-    if (!activeDataset) return;
-    
     try {
       const selectedSKU = selectedProduct !== "ALL" ? selectedProduct : null;
       const selectedLoc = selectedLocation !== "ALL" ? selectedLocation : null;
@@ -230,7 +220,6 @@ const Dashboard = () => {
       let query = supabase
         .from('dbm_calculations')
         .select('*')
-        .eq('dataset_id', activeDataset.id)
         .order('calculation_date', { ascending: true });
 
       if (selectedSKU) {
@@ -256,8 +245,6 @@ const Dashboard = () => {
   };
 
   const runDBMAnalysis = async () => {
-    if (!activeDataset) return;
-    
     setIsRunningDBM(true);
     setSimulationResult(null);
     
@@ -271,7 +258,6 @@ const Dashboard = () => {
 
       // Fetch raw fact_daily data
       const { data: rawData, error: fetchError } = await supabase.rpc('get_fact_daily_raw', {
-        p_dataset_id: activeDataset.id,
         p_location_code: selectedLocation,
         p_sku: selectedProduct,
         p_start_date: startDate,
@@ -287,7 +273,6 @@ const Dashboard = () => {
       // Call the dbm-calculator Edge Function
       const { data: result, error: calcError } = await supabase.functions.invoke('dbm-calculator', {
         body: {
-          dataset_id: activeDataset.id,
           location_code: selectedLocation,
           sku: selectedProduct,
           start_date: startDate,
@@ -307,8 +292,8 @@ const Dashboard = () => {
 
       // Reload data
       const [kpi, facts] = await Promise.all([
-        fetchKPIData(selectedLocation, selectedProduct, startDate, endDate, activeDataset.id),
-        fetchFactDaily(selectedLocation, selectedProduct, startDate, endDate, activeDataset.id),
+        fetchKPIData(selectedLocation, selectedProduct, startDate, endDate),
+        fetchFactDaily(selectedLocation, selectedProduct, startDate, endDate),
       ]);
       setKpiData(kpi);
       setFactDaily(facts);
