@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { DatasetProvider } from "@/contexts/DatasetContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ScrollToTop } from "./components/ScrollToTop";
 import Landing from "./pages/Landing";
@@ -12,7 +11,6 @@ import Report from "./pages/Report";
 import About from "./pages/About";
 import Login from "./pages/Login";
 import DataImport from "./pages/DataImport";
-import DatasetManagement from "./pages/DatasetManagement";
 import Settings from "./pages/Settings";
 import BlogList from "./pages/BlogList";
 import BlogPost from "./pages/BlogPost";
@@ -27,12 +25,11 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <DatasetProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <ScrollToTop />
-          <Routes>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <ScrollToTop />
+        <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />
@@ -43,7 +40,6 @@ const App = () => (
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
           <Route path="/import" element={<ProtectedRoute><DataImport /></ProtectedRoute>} />
-          <Route path="/datasets" element={<ProtectedRoute><DatasetManagement /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/dbm-explainer" element={<ProtectedRoute><DBMExplainer /></ProtectedRoute>} />
           <Route path="/case-study/dk-company" element={<CaseStudyDK />} />
@@ -51,7 +47,6 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
-      </DatasetProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

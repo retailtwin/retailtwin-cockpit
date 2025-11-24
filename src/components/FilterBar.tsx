@@ -13,10 +13,6 @@ import { Location, Product } from "@/lib/supabase-helpers";
 import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
-import { useDataset } from "@/contexts/DatasetContext";
-import { Database } from "@/integrations/supabase/types";
-
-type Dataset = Database['public']['Tables']['datasets']['Row'];
 
 interface FilterBarProps {
   locations: Location[];

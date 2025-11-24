@@ -12,10 +12,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useDataset } from "@/contexts/DatasetContext";
 
 const Report = () => {
-  const { activeDataset } = useDataset();
   const [locations, setLocations] = useState<Array<{ code: string; name: string }>>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>("ALL");
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({

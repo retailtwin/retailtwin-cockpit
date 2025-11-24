@@ -225,7 +225,6 @@ export type Database = {
         Row: {
           calculation_date: string
           created_at: string
-          dataset_id: string | null
           economic_overstock_units: number | null
           economic_units: number | null
           id: string
@@ -237,7 +236,6 @@ export type Database = {
         Insert: {
           calculation_date: string
           created_at?: string
-          dataset_id?: string | null
           economic_overstock_units?: number | null
           economic_units?: number | null
           id?: string
@@ -249,7 +247,6 @@ export type Database = {
         Update: {
           calculation_date?: string
           created_at?: string
-          dataset_id?: string | null
           economic_overstock_units?: number | null
           economic_units?: number | null
           id?: string
@@ -258,15 +255,7 @@ export type Database = {
           sku?: string
           target_units?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "dbm_calculations_dataset_id_fkey"
-            columns: ["dataset_id"]
-            isOneToOne: false
-            referencedRelation: "datasets"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       knowledge_usage: {
         Row: {
@@ -493,50 +482,98 @@ export type Database = {
         }
         Returns: number
       }
-      export_inventory_data: {
-        Args: { p_dataset_id: string }
-        Returns: {
-          d: string
-          in_transit_units: number
-          location_code: string
-          on_hand_units: number
-          on_order_units: number
-          sku: string
-        }[]
-      }
-      export_locations_data: {
-        Args: { p_dataset_id: string }
-        Returns: {
-          code: string
-          name: string
-          order_days: string
-          production_lead_time: number
-          shipping_lead_time: number
-        }[]
-      }
-      export_products_data: {
-        Args: { p_dataset_id: string }
-        Returns: {
-          group_1: string
-          group_2: string
-          group_3: string
-          minimum_order_quantity: number
-          name: string
-          pack_size: number
-          sku: string
-          unit_cost: number
-          unit_price: number
-        }[]
-      }
-      export_sales_data: {
-        Args: { p_dataset_id: string }
-        Returns: {
-          d: string
-          location_code: string
-          sku: string
-          units_sold: number
-        }[]
-      }
+      export_inventory_data:
+        | {
+            Args: { p_dataset_id: string }
+            Returns: {
+              d: string
+              in_transit_units: number
+              location_code: string
+              on_hand_units: number
+              on_order_units: number
+              sku: string
+            }[]
+          }
+        | {
+            Args: never
+            Returns: {
+              d: string
+              in_transit_units: number
+              location_code: string
+              on_hand_units: number
+              on_order_units: number
+              sku: string
+            }[]
+          }
+      export_locations_data:
+        | {
+            Args: { p_dataset_id: string }
+            Returns: {
+              code: string
+              name: string
+              order_days: string
+              production_lead_time: number
+              shipping_lead_time: number
+            }[]
+          }
+        | {
+            Args: never
+            Returns: {
+              code: string
+              name: string
+              order_days: string
+              production_lead_time: number
+              shipping_lead_time: number
+            }[]
+          }
+      export_products_data:
+        | {
+            Args: { p_dataset_id: string }
+            Returns: {
+              group_1: string
+              group_2: string
+              group_3: string
+              minimum_order_quantity: number
+              name: string
+              pack_size: number
+              sku: string
+              unit_cost: number
+              unit_price: number
+            }[]
+          }
+        | {
+            Args: never
+            Returns: {
+              group_1: string
+              group_2: string
+              group_3: string
+              minimum_order_quantity: number
+              name: string
+              pack_size: number
+              sku: string
+              unit_cost: number
+              unit_price: number
+            }[]
+          }
+      export_sales_data:
+        | {
+            Args: { p_dataset_id: string }
+            Returns: {
+              d: string
+              location_code: string
+              sku: string
+              units_sold: number
+            }[]
+          }
+        | {
+            Args: never
+            Returns: {
+              d: string
+              location_code: string
+              sku: string
+              units_sold: number
+            }[]
+          }
       get_data_date_range: {
         Args: never
         Returns: {
@@ -744,13 +781,21 @@ export type Database = {
           total_on_order: number
         }[]
       }
-      get_locations: {
-        Args: { p_dataset_id: string }
-        Returns: {
-          code: string
-          name: string
-        }[]
-      }
+      get_locations:
+        | {
+            Args: never
+            Returns: {
+              code: string
+              name: string
+            }[]
+          }
+        | {
+            Args: { p_dataset_id: string }
+            Returns: {
+              code: string
+              name: string
+            }[]
+          }
       get_mtv_by_sku_style: {
         Args: {
           p_end_date?: string
@@ -799,13 +844,21 @@ export type Database = {
               total_units_sold: number
             }[]
           }
-      get_products: {
-        Args: { p_dataset_id: string }
-        Returns: {
-          name: string
-          sku: string
-        }[]
-      }
+      get_products:
+        | {
+            Args: never
+            Returns: {
+              name: string
+              sku: string
+            }[]
+          }
+        | {
+            Args: { p_dataset_id: string }
+            Returns: {
+              name: string
+              sku: string
+            }[]
+          }
       get_sku_details:
         | {
             Args: {
@@ -881,6 +934,10 @@ export type Database = {
         Args: { p_dataset_id: string; records: Json }
         Returns: undefined
       }
+      replace_inventory: { Args: { records: Json }; Returns: undefined }
+      replace_locations: { Args: { records: Json }; Returns: undefined }
+      replace_products: { Args: { records: Json }; Returns: undefined }
+      replace_sales: { Args: { records: Json }; Returns: undefined }
       search_knowledge:
         | {
             Args: {
