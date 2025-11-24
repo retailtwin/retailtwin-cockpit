@@ -191,10 +191,36 @@ serve(async (req) => {
     const engine = new DBMEngine();
     const results: any[] = [];
 
+    // Order tracking structure
+    interface PendingOrder {
+      quantity: number;
+      arrival_date: string;
+      sku: string;
+      location: string;
+    }
+
     salesBySkuLoc.forEach((rows, key) => {
       let previousCalculated: SkuLocDate | null = null;
+      let sim_inventory = 0;
+      const sku_location_orders: PendingOrder[] = [];
       
       rows.forEach((row: any, idx: number) => {
+        // Initialize sim_inventory on first day
+        if (idx === 0) {
+          sim_inventory = row.on_hand_units || 0;
+        }
+        
+        // Step 1: Check for arriving orders
+        const arrivingOrders = sku_location_orders.filter(o => o.arrival_date === row.d);
+        const arrivals = arrivingOrders.reduce((sum, o) => sum + o.quantity, 0);
+        sim_inventory += arrivals;
+        
+        // Remove arrived orders from queue
+        sku_location_orders.splice(0, sku_location_orders.length, 
+          ...sku_location_orders.filter(o => o.arrival_date !== row.d));
+        
+        // Step 2: Deduct sales from simulated inventory
+        sim_inventory = Math.max(0, sim_inventory - (row.units_sold || 0));
         // Calculate economic units
         const economicUnits = Math.max(0, 
           (row.on_hand_units || 0) + 
@@ -275,6 +301,31 @@ serve(async (req) => {
         // Log after DBM calculation
         console.log(`Day ${idx + 1} ${row.location_code}/${row.sku} OUT: green_out=${calculated.green}, decision=${calculated.decision}, state=${calculated.state}, zone=${calculated.dbm_zone}`);
         
+        // Step 4: Check if order is needed
+        const pending_orders = sku_location_orders.reduce((sum, o) => sum + o.quantity, 0);
+        const position = sim_inventory + pending_orders;
+        
+        if (position < calculated.green!) {
+          // Place order
+          const order_qty = calculated.green! - position;
+          const leadTime = input.lead_time;
+          const arrival = new Date(row.d);
+          arrival.setDate(arrival.getDate() + leadTime);
+          const arrival_date = arrival.toISOString().split('T')[0];
+          
+          sku_location_orders.push({
+            quantity: order_qty,
+            arrival_date: arrival_date,
+            sku: row.sku,
+            location: row.location_code
+          });
+          
+          console.log(`ORDER: ${row.location_code}/${row.sku} on ${row.d}: qty=${order_qty}, arrives=${arrival_date}, target=${calculated.green}, sim_inv=${sim_inventory}`);
+        }
+        
+        // Step 5: Store simulated inventory for this day
+        calculated.on_hand_units_sim = sim_inventory;
+        
         previousCalculated = calculated;
         results.push(calculated);
       });
@@ -287,6 +338,7 @@ serve(async (req) => {
       location_code: r.store_code,
       sku: r.product_code,
       d: r.execution_date,
+      on_hand_units_sim: r.on_hand_units_sim,
       target_units: r.green,
       economic_units: r.units_economic,
       economic_overstock_units: r.units_economic_overstock,
