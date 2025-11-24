@@ -238,10 +238,34 @@ export function formatPercentage(value: number | null): string {
 }
 
 export async function getDataDateRange(): Promise<{min_date: string, max_date: string} | null> {
-  const { data, error } = await supabase.rpc('get_data_date_range');
+  // Get date range where inventory on_hand_units > 0
+  const { data, error } = await supabase.rpc('get_fact_daily_raw', {
+    p_location_code: 'ALL',
+    p_sku: 'ALL',
+    p_start_date: null,
+    p_end_date: null
+  });
+  
   if (error) {
     console.error("Error fetching data date range:", error);
     return null;
   }
-  return data && data.length > 0 ? data[0] : null;
+  
+  if (!data || data.length === 0) {
+    return null;
+  }
+  
+  // Filter to only dates with inventory > 0
+  const inventoryDates = data
+    .filter((row: any) => row.on_hand_units > 0)
+    .map((row: any) => row.d);
+  
+  if (inventoryDates.length === 0) {
+    return null;
+  }
+  
+  const minDate = inventoryDates.reduce((min: string, d: string) => d < min ? d : min);
+  const maxDate = inventoryDates.reduce((max: string, d: string) => d > max ? d : max);
+  
+  return { min_date: minDate, max_date: maxDate };
 }

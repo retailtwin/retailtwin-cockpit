@@ -407,15 +407,42 @@ async function processFileInBackground(
         throw new Error(`Unknown file type: ${fileType}`);
     }
 
-    // Send all records in one RPC call (replace_* functions TRUNCATE on every call)
+    // Batch large datasets to avoid payload size limits
+    const BATCH_SIZE = 500;
     console.log(`Inserting ${dedupedRecords.length} records via ${rpcFunction}`);
     
-    const { error: rpcError } = await supabase.rpc(rpcFunction, {
-      records: dedupedRecords,
-    });
+    if (fileType === 'sales' || fileType === 'inventory') {
+      // For sales/inventory, batch the inserts
+      // First clear existing data
+      console.log(`Clearing existing ${fileType} data...`);
+      const { error: clearError } = await supabase.rpc(rpcFunction, { records: [] });
+      if (clearError) {
+        throw new Error(`Failed to clear ${fileType} data: ${clearError.message}`);
+      }
+      
+      // Then insert in batches
+      for (let i = 0; i < dedupedRecords.length; i += BATCH_SIZE) {
+        const batch = dedupedRecords.slice(i, i + BATCH_SIZE);
+        console.log(`Inserting batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(dedupedRecords.length / BATCH_SIZE)} (${batch.length} records)`);
+        
+        // Use RPC function for batch insert (respects schema)
+        const { error: insertError } = await supabase.rpc(rpcFunction, {
+          records: batch
+        });
+        
+        if (insertError) {
+          throw new Error(`Failed to insert batch: ${insertError.message}`);
+        }
+      }
+    } else {
+      // For locations/products, use the RPC function directly (smaller datasets)
+      const { error: rpcError } = await supabase.rpc(rpcFunction, {
+        records: dedupedRecords,
+      });
 
-    if (rpcError) {
-      throw new Error(`Failed to insert records: ${rpcError.message}`);
+      if (rpcError) {
+        throw new Error(`Failed to insert records: ${rpcError.message}`);
+      }
     }
 
     // Update dataset with record count and date range

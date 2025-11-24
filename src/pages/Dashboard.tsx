@@ -109,10 +109,21 @@ const Dashboard = () => {
   const fetchDataDateRange = async () => {
     const { data, error } = await supabase.rpc('get_data_date_range');
     if (data && data.length > 0) {
+      const minDate = new Date(data[0].min_date);
+      const maxDate = new Date(data[0].max_date);
+      
       setDataDateRange({
-        min: new Date(data[0].min_date),
-        max: new Date(data[0].max_date)
+        min: minDate,
+        max: maxDate
       });
+      
+      // Auto-set date range to full inventory range if not already set
+      if (!dateRange) {
+        setDateRange({
+          from: minDate,
+          to: maxDate
+        });
+      }
     }
   };
 
@@ -133,6 +144,9 @@ const Dashboard = () => {
           setSelectedLocation("ALL");
           setSelectedProduct("ALL");
         }
+        
+        // Load date range and set default to full inventory range
+        await fetchDataDateRange();
       } catch (error) {
         console.error("Error loading initial data:", error);
         toast({
