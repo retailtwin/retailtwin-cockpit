@@ -157,8 +157,7 @@ export type Database = {
           error_message: string | null
           id: string
           inventory_filename: string | null
-          is_active: boolean | null
-          is_template: boolean | null
+          last_updated: string | null
           locations_filename: string | null
           processed_at: string | null
           products_filename: string | null
@@ -182,8 +181,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           inventory_filename?: string | null
-          is_active?: boolean | null
-          is_template?: boolean | null
+          last_updated?: string | null
           locations_filename?: string | null
           processed_at?: string | null
           products_filename?: string | null
@@ -207,8 +205,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           inventory_filename?: string | null
-          is_active?: boolean | null
-          is_template?: boolean | null
+          last_updated?: string | null
           locations_filename?: string | null
           processed_at?: string | null
           products_filename?: string | null
