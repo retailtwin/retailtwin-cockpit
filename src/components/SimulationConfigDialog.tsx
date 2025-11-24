@@ -21,6 +21,7 @@ import { useCommonScope } from "@/hooks/useCommonScope";
 import { ProductGroupPicker } from "@/components/ProductGroupPicker";
 import { StorePicker } from "@/components/StorePicker";
 import { Progress } from "@/components/ui/progress";
+import { getContiguousValidDateRange, type ContiguousDateRange } from "@/lib/supabase-helpers";
 
 interface SimulationConfigDialogProps {
   open: boolean;
@@ -67,75 +68,74 @@ export const SimulationConfigDialog = ({
     warning?: string;
     isBlocked: boolean;
   } | null>(null);
+  const [contiguousRange, setContiguousRange] = useState<ContiguousDateRange | null>(null);
+  const [isLoadingRange, setIsLoadingRange] = useState(false);
 
-  // Calculate valid date range from validDates
-  const getValidDateRange = () => {
-    if (!validDates || validDates.size === 0) return null;
-    
-    const dates = Array.from(validDates).map(d => new Date(d).getTime());
-    return {
-      min: new Date(Math.min(...dates)),
-      max: new Date(Math.max(...dates))
-    };
-  };
-
-  // Initialize defaults when dialog opens and data is loaded
+  // Load contiguous date range when dialog opens or location changes
   useEffect(() => {
-    if (open && !commonScope.isLoading && commonScope.locations.length > 0) {
-      // Set first location as default
-      if (!location) {
-        setLocation(commonScope.locations[0].code);
-      }
+    if (!open) return;
 
-      // Set date range to valid dates (or full year of valid data) by default
-      if (!dateRange) {
-        const validRange = getValidDateRange();
-        if (validRange) {
-          const endDate = validRange.max;
-          const startDate = new Date(endDate);
-          startDate.setMonth(endDate.getMonth() - 12); // Try 12 months
-          
-          // Ensure we stay within valid range
-          if (startDate < validRange.min) {
-            startDate.setTime(validRange.min.getTime());
-          }
-          
-          setDateRange({ from: startDate, to: endDate });
-        } else if (commonScope.dateRange) {
-          // Fallback to commonScope if no valid dates
-          const endDate = new Date(commonScope.dateRange.max);
-          const startDate = new Date(endDate);
-          startDate.setMonth(endDate.getMonth() - 12);
-          
-          const minDate = new Date(commonScope.dateRange.min);
-          if (startDate < minDate) {
-            startDate.setTime(minDate.getTime());
-          }
-          
-          setDateRange({ from: startDate, to: endDate });
+    const loadContiguousRange = async () => {
+      setIsLoadingRange(true);
+      try {
+        const range = await getContiguousValidDateRange(location || undefined, undefined);
+        setContiguousRange(range);
+        
+        // Initialize location if not set
+        if (!location && commonScope.locations.length > 0) {
+          setLocation(commonScope.locations[0].code);
         }
-      }
+        
+        // Initialize date range to last 12 months of contiguous range
+        if (range && !dateRange) {
+          const end = new Date(range.endDate);
+          const start = new Date(end);
+          start.setMonth(start.getMonth() - 12);
+          
+          const rangeStart = new Date(range.startDate);
+          const finalStart = start < rangeStart ? rangeStart : start;
+          
+          setDateRange({
+            from: finalStart,
+            to: end,
+          });
+        }
 
-      // Default to 250 products if total products exceed 250
-      if (commonScope.totalProducts > 250 && productSKUs === 'ALL') {
-        const first250SKUs = commonScope.products.slice(0, 250).map(p => p.sku);
-        setProductSKUs(first250SKUs);
+        // Default to 250 products if total products exceed 250
+        if (commonScope.totalProducts > 250 && productSKUs === 'ALL') {
+          const first250SKUs = commonScope.products.slice(0, 250).map(p => p.sku);
+          setProductSKUs(first250SKUs);
+        }
+      } catch (error) {
+        console.error("Error loading contiguous range:", error);
+      } finally {
+        setIsLoadingRange(false);
       }
-    }
-  }, [open, commonScope.isLoading, commonScope.locations, commonScope.dateRange, commonScope.totalProducts, validDates]);
+    };
 
-  // Estimate record count when config changes
+    loadContiguousRange();
+  }, [open, location]);
+
+  // Estimate record count based on valid days in contiguous range
   useEffect(() => {
-    if (!open || !dateRange?.from || !dateRange?.to || !location) return;
+    if (!open || !dateRange?.from || !dateRange?.to || !location || !contiguousRange) return;
 
     const estimateRecords = async () => {
       setEstimating(true);
       try {
-        const diffTime = Math.abs(dateRange.to!.getTime() - dateRange.from!.getTime());
-        const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        // Count only valid days within the selected range
+        const fromStr = format(dateRange.from, 'yyyy-MM-dd');
+        const toStr = format(dateRange.to, 'yyyy-MM-dd');
+        
+        let validDaysInRange = 0;
+        for (const dateStr of contiguousRange.validDates) {
+          if (dateStr >= fromStr && dateStr <= toStr) {
+            validDaysInRange++;
+          }
+        }
         
         const productCount = productSKUs === 'ALL' ? commonScope.totalProducts : productSKUs.length;
-        const recordCount = days * 1 * productCount;
+        const recordCount = validDaysInRange * 1 * productCount;
 
         const estimatedSeconds = Math.ceil(recordCount / 1000);
         const estimatedTime =
@@ -163,29 +163,21 @@ export const SimulationConfigDialog = ({
     };
 
     estimateRecords();
-  }, [open, location, productSKUs, dateRange, commonScope.totalProducts]);
+  }, [open, location, productSKUs, dateRange, commonScope.totalProducts, contiguousRange]);
 
   const handlePresetChange = (preset: PresetType) => {
     setSelectedPreset(preset);
     
-    // Update date range based on preset, using valid date range
-    if (preset !== "custom") {
-      const validRange = getValidDateRange();
-      const effectiveRange = validRange || commonScope.dateRange;
+    if (preset !== "custom" && contiguousRange) {
+      const endDate = new Date(contiguousRange.endDate);
+      const startDate = new Date(endDate);
+      const presetConfig = PRESETS[preset];
+      startDate.setMonth(endDate.getMonth() - presetConfig.months);
+    
+      const rangeStart = new Date(contiguousRange.startDate);
+      const finalStart = startDate < rangeStart ? rangeStart : startDate;
       
-      if (effectiveRange) {
-        const endDate = new Date(effectiveRange.max);
-        const startDate = new Date(endDate);
-        const presetConfig = PRESETS[preset];
-        startDate.setMonth(endDate.getMonth() - presetConfig.months);
-      
-        const minDate = new Date(effectiveRange.min);
-        if (startDate < minDate) {
-          startDate.setTime(minDate.getTime());
-        }
-        
-        setDateRange({ from: startDate, to: endDate });
-      }
+      setDateRange({ from: finalStart, to: endDate });
     }
   };
 
@@ -215,7 +207,7 @@ export const SimulationConfigDialog = ({
     return differenceInMonths(dateRange.to, dateRange.from) + 1;
   };
 
-  if (commonScope.isLoading) {
+  if (commonScope.isLoading || isLoadingRange) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
@@ -244,25 +236,23 @@ export const SimulationConfigDialog = ({
             <CardContent className="pt-4">
               <div className="flex items-start gap-2">
                 <Info className="h-5 w-5 text-primary mt-0.5" />
-                <div className="flex-1 space-y-1 text-sm">
+                  <div className="flex-1 space-y-1 text-sm">
                   <p className="font-semibold text-primary">Available Data</p>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
                     <div>
-                      <span className="text-muted-foreground">Period:</span>
+                      <span className="text-muted-foreground">Contiguous Period:</span>
                       <p className="font-medium">
-                        {(() => {
-                          const validRange = getValidDateRange();
-                          if (validRange) {
-                            return `${format(validRange.min, 'MMM d, yyyy')} → ${format(validRange.max, 'MMM d, yyyy')} (${differenceInMonths(validRange.max, validRange.min) + 1} months)`;
-                          } else if (commonScope.dateRange) {
-                            return `${format(new Date(commonScope.dateRange.min), 'MMM d, yyyy')} → ${format(new Date(commonScope.dateRange.max), 'MMM d, yyyy')} (${differenceInMonths(new Date(commonScope.dateRange.max), new Date(commonScope.dateRange.min)) + 1} months)`;
-                          }
-                          return 'Loading...';
-                        })()}
+                        {contiguousRange ? (
+                          <>
+                            {format(contiguousRange.startDate, 'MMM d, yyyy')} → {format(contiguousRange.endDate, 'MMM d, yyyy')}
+                          </>
+                        ) : (
+                          'No continuous data range'
+                        )}
                       </p>
-                      {validDates && validDates.size > 0 && (
+                      {contiguousRange && (
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {validDates.size} days with complete data
+                          {contiguousRange.validDaysCount}/{contiguousRange.totalDays} days ({contiguousRange.completeness}% complete)
                         </p>
                       )}
                     </div>
@@ -345,26 +335,19 @@ export const SimulationConfigDialog = ({
                       setSelectedPreset("custom");
                     }}
                     numberOfMonths={2}
-                    defaultMonth={commonScope.dateRange ? new Date(commonScope.dateRange.min) : undefined}
-                    fromDate={validDates && validDates.size > 0 
-                      ? new Date(Math.min(...Array.from(validDates).map(d => new Date(d).getTime())))
-                      : commonScope.dateRange ? new Date(commonScope.dateRange.min) : undefined
-                    }
-                    toDate={validDates && validDates.size > 0
-                      ? new Date(Math.max(...Array.from(validDates).map(d => new Date(d).getTime())))
-                      : commonScope.dateRange ? new Date(commonScope.dateRange.max) : undefined
-                    }
+                    defaultMonth={contiguousRange ? new Date(contiguousRange.startDate) : undefined}
+                    fromDate={contiguousRange ? new Date(contiguousRange.startDate) : undefined}
+                    toDate={contiguousRange ? new Date(contiguousRange.endDate) : undefined}
                     disabled={(date) => {
-                      // Then check if date has valid data
-                      if (!validDates) return false;
+                      if (!contiguousRange) return true;
                       const dateStr = format(date, 'yyyy-MM-dd');
-                      return !validDates.has(dateStr);
+                      return dateStr < contiguousRange.startDate || dateStr > contiguousRange.endDate;
                     }}
                     className="pointer-events-auto"
                   />
-                  {validDates && (
+                  {contiguousRange && (
                     <p className="text-xs text-muted-foreground text-center px-3 pb-3">
-                      {validDates.size} days available with complete data
+                      {contiguousRange.validDaysCount} days available with {contiguousRange.completeness}% data completeness
                     </p>
                   )}
                 </div>
