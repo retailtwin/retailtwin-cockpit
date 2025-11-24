@@ -269,3 +269,140 @@ export async function getDataDateRange(): Promise<{min_date: string, max_date: s
   
   return { min_date: minDate, max_date: maxDate };
 }
+
+export interface OptimalScope {
+  dateRange: { start: string; end: string };
+  topSkus: Array<{ sku: string; name: string; totalSales: number }>;
+  location: string;
+  metrics: {
+    dataCompleteness: number;
+    skuCoverage: number;
+    totalSales: number;
+    overlapScore: number;
+  };
+}
+
+export async function findOptimalSimulationScope(): Promise<OptimalScope | null> {
+  try {
+    // Get all locations
+    const locations = await fetchLocations();
+    if (locations.length === 0) return null;
+
+    // Get date range (last 18 months or all available data)
+    const dateRange = await getDataDateRange();
+    if (!dateRange) return null;
+
+    const endDate = new Date(dateRange.max_date);
+    const startDate = new Date(dateRange.min_date);
+    const eighteenMonthsAgo = new Date(endDate);
+    eighteenMonthsAgo.setMonth(endDate.getMonth() - 18);
+    
+    const searchStartDate = startDate > eighteenMonthsAgo ? startDate : eighteenMonthsAgo;
+
+    let bestScope: OptimalScope | null = null;
+    let bestScore = 0;
+
+    // Check each location
+    for (const location of locations) {
+      // Fetch all data for this location
+      const { data, error } = await supabase.rpc('get_fact_daily_raw', {
+        p_location_code: location.code,
+        p_sku: 'ALL',
+        p_start_date: searchStartDate.toISOString().split('T')[0],
+        p_end_date: endDate.toISOString().split('T')[0]
+      });
+
+      if (error || !data || data.length === 0) continue;
+
+      // Slide 90-day windows across the data
+      const windowDays = 90;
+      let currentStart = new Date(searchStartDate);
+      
+      while (currentStart <= new Date(endDate.getTime() - windowDays * 24 * 60 * 60 * 1000)) {
+        const currentEnd = new Date(currentStart);
+        currentEnd.setDate(currentEnd.getDate() + windowDays);
+
+        const windowStartStr = currentStart.toISOString().split('T')[0];
+        const windowEndStr = currentEnd.toISOString().split('T')[0];
+
+        // Filter data to window
+        const windowData = data.filter((row: any) => 
+          row.d >= windowStartStr && row.d <= windowEndStr
+        );
+
+        if (windowData.length === 0) {
+          currentStart.setDate(currentStart.getDate() + 7); // Move window by 7 days
+          continue;
+        }
+
+        // Calculate metrics
+        const uniqueDates = new Set(windowData.map((row: any) => row.d));
+        const dataCompleteness = (uniqueDates.size / windowDays) * 100;
+
+        const skusWithSales = new Set(
+          windowData.filter((row: any) => row.units_sold > 0).map((row: any) => row.sku)
+        );
+        const skusWithInventory = new Set(
+          windowData.filter((row: any) => row.on_hand_units > 0).map((row: any) => row.sku)
+        );
+        const skusWithBoth = new Set(
+          [...skusWithSales].filter(sku => skusWithInventory.has(sku))
+        );
+        const allSkus = new Set([...skusWithSales, ...skusWithInventory]);
+
+        const overlapScore = allSkus.size > 0 ? (skusWithBoth.size / allSkus.size) * 100 : 0;
+        const skuCoverage = allSkus.size;
+
+        const totalSales = windowData.reduce((sum: number, row: any) => sum + (row.units_sold || 0), 0);
+
+        // Calculate composite score (weighted)
+        // Normalize sales (assume max 10000 units per window for normalization)
+        const normalizedSales = Math.min(totalSales / 10000, 1) * 100;
+        const score = (overlapScore * 0.4) + (dataCompleteness * 0.3) + (normalizedSales * 0.3);
+
+        // Only consider windows with >50% overlap and >1000 sales
+        if (overlapScore > 50 && totalSales > 1000 && score > bestScore) {
+          // Get top SKUs by sales
+          const skuSalesMap = new Map<string, number>();
+          windowData.forEach((row: any) => {
+            const current = skuSalesMap.get(row.sku) || 0;
+            skuSalesMap.set(row.sku, current + (row.units_sold || 0));
+          });
+
+          const topSkusList = Array.from(skuSalesMap.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 20);
+
+          // Get product names
+          const products = await fetchProducts();
+          const topSkus = topSkusList.map(([sku, sales]) => ({
+            sku,
+            name: products.find(p => p.sku === sku)?.name || sku,
+            totalSales: sales
+          }));
+
+          bestScore = score;
+          bestScope = {
+            dateRange: { start: windowStartStr, end: windowEndStr },
+            topSkus,
+            location: location.code,
+            metrics: {
+              dataCompleteness: Math.round(dataCompleteness),
+              skuCoverage: skuCoverage,
+              totalSales: totalSales,
+              overlapScore: Math.round(overlapScore)
+            }
+          };
+        }
+
+        // Move window by 7 days
+        currentStart.setDate(currentStart.getDate() + 7);
+      }
+    }
+
+    return bestScope;
+  } catch (error) {
+    console.error("Error finding optimal scope:", error);
+    return null;
+  }
+}
