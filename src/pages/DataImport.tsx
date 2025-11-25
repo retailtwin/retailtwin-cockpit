@@ -493,91 +493,104 @@ export default function DataImport() {
     }
 
     setBatchUploading(true);
-    setProcessingStep('uploading');
+    setProcessingStep('processing');
     setUploadedFilesSummary(null);
     
-    const fileTypes: ImportType[] = ['locations', 'products', 'sales', 'inventory'];
-    const failedTypes: string[] = [];
+    const recordCounts = {
+      locations: 0,
+      products: 0,
+      sales: 0,
+      inventory: 0,
+    };
     
     try {
-      // Step 1: Upload all files to storage
-      const uploadedPaths: Record<ImportType, string> = {} as any;
-      let totalSize = 0;
-      
-      for (const fileType of fileTypes) {
-        const file = selectedFiles[fileType];
-        if (!file) continue;
+      // Helper to read file as text
+      const readFileAsText = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = reject;
+          reader.readAsText(file);
+        });
+      };
 
-        setUploadProgress(prev => ({ ...prev, [fileType]: 'uploading' }));
-        totalSize += file.size;
-        
-        const fileName = `${fileType}_${Date.now()}.csv`;
-        const filePath = `${datasetId}/${fileType}/${fileName}`;
+      // Step 1: Import Locations
+      setUploadProgress(prev => ({ ...prev, locations: 'processing' }));
+      toast({
+        title: "Importing locations...",
+        description: "Processing store data",
+      });
 
-        const { error: uploadError } = await supabase.storage
-          .from('dataset-files')
-          .upload(filePath, file, {
-            upsert: true
-          });
-
-        if (uploadError) {
-          failedTypes.push(fileType);
-          throw new Error(`Failed to upload ${fileType}: ${uploadError.message}`);
-        }
-        
-        uploadedPaths[fileType] = filePath;
-        setUploadProgress(prev => ({ ...prev, [fileType]: 'complete' }));
-      }
-
-
-      // Step 2: Update dataset record with all file paths
-      setProcessingStep('validating');
-      
-      const { error: updateError } = await supabase
-        .from('datasets')
-        .update({
-          locations_filename: uploadedPaths.locations,
-          products_filename: uploadedPaths.products,
-          sales_filename: uploadedPaths.sales,
-          inventory_filename: uploadedPaths.inventory,
-          status: 'processing',
-          last_updated: new Date().toISOString(),
-        })
-        .eq('id', datasetId);
-
-      if (updateError) throw updateError;
-
-      // Step 3: Call ETL-Enhanced function
-      setProcessingStep('processing');
-      
-      const { data: etlResult, error: etlError } = await supabase.functions.invoke(
-        'etl-enhanced',
-        {
-          body: {
-            datasetId,
-            locationsPath: uploadedPaths.locations,
-            productsPath: uploadedPaths.products,
-            salesPath: uploadedPaths.sales,
-            inventoryPath: uploadedPaths.inventory,
-          }
-        }
+      const locationsCSV = await readFileAsText(selectedFiles.locations!);
+      const { data: locResult, error: locError } = await supabase.functions.invoke(
+        'import-locations',
+        { body: { csvText: locationsCSV } }
       );
+      
+      if (locError) throw new Error(`Locations import failed: ${locError.message}`);
+      recordCounts.locations = locResult?.count || 0;
+      setUploadProgress(prev => ({ ...prev, locations: 'complete' }));
 
-      if (etlError) {
-        throw new Error(`ETL processing failed: ${etlError.message}`);
-      }
+      // Step 2: Import Products
+      setUploadProgress(prev => ({ ...prev, products: 'processing' }));
+      toast({
+        title: "Importing products...",
+        description: "Processing product catalog",
+      });
+
+      const productsCSV = await readFileAsText(selectedFiles.products!);
+      const { data: prodResult, error: prodError } = await supabase.functions.invoke(
+        'import-products',
+        { body: { csvText: productsCSV } }
+      );
+      
+      if (prodError) throw new Error(`Products import failed: ${prodError.message}`);
+      recordCounts.products = prodResult?.count || 0;
+      setUploadProgress(prev => ({ ...prev, products: 'complete' }));
+
+      // Step 3: Import Sales
+      setUploadProgress(prev => ({ ...prev, sales: 'processing' }));
+      toast({
+        title: "Importing sales...",
+        description: "Processing sales transactions",
+      });
+
+      const salesCSV = await readFileAsText(selectedFiles.sales!);
+      const { data: salesResult, error: salesError } = await supabase.functions.invoke(
+        'import-fact-daily',
+        { body: { csvText: salesCSV } }
+      );
+      
+      if (salesError) throw new Error(`Sales import failed: ${salesError.message}`);
+      recordCounts.sales = salesResult?.count || 0;
+      setUploadProgress(prev => ({ ...prev, sales: 'complete' }));
+
+      // Step 4: Import Inventory
+      setUploadProgress(prev => ({ ...prev, inventory: 'processing' }));
+      toast({
+        title: "Importing inventory...",
+        description: "Processing inventory snapshots",
+      });
+
+      const inventoryCSV = await readFileAsText(selectedFiles.inventory!);
+      const { data: invResult, error: invError } = await supabase.functions.invoke(
+        'import-fact-daily',
+        { body: { csvText: inventoryCSV } }
+      );
+      
+      if (invError) throw new Error(`Inventory import failed: ${invError.message}`);
+      recordCounts.inventory = invResult?.count || 0;
+      setUploadProgress(prev => ({ ...prev, inventory: 'complete' }));
 
       // Set summary
-      if (etlResult?.summary) {
-        setUploadedFilesSummary({
-          filesProcessed: 4,
-          totalSize,
-          records: etlResult.summary,
-          warnings: etlResult.summary.warnings || []
-        });
-      }
+      setUploadedFilesSummary({
+        filesProcessed: 4,
+        totalSize: Object.values(selectedFiles).reduce((sum, file) => sum + (file?.size || 0), 0),
+        records: recordCounts,
+        warnings: []
+      });
 
-      // Step 4: Run DBM simulation
+      // Run DBM simulation
       toast({
         title: "Running DBM Simulation",
         description: "Calculating optimal buffer management targets...",
@@ -623,13 +636,17 @@ export default function DataImport() {
         variant: "destructive",
       });
       
-      if (failedTypes.length > 0) {
-        const newProgress = { ...uploadProgress };
-        failedTypes.forEach(type => {
-          newProgress[type as ImportType] = 'error';
+      // Mark failed steps as error
+      setUploadProgress(prev => {
+        const newProgress = { ...prev };
+        // Find which steps haven't completed yet and mark them as error
+        Object.keys(newProgress).forEach(key => {
+          if (newProgress[key as ImportType] === 'processing') {
+            newProgress[key as ImportType] = 'error';
+          }
         });
-        setUploadProgress(newProgress);
-      }
+        return newProgress;
+      });
     } finally {
       setBatchUploading(false);
     }
@@ -793,7 +810,18 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
       });
 
       // Call appropriate edge function
-      if (type === 'products') {
+      if (type === 'locations') {
+        const { data, error } = await supabase.functions.invoke('import-locations', {
+          body: { csvText }
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Locations imported",
+          description: data.message || `Successfully imported ${data.count} locations`,
+        });
+      } else if (type === 'products') {
         const { data, error } = await supabase.functions.invoke('import-products', {
           body: { csvText }
         });
@@ -805,7 +833,7 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
           description: data.message || `Successfully imported ${data.count} products`,
         });
       } else {
-        // For locations, sales, inventory - use import-fact-daily
+        // For sales, inventory - use import-fact-daily
         const { data, error } = await supabase.functions.invoke('import-fact-daily', {
           body: { csvText }
         });
