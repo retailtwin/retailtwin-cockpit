@@ -82,6 +82,7 @@ export default function DataImport() {
 
   const [showInstructions, setShowInstructions] = useState(false);
   const [isExcelUpload, setIsExcelUpload] = useState(false);
+  const [selectedExcelFile, setSelectedExcelFile] = useState<File | null>(null);
 
   const [csvPreviews, setCsvPreviews] = useState<Record<ImportType, CSVPreview | null>>({
     locations: null,
@@ -328,10 +329,12 @@ export default function DataImport() {
         inventory: null,
       });
       setIsExcelUpload(false);
+      setSelectedExcelFile(null);
       return;
     }
     
     setIsExcelUpload(true);
+    setSelectedExcelFile(file);
     
     try {
       const extractedFiles = await parseExcelWorkbook(file);
@@ -365,6 +368,30 @@ export default function DataImport() {
         description: error.message || "Failed to parse Excel workbook",
       });
       setIsExcelUpload(false);
+      setSelectedExcelFile(null);
+    }
+  };
+
+  const handleClearExcelFile = () => {
+    setSelectedFiles({
+      locations: null,
+      products: null,
+      sales: null,
+      inventory: null,
+    });
+    setCsvPreviews({
+      locations: null,
+      products: null,
+      sales: null,
+      inventory: null,
+    });
+    setIsExcelUpload(false);
+    setSelectedExcelFile(null);
+    
+    // Reset the file input
+    const fileInput = document.querySelector('input[type="file"][accept=".xlsx,.xls"]') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
     }
   };
 
@@ -1038,10 +1065,23 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                 onChange={(e) => handleExcelFileSelect(e.target.files?.[0] || null)}
                 disabled={batchUploading}
               />
-              {isExcelUpload && (
-                <p className="text-sm text-green-600 mt-2">
-                  ✓ Excel workbook loaded - all 4 worksheets extracted
-                </p>
+              {isExcelUpload && selectedExcelFile && (
+                <div className="flex items-center justify-between mt-2 p-2 bg-green-50 dark:bg-green-950 rounded">
+                  <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    {selectedExcelFile.name}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearExcelFile}
+                    disabled={batchUploading}
+                    className="h-6 w-6 p-0 hover:bg-destructive/10"
+                  >
+                    <span className="sr-only">Clear file</span>
+                    ×
+                  </Button>
+                </div>
               )}
             </div>
 
