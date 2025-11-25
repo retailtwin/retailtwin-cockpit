@@ -11,7 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import * as XLSX from 'xlsx';
+import { useNavigate } from "react-router-dom";
 
 type ImportType = 'locations' | 'products' | 'sales' | 'inventory';
 
@@ -40,6 +43,7 @@ interface Dataset {
 
 export default function DataImport() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [datasetId, setDatasetId] = useState<string | null>(null);
@@ -52,6 +56,13 @@ export default function DataImport() {
   });
 
   const [batchUploading, setBatchUploading] = useState(false);
+  const [processingStep, setProcessingStep] = useState<'uploading' | 'validating' | 'processing' | 'complete'>('uploading');
+  const [uploadedFilesSummary, setUploadedFilesSummary] = useState<{
+    filesProcessed: number;
+    totalSize: number;
+    records: { locations: number; products: number; sales: number; inventory: number };
+    warnings: string[];
+  } | null>(null);
 
   const [uploadProgress, setUploadProgress] = useState<Record<ImportType, 'pending' | 'uploading' | 'processing' | 'complete' | 'error'>>({
     locations: 'pending',
@@ -453,18 +464,23 @@ export default function DataImport() {
     }
 
     setBatchUploading(true);
+    setProcessingStep('uploading');
+    setUploadedFilesSummary(null);
+    
     const fileTypes: ImportType[] = ['locations', 'products', 'sales', 'inventory'];
     const failedTypes: string[] = [];
     
     try {
       // Step 1: Upload all files to storage
       const uploadedPaths: Record<ImportType, string> = {} as any;
+      let totalSize = 0;
       
       for (const fileType of fileTypes) {
         const file = selectedFiles[fileType];
         if (!file) continue;
 
         setUploadProgress(prev => ({ ...prev, [fileType]: 'uploading' }));
+        totalSize += file.size;
         
         const fileName = `${fileType}_${Date.now()}.csv`;
         const filePath = `${datasetId}/${fileType}/${fileName}`;
@@ -481,12 +497,13 @@ export default function DataImport() {
         }
         
         uploadedPaths[fileType] = filePath;
-        toast({ 
-          description: `${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully` 
-        });
+        setUploadProgress(prev => ({ ...prev, [fileType]: 'complete' }));
       }
 
-      // Step 2: Update dataset record with all file paths and scope
+
+      // Step 2: Update dataset record with all file paths
+      setProcessingStep('validating');
+      
       const { error: updateError } = await supabase
         .from('datasets')
         .update({
@@ -501,74 +518,83 @@ export default function DataImport() {
 
       if (updateError) throw updateError;
 
-      // Step 3: Trigger processing for each file type
-      for (const fileType of fileTypes) {
-        setUploadProgress(prev => ({ ...prev, [fileType]: 'processing' }));
-        
-        const { error: functionError } = await supabase.functions.invoke(
-          'process-dataset-upload',
-          {
-            body: {
-              datasetId: datasetId,
-              fileType: fileType,
-            },
-          }
-        );
+      // Step 3: Call ETL-Enhanced function
+      setProcessingStep('processing');
+      
+      const formData = new FormData();
+      formData.append('datasetId', datasetId);
+      formData.append('locationsPath', uploadedPaths.locations);
+      formData.append('productsPath', uploadedPaths.products);
+      formData.append('salesPath', uploadedPaths.sales);
+      formData.append('inventoryPath', uploadedPaths.inventory);
 
-        if (functionError) {
-          console.error(`Processing error for ${fileType}:`, functionError);
-          setUploadProgress(prev => ({ ...prev, [fileType]: 'error' }));
-          failedTypes.push(fileType);
-          toast({
-            title: "Processing failed",
-            description: `Failed to process ${fileType}: ${functionError.message}`,
-            variant: "destructive",
-          });
+      const { data: etlResult, error: etlError } = await supabase.functions.invoke(
+        'etl-enhanced',
+        {
+          body: formData,
         }
+      );
+
+      if (etlError) {
+        throw new Error(`ETL processing failed: ${etlError.message}`);
       }
 
-      if (failedTypes.length === 0) {
-        toast({
-          title: "Processing started",
-          description: "All files uploaded and processing started successfully",
-        });
-
-        // Step 4: Poll for completion
-        await pollDatasetUntilComplete(datasetId);
-        
-        // Refresh dataset info
-        await ensureUserHasDataset();
-        
-        // Mark all as complete
-        setUploadProgress({
-          locations: 'complete',
-          products: 'complete',
-          sales: 'complete',
-          inventory: 'complete',
-        });
-      } else {
-        toast({
-          title: "Partial failure",
-          description: `Failed files: ${failedTypes.join(', ')}. Please retry.`,
-          variant: "destructive",
+      // Set summary
+      if (etlResult?.summary) {
+        setUploadedFilesSummary({
+          filesProcessed: 4,
+          totalSize,
+          records: etlResult.summary,
+          warnings: etlResult.summary.warnings || []
         });
       }
+
+      // Step 4: Run DBM simulation
+      toast({
+        title: "Running DBM Simulation",
+        description: "Calculating optimal buffer management targets...",
+      });
+
+      const { error: dbmError } = await supabase.functions.invoke('dbm-calculator', {
+        body: { datasetId }
+      });
+
+      if (dbmError) {
+        console.error('DBM calculation error:', dbmError);
+        toast({
+          title: "Simulation Warning",
+          description: "Data imported but simulation had issues. You can run it manually later.",
+          variant: "default",
+        });
+      }
+
+      setProcessingStep('complete');
+      
+      // Refresh dataset info
+      await ensureUserHasDataset();
+      
+      // Mark all as complete
+      setUploadProgress({
+        locations: 'complete',
+        products: 'complete',
+        sales: 'complete',
+        inventory: 'complete',
+      });
+
+      toast({
+        title: "Import Complete!",
+        description: "All data has been processed successfully.",
+      });
 
     } catch (error: any) {
       console.error("Batch upload error:", error);
       
-      // Show specific error with failed worksheet if available
-      const errorMessage = failedTypes.length > 0
-        ? `Failed on ${failedTypes[failedTypes.length - 1]}: ${error.message}`
-        : error.message;
-      
       toast({
         title: "Upload failed",
-        description: errorMessage,
+        description: error.message,
         variant: "destructive",
       });
       
-      // Mark failed types as error
       if (failedTypes.length > 0) {
         const newProgress = { ...uploadProgress };
         failedTypes.forEach(type => {
@@ -1009,6 +1035,93 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
           </Card>
         )}
       </div>
+
+      {/* Progress Modal */}
+      <Dialog open={batchUploading} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Processing Your Data</DialogTitle>
+            <DialogDescription>
+              {processingStep === 'uploading' && 'Uploading files to cloud storage...'}
+              {processingStep === 'validating' && 'Validating data structure...'}
+              {processingStep === 'processing' && 'Processing and importing records...'}
+              {processingStep === 'complete' && 'Import complete!'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                {processingStep === 'uploading' ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4 text-success" />}
+                <span className={processingStep === 'uploading' ? 'font-medium' : 'text-muted-foreground'}>Uploading files</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {processingStep === 'validating' ? <Loader2 className="h-4 w-4 animate-spin" /> : processingStep === 'uploading' ? <div className="h-4 w-4" /> : <CheckCircle className="h-4 w-4 text-success" />}
+                <span className={processingStep === 'validating' ? 'font-medium' : 'text-muted-foreground'}>Validating data</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {processingStep === 'processing' ? <Loader2 className="h-4 w-4 animate-spin" /> : ['uploading', 'validating'].includes(processingStep) ? <div className="h-4 w-4" /> : <CheckCircle className="h-4 w-4 text-success" />}
+                <span className={processingStep === 'processing' ? 'font-medium' : 'text-muted-foreground'}>Processing records</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {processingStep === 'complete' ? <CheckCircle className="h-4 w-4 text-success" /> : <div className="h-4 w-4" />}
+                <span className={processingStep === 'complete' ? 'font-medium text-success' : 'text-muted-foreground'}>Complete!</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              {(['locations', 'products', 'sales', 'inventory'] as ImportType[]).map(type => (
+                <div key={type} className="flex items-center justify-between text-sm">
+                  <span className="capitalize">{type}</span>
+                  <Badge variant={uploadProgress[type] === 'complete' ? 'default' : uploadProgress[type] === 'error' ? 'destructive' : 'secondary'}>
+                    {uploadProgress[type]}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {uploadedFilesSummary && (
+        <Alert className="border-success bg-success/10">
+          <CheckCircle className="h-5 w-5 text-success" />
+          <AlertTitle>Import Successful!</AlertTitle>
+          <AlertDescription>
+            <div className="space-y-2 mt-2">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>Files processed: {uploadedFilesSummary.filesProcessed}</div>
+                <div>Total size: {(uploadedFilesSummary.totalSize / 1024 / 1024).toFixed(2)} MB</div>
+              </div>
+              <Separator className="my-2" />
+              <div className="space-y-1 text-sm">
+                <div>Locations: {uploadedFilesSummary.records.locations}</div>
+                <div>Products: {uploadedFilesSummary.records.products}</div>
+                <div>Sales: {uploadedFilesSummary.records.sales}</div>
+                <div>Inventory: {uploadedFilesSummary.records.inventory}</div>
+              </div>
+              
+              {uploadedFilesSummary.warnings.length > 0 && (
+                <>
+                  <Separator className="my-2" />
+                  <div className="space-y-1">
+                    <div className="font-medium text-warning">Warnings:</div>
+                    {uploadedFilesSummary.warnings.map((warning, idx) => (
+                      <div key={idx} className="text-xs text-muted-foreground">• {warning}</div>
+                    ))}
+                  </div>
+                </>
+              )}
+              
+              <div className="pt-3">
+                <Button onClick={() => navigate('/dashboard')} className="w-full">
+                  View Dashboard
+                </Button>
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }
