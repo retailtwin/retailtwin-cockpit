@@ -203,6 +203,36 @@ const Dashboard = () => {
   };
 
   const fetchDataDateRange = async () => {
+    try {
+      // First try to get from dataset metadata
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: datasets } = await supabase
+        .from('datasets')
+        .select('date_range_start, date_range_end')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .limit(1)
+        .single();
+
+      if (datasets?.date_range_start && datasets?.date_range_end) {
+        const minDate = new Date(datasets.date_range_start);
+        const maxDate = new Date(datasets.date_range_end);
+        
+        setDataDateRange({
+          min: minDate,
+          max: maxDate
+        });
+        
+        console.log('Date range from dataset metadata:', { minDate, maxDate });
+        return;
+      }
+    } catch (error) {
+      console.log('No dataset metadata found, falling back to data query');
+    }
+
+    // Fallback to querying actual data
     const { data, error } = await supabase.rpc('get_data_date_range');
     if (data && data.length > 0) {
       const minDate = new Date(data[0].min_date);
@@ -212,7 +242,7 @@ const Dashboard = () => {
         min: minDate,
         max: maxDate
       });
-      // Date range is now set by optimal scope detection
+      console.log('Date range from data:', { minDate, maxDate });
     }
   };
 
@@ -298,17 +328,18 @@ const Dashboard = () => {
       try {
         const days = await fetchLocationOrderDays(selectedLocation);
         setOrderDays(days || undefined);
+        
+        // Also reload valid dates when location/product changes
+        await loadValidDates(selectedLocation, selectedProduct || 'ALL');
       } catch (error) {
-        console.error("Error loading order days:", error);
+        console.error('Error loading order days:', error);
       }
     };
 
     loadOrderDays();
     
-    // Reload valid dates when filters change
-    if (selectedProduct) {
-      loadValidDates(selectedLocation, selectedProduct);
-    }
+    // Refresh data date range to get latest metadata
+    fetchDataDateRange();
   }, [selectedLocation, selectedProduct]);
 
   const handleAskArchie = (prompt: string) => {
