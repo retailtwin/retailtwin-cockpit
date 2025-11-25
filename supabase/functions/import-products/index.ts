@@ -94,10 +94,13 @@ serve(async (req) => {
       throw new Error('No valid records found in CSV');
     }
 
-    // Batch insert via RPC
-    const { error: insertError } = await supabase.rpc('upsert_products_batch', {
-      records: records
-    });
+    // Direct insert using Supabase client
+    const { error: insertError } = await supabase
+      .from('products')
+      .upsert(records, { 
+        onConflict: 'sku',
+        ignoreDuplicates: false 
+      });
 
     if (insertError) {
       console.error('Insert error:', insertError);

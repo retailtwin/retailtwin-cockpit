@@ -118,10 +118,23 @@ serve(async (req) => {
       throw new Error(`Unknown product codes: ${invalidProducts.join(', ')}`);
     }
 
-    // Batch insert via RPC
-    const { error: insertError } = await supabase.rpc('upsert_inventory_batch', {
-      records: records
-    });
+    // Transform records to match database schema
+    const inventoryRecords = records.map(r => ({
+      d: r.day,
+      location_code: r.store,
+      sku: r.product,
+      on_hand_units: r.units_on_hand,
+      on_order_units: r.units_on_order,
+      in_transit_units: r.units_in_transit
+    }));
+
+    // Direct insert using Supabase client
+    const { error: insertError } = await supabase
+      .from('inventory')
+      .upsert(inventoryRecords, { 
+        onConflict: 'd,location_code,sku',
+        ignoreDuplicates: false 
+      });
 
     if (insertError) {
       console.error('Insert error:', insertError);
