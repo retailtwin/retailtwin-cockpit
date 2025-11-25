@@ -550,17 +550,16 @@ export default function DataImport() {
       // Step 3: Call ETL-Enhanced function
       setProcessingStep('processing');
       
-      const formData = new FormData();
-      formData.append('datasetId', datasetId);
-      formData.append('locationsPath', uploadedPaths.locations);
-      formData.append('productsPath', uploadedPaths.products);
-      formData.append('salesPath', uploadedPaths.sales);
-      formData.append('inventoryPath', uploadedPaths.inventory);
-
       const { data: etlResult, error: etlError } = await supabase.functions.invoke(
         'etl-enhanced',
         {
-          body: formData,
+          body: {
+            datasetId,
+            locationsPath: uploadedPaths.locations,
+            productsPath: uploadedPaths.products,
+            salesPath: uploadedPaths.sales,
+            inventoryPath: uploadedPaths.inventory,
+          }
         }
       );
 
