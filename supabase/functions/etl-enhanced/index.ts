@@ -52,14 +52,10 @@ serve(async (req) => {
 
     console.log(`[ETL-Enhanced] Processing for user: ${user.id}`);
 
-    const formData = await req.formData();
-    const datasetId = formData.get('datasetId') as string;
-    const locationsPath = formData.get('locationsPath') as string;
-    const productsPath = formData.get('productsPath') as string;
-    const salesPath = formData.get('salesPath') as string;
-    const inventoryPath = formData.get('inventoryPath') as string;
+    const body = await req.json();
+    const { datasetId, locationsPath, productsPath, salesPath, inventoryPath } = body;
 
-    console.log('[ETL-Enhanced] File paths:', { locationsPath, productsPath, salesPath, inventoryPath });
+    console.log('[ETL-Enhanced] File paths:', { datasetId, locationsPath, productsPath, salesPath, inventoryPath });
 
     const summary: ProcessingSummary = {
       locations: 0,
