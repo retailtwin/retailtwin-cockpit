@@ -39,6 +39,8 @@ interface Dataset {
   total_products: number | null;
   total_sales_records: number | null;
   total_inventory_records: number | null;
+  date_range_start: string | null;
+  date_range_end: string | null;
 }
 
 export default function DataImport() {
@@ -681,6 +683,182 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
     });
   };
 
+  const handleClearDataset = async () => {
+    if (!datasetId) return;
+    
+    const confirmed = window.confirm(
+      "This will delete all existing data in your dataset. This action cannot be undone. Continue?"
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      toast({
+        title: "Clearing dataset...",
+        description: "Please wait while we remove all data",
+      });
+
+      // Clear dataset via RPC or direct deletes to aifo schema
+      // Since we don't have direct access to aifo schema, we'll update the dataset record
+      const { error: updateError } = await supabase
+        .from('datasets')
+        .update({
+          status: 'pending',
+          total_locations: 0,
+          total_products: 0,
+          total_sales_records: 0,
+          total_inventory_records: 0,
+          date_range_start: null,
+          date_range_end: null,
+          locations_filename: null,
+          products_filename: null,
+          sales_filename: null,
+          inventory_filename: null,
+          processed_at: null,
+        })
+        .eq('id', datasetId);
+
+      if (updateError) throw updateError;
+
+      // Refresh dataset info
+      await ensureUserHasDataset();
+
+      // Clear selected files
+      setSelectedFiles({
+        locations: null,
+        products: null,
+        sales: null,
+        inventory: null,
+      });
+
+      setCsvPreviews({
+        locations: null,
+        products: null,
+        sales: null,
+        inventory: null,
+      });
+
+      toast({
+        title: "Dataset cleared",
+        description: "All data has been removed successfully",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Clear failed",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleIndividualUpload = async (type: ImportType) => {
+    const file = selectedFiles[type];
+    if (!file || !datasetId) return;
+
+    try {
+      setUploadProgress(prev => ({ ...prev, [type]: 'uploading' }));
+
+      // Read file content
+      const reader = new FileReader();
+      const csvText = await new Promise<string>((resolve, reject) => {
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+
+      // Call appropriate edge function
+      if (type === 'products') {
+        const { data, error } = await supabase.functions.invoke('import-products', {
+          body: { csvText }
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: "Products imported",
+          description: data.message || `Successfully imported ${data.count} products`,
+        });
+      } else {
+        // For locations, sales, inventory - use import-fact-daily
+        const { data, error } = await supabase.functions.invoke('import-fact-daily', {
+          body: { csvText }
+        });
+
+        if (error) throw error;
+
+        toast({
+          title: `${type.charAt(0).toUpperCase() + type.slice(1)} imported`,
+          description: data.message || 'Successfully imported records',
+        });
+      }
+
+      setUploadProgress(prev => ({ ...prev, [type]: 'complete' }));
+      
+      // Refresh dataset info
+      await ensureUserHasDataset();
+
+    } catch (error: any) {
+      console.error(`Upload error for ${type}:`, error);
+      setUploadProgress(prev => ({ ...prev, [type]: 'error' }));
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: error.message,
+      });
+    }
+  };
+
+  const handlePrepareDataset = async () => {
+    if (!datasetId) return;
+
+    // Check if we have at least products and (sales or inventory)
+    const hasProducts = dataset?.total_products && dataset.total_products > 0;
+    const hasData = (dataset?.total_sales_records && dataset.total_sales_records > 0) || 
+                     (dataset?.total_inventory_records && dataset.total_inventory_records > 0);
+
+    if (!hasProducts || !hasData) {
+      toast({
+        variant: "destructive",
+        title: "Insufficient data",
+        description: "Please upload Products and at least Sales or Inventory data first",
+      });
+      return;
+    }
+
+    try {
+      toast({
+        title: "Preparing dataset...",
+        description: "Calculating active window and validating data",
+      });
+
+      const { data, error } = await supabase.functions.invoke('prepare-dataset');
+
+      if (error) throw error;
+
+      if (data.success) {
+        const { metadata } = data;
+        toast({
+          title: "Dataset ready!",
+          description: `Active window: ${metadata.startDate} to ${metadata.endDate}`,
+        });
+        toast({
+          title: "Dataset statistics",
+          description: `${metadata.totalRecords} records across ${metadata.uniqueLocations} locations and ${metadata.uniqueSkus} SKUs`,
+        });
+
+        // Refresh dataset info
+        await ensureUserHasDataset();
+      }
+    } catch (error: any) {
+      console.error('Prepare dataset error:', error);
+      toast({
+        variant: "destructive",
+        title: "Preparation failed",
+        description: error.message,
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -753,35 +931,79 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
         {/* Dataset Information */}
         <Card>
           <CardHeader>
-            <CardTitle>Dataset Information</CardTitle>
-            <CardDescription>
-              Your active dataset for all data imports
-            </CardDescription>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>Dataset Information</CardTitle>
+                <CardDescription>
+                  Your active dataset for all data imports
+                </CardDescription>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleClearDataset}
+                disabled={!dataset || batchUploading}
+              >
+                Clear Dataset
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {dataset ? (
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Status:</span>
-                  <span className="font-medium capitalize">{dataset.status}</span>
+                  <Badge variant={dataset.status === 'active' ? 'default' : 'secondary'}>
+                    {dataset.status === 'active' ? 'Ready' : 'Needs Preparation'}
+                  </Badge>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Records:</span>
-                  <span className="font-medium">
-                    {(dataset.total_locations || 0) + 
-                     (dataset.total_products || 0) + 
-                     (dataset.total_sales_records || 0) + 
-                     (dataset.total_inventory_records || 0)}
-                  </span>
+                
+                {dataset.date_range_start && dataset.date_range_end && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Date Range:</span>
+                    <span className="font-medium">
+                      {format(new Date(dataset.date_range_start), 'MMM d, yyyy')} - {format(new Date(dataset.date_range_end), 'MMM d, yyyy')}
+                    </span>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Locations</div>
+                    <div className="text-lg font-semibold">{dataset.total_locations || 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Products</div>
+                    <div className="text-lg font-semibold">{dataset.total_products || 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Sales Records</div>
+                    <div className="text-lg font-semibold">{dataset.total_sales_records || 0}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Inventory Records</div>
+                    <div className="text-lg font-semibold">{dataset.total_inventory_records || 0}</div>
+                  </div>
                 </div>
-                <div className="flex justify-between">
+                
+                <div className="flex justify-between pt-2 border-t">
                   <span className="text-muted-foreground">Last Updated:</span>
                   <span className="font-medium">
                     {dataset.last_updated 
-                      ? format(new Date(dataset.last_updated), 'MMM d, yyyy') 
+                      ? format(new Date(dataset.last_updated), 'MMM d, yyyy HH:mm') 
                       : 'Never'}
                   </span>
                 </div>
+
+                {dataset.status !== 'active' && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Dataset Not Ready</AlertTitle>
+                    <AlertDescription>
+                      Upload data files then click "Prepare Dataset" to calculate the active data window.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">Loading dataset...</p>
@@ -867,11 +1089,27 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                         <Download className="h-4 w-4 mr-2" />
                         Template
                       </Button>
+                      {selectedFiles[fileType] && !isExcelUpload && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => handleIndividualUpload(fileType)}
+                          disabled={batchUploading || uploadProgress[fileType] === 'uploading'}
+                        >
+                          {uploadProgress[fileType] === 'uploading' ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : uploadProgress[fileType] === 'complete' ? (
+                            <CheckCircle className="h-4 w-4" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
                     </div>
 
                     {selectedFiles[fileType] && (
                       <p className="text-sm text-muted-foreground">
-                        ✓ {selectedFiles[fileType]!.name} ready to upload
+                        {uploadProgress[fileType] === 'complete' ? '✓ Uploaded successfully' : `✓ ${selectedFiles[fileType]!.name} ready to upload`}
                       </p>
                     )}
 
@@ -920,24 +1158,41 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
 
             {/* Batch Upload Button */}
             <div className="pt-4 space-y-2">
-              <Button
-                onClick={handleBatchUploadAndProcess}
-                disabled={!Object.values(selectedFiles).every(f => f !== null) || batchUploading}
-                className="w-full"
-                size="lg"
-              >
-                {batchUploading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Uploading All Files...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-2 h-5 w-5" />
-                    Upload All Data
-                  </>
-                )}
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleBatchUploadAndProcess}
+                  disabled={!Object.values(selectedFiles).every(f => f !== null) || batchUploading}
+                  className="flex-1"
+                  size="lg"
+                >
+                  {batchUploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Uploading All Files...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-5 w-5" />
+                      Upload All Data
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={handlePrepareDataset}
+                  disabled={
+                    batchUploading ||
+                    !dataset ||
+                    !(dataset.total_products && dataset.total_products > 0) ||
+                    !((dataset.total_sales_records && dataset.total_sales_records > 0) || (dataset.total_inventory_records && dataset.total_inventory_records > 0))
+                  }
+                >
+                  <CheckCircle className="mr-2 h-5 w-5" />
+                  Prepare Dataset
+                </Button>
+              </div>
               
               {/* File size info */}
               {Object.values(selectedFiles).some(f => f !== null) && (
