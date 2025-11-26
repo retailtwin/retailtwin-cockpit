@@ -107,10 +107,18 @@ serve(async (req) => {
       group_3: r.group_3
     }));
 
+    // Deduplicate by SKU (keep last occurrence)
+    const uniqueRecords = Array.from(
+      productRecords.reduce((map, record) => {
+        map.set(record.sku, record);
+        return map;
+      }, new Map()).values()
+    );
+
     // Direct insert using Supabase client
     const { error: insertError } = await supabase
       .from('products')
-      .upsert(productRecords, { 
+      .upsert(uniqueRecords, { 
         onConflict: 'sku',
         ignoreDuplicates: false 
       });
