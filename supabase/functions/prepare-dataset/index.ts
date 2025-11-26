@@ -51,15 +51,28 @@ serve(async (req) => {
     console.log('Dataset ID:', datasetId);
 
     // Step 1: Check if public schema has data
-    const { count: publicProductsCount } = await supabase
+    const { count: publicProductsCount, error: publicProdCountError } = await supabase
       .from('products')
       .select('*', { count: 'exact', head: true });
 
-    const { count: publicFactDailyCount } = await supabase
+    const { count: publicFactDailyCount, error: publicFactCountError } = await supabase
       .from('fact_daily')
       .select('*', { count: 'exact', head: true });
 
-    console.log('Public schema data:', { products: publicProductsCount, fact_daily: publicFactDailyCount });
+    console.log('Staging data counts (public):', { 
+      products: publicProductsCount, 
+      fact_daily: publicFactDailyCount,
+      publicProdCountError,
+      publicFactCountError
+    });
+
+    if (publicProdCountError) {
+      throw new Error(`Failed to count products in staging: ${publicProdCountError.message}`);
+    }
+
+    if (publicFactCountError) {
+      throw new Error(`Failed to count fact_daily in staging: ${publicFactCountError.message}`);
+    }
 
     if (!publicProductsCount || publicProductsCount === 0) {
       throw new Error('No products found in staging area. Please import data first.');
