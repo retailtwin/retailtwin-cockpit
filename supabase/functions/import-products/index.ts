@@ -70,7 +70,7 @@ serve(async (req) => {
     const { csvText } = importSchema.parse(body);
 
     // Parse CSV
-    const lines = csvText.trim().split('\n');
+    const lines = csvText.trim().split('\n').filter(line => line.trim() !== '');
     if (lines.length < 2) {
       throw new Error('CSV must contain header row and at least one data row');
     }
