@@ -2,6 +2,7 @@ project_id = "zgsrbhfazvgtqbpkhabg"
 
 [functions.import-fact-daily]
 verify_jwt = true
+timeout = 300
 
 [functions.import-locations]
 verify_jwt = true

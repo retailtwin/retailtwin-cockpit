@@ -104,10 +104,10 @@ serve(async (req) => {
       day: string;
       location_code: string;
       sku: string;
-      units_sold: string;
-      units_on_hand: string;
-      units_on_order: string;
-      units_in_transit: string;
+      units_sold: number;
+      units_on_hand: number;
+      units_on_order: number;
+      units_in_transit: number;
     } | null;
     
     for (let i = 0; i < dataLines.length; i += batchSize) {
@@ -115,34 +115,37 @@ serve(async (req) => {
       const records = batch
         .map((line: string, lineIndex: number): FactDailyRecord => {
           try {
-            const parts = line.split(',');
+            const parts = line.split(',').map(p => p.trim());
             
             // Skip if line is empty or doesn't have enough columns
-            if (!line.trim() || parts.length < 23) {
-              console.log(`Skipping line ${i + lineIndex}: insufficient columns or empty`);
+            if (!line.trim() || parts.length < 4) {
+              console.log(`Skipping line ${i + lineIndex + 2}: insufficient columns or empty`);
               return null;
             }
             
-            // Extract date from timestamp format "2023-01-01 00:00:00" -> "2023-01-01"
-            const dateStr = parts[0].trim().split(' ')[0];
+            // CSV format: day,store,product,units
+            const day = parts[0];
+            const store = parts[1];
+            const product = parts[2];
+            const units = parts[3];
             
-            // Skip if date is empty or invalid
-            if (!dateStr || dateStr === '') {
-              console.log(`Skipping line ${i + lineIndex}: empty date`);
+            // Skip if required fields are empty
+            if (!day || !store || !product) {
+              console.log(`Skipping line ${i + lineIndex + 2}: missing required fields`);
               return null;
             }
             
             return {
-              day: dateStr,
-              location_code: parts[1].trim().replace('.0', ''),
-              sku: parts[3].trim().replace('.0', ''),
-              units_sold: parts[9].trim() || '0',
-              units_on_hand: parts[12].trim() || '0',
-              units_on_order: parts[16].trim() || '0',
-              units_in_transit: parts[18].trim() || '0'
+              day,
+              location_code: store,
+              sku: product,
+              units_sold: parseFloat(units) || 0,
+              units_on_hand: 0,
+              units_on_order: 0,
+              units_in_transit: 0
             };
           } catch (error) {
-            console.error(`Error parsing line ${i + lineIndex}:`, error);
+            console.error(`Error parsing line ${i + lineIndex + 2}:`, error);
             return null;
           }
         })
