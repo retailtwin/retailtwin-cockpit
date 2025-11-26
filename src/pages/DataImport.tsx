@@ -859,12 +859,8 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
   const handlePrepareDataset = async () => {
     if (!datasetId) return;
 
-    // Check if we have at least products and (sales or inventory)
-    const hasProducts = dataset?.total_products && dataset.total_products > 0;
-    const hasData = (dataset?.total_sales_records && dataset.total_sales_records > 0) || 
-                     (dataset?.total_inventory_records && dataset.total_inventory_records > 0);
-
-    if (!hasProducts || !hasData) {
+    // Use the same readiness logic as the button
+    if (!canPrepareDataset) {
       toast({
         variant: "destructive",
         title: "Insufficient data",
