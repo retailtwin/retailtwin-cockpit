@@ -220,27 +220,32 @@ serve(async (req) => {
       offset += batchSize;
     }
 
-    // Step 5: Calculate date range from aifo schema
-    const { data: dateAnalysis, error: analysisError } = await supabase.rpc('get_data_date_range');
-    
-    if (analysisError) {
-      console.error('Error analyzing date range:', analysisError);
-      throw new Error('Failed to analyze data date range');
+    // Step 5: Merge sales and inventory into fact_daily
+    console.log('Merging sales and inventory into fact_daily...');
+    const { data: mergeResult, error: mergeError } = await supabase
+      .rpc('merge_sales_inventory_to_fact_daily', {
+        p_dataset_id: datasetId
+      });
+
+    if (mergeError) {
+      console.error('Error merging sales and inventory:', mergeError);
+      throw new Error(`Failed to merge data: ${mergeError.message}`);
     }
 
-    if (!dateAnalysis || dateAnalysis.length === 0) {
-      throw new Error('No data found after ETL process');
+    if (!mergeResult || mergeResult.length === 0) {
+      throw new Error('No data found after merge process');
     }
 
-    const startDate = dateAnalysis[0].min_date;
-    const endDate = dateAnalysis[0].max_date;
+    const factDailyRecords = mergeResult[0].records_created;
+    const startDate = mergeResult[0].min_date;
+    const endDate = mergeResult[0].max_date;
 
-    console.log('Active window:', { startDate, endDate });
+    console.log('Merge complete:', { factDailyRecords, startDate, endDate });
 
     const uniqueLocations = locationRecords.length;
     const uniqueSkus = productRecords.length;
 
-    console.log('Dataset stats:', { uniqueLocations, uniqueSkus, totalRecords: totalCopied });
+    console.log('Dataset stats:', { uniqueLocations, uniqueSkus, totalRecords: factDailyRecords });
 
     // Update dataset with metadata
     const { error: updateError } = await supabase
@@ -267,7 +272,7 @@ serve(async (req) => {
       endDate,
       uniqueLocations,
       uniqueSkus,
-      totalRecords: totalCopied,
+      totalRecords: factDailyRecords,
     };
 
     return new Response(
