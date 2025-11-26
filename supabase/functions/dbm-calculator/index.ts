@@ -15,7 +15,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { location_code, sku, start_date, end_date } = body;
+    const { location_code, sku, start_date, end_date, use_statistical_initial = true } = body;
 
     console.log(`DBM Calculation starting for location: ${location_code}, SKU: ${sku}`);
 
@@ -71,6 +71,25 @@ serve(async (req) => {
       const [loc, sk] = key.split('|');
       console.log(`Processing ${loc}-${sk}: ${records.length} days`);
 
+      // Calculate initial statistics from first 30 days (or available days)
+      const initialPeriodDays = Math.min(30, records.length);
+      const initialRecords = records.slice(0, initialPeriodDays);
+      const salesData = initialRecords.map(r => r.units_sold || 0);
+      
+      let initialAvgSales = 0;
+      let initialStDevSales = 0;
+      
+      if (salesData.length > 0) {
+        initialAvgSales = salesData.reduce((sum, val) => sum + val, 0) / salesData.length;
+        
+        if (salesData.length > 1) {
+          const variance = salesData.reduce((sum, val) => sum + Math.pow(val - initialAvgSales, 2), 0) / salesData.length;
+          initialStDevSales = Math.sqrt(variance);
+        }
+      }
+
+      console.log(`Initial stats for ${loc}-${sk}: avg=${initialAvgSales.toFixed(2)}, stdev=${initialStDevSales.toFixed(2)}`);
+
       // Track orders for this SKU-location
       const orders: Array<{
         created: string;
@@ -91,7 +110,23 @@ serve(async (req) => {
 
         if (isFirstDay) {
           // Day 1: Initialize with proper starting state (like SetInitialSkuLocDate)
-          const initialGreen = record.on_hand_units || 1; // Could be statistical, but starting simple
+          let initialGreen = record.on_hand_units || 1;
+          let initInfo = `OH=[${record.on_hand_units}]`;
+          
+          // Calculate statistical initial green if enabled
+          if (use_statistical_initial && initialAvgSales > 0 && initialStDevSales > 0) {
+            const leadTime = 10; // Default, could be from location/product master
+            const statisticalGreen = (initialAvgSales * leadTime) + (2 * Math.sqrt(leadTime) * initialStDevSales);
+            
+            initInfo += `, STAT=${statisticalGreen.toFixed(2)}`;
+            
+            if (statisticalGreen > initialGreen) {
+              initialGreen = Math.ceil(statisticalGreen);
+            }
+          }
+          
+          initInfo += ` => INIT=${initialGreen}`;
+          console.log(`${loc}-${sk} initialization: ${initInfo}`);
           
           skuLocDate = {
             store_code: loc,
