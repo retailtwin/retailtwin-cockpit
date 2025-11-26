@@ -118,21 +118,22 @@ serve(async (req) => {
       throw new Error(`Unknown product codes: ${invalidProducts.join(', ')}`);
     }
 
-    // Transform records to match database schema
-    const inventoryRecords = records.map(r => ({
-      d: r.day,
+    // Transform records to match fact_daily table schema
+    const factDailyRecords = records.map(r => ({
+      day: r.day,
       location_code: r.store,
       sku: r.product,
-      on_hand_units: r.units_on_hand,
-      on_order_units: r.units_on_order,
-      in_transit_units: r.units_in_transit
+      units_on_hand: r.units_on_hand,
+      units_on_order: r.units_on_order,
+      units_in_transit: r.units_in_transit,
+      units_sold: 0 // Inventory data doesn't include sales
     }));
 
     // Direct insert using Supabase client
     const { error: insertError } = await supabase
-      .from('inventory')
-      .upsert(inventoryRecords, { 
-        onConflict: 'd,location_code,sku',
+      .from('fact_daily')
+      .upsert(factDailyRecords, { 
+        onConflict: 'day,location_code,sku',
         ignoreDuplicates: false 
       });
 

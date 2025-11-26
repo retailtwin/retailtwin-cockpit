@@ -94,10 +94,23 @@ serve(async (req) => {
       throw new Error('No valid records found in CSV');
     }
 
+    // Transform records to match database schema (product_code -> sku)
+    const productRecords = records.map(r => ({
+      sku: r.product_code,
+      name: r.name,
+      cost_price: r.cost_price,
+      sales_price: r.sales_price,
+      pack_size: r.pack_size,
+      minimum_order_quantity: r.minimum_order_quantity,
+      group_1: r.group_1,
+      group_2: r.group_2,
+      group_3: r.group_3
+    }));
+
     // Direct insert using Supabase client
     const { error: insertError } = await supabase
       .from('products')
-      .upsert(records, { 
+      .upsert(productRecords, { 
         onConflict: 'sku',
         ignoreDuplicates: false 
       });

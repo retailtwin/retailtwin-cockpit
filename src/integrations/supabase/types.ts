@@ -146,6 +146,30 @@ export type Database = {
         }
         Relationships: []
       }
+      dataset_metadata: {
+        Row: {
+          created_at: string | null
+          end_date: string | null
+          id: string
+          start_date: string | null
+          total_records: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          start_date?: string | null
+          total_records?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          start_date?: string | null
+          total_records?: number | null
+        }
+        Relationships: []
+      }
       datasets: {
         Row: {
           created_at: string | null
@@ -257,6 +281,36 @@ export type Database = {
         }
         Relationships: []
       }
+      fact_daily: {
+        Row: {
+          day: string
+          location_code: string
+          sku: string
+          units_in_transit: number | null
+          units_on_hand: number | null
+          units_on_order: number | null
+          units_sold: number | null
+        }
+        Insert: {
+          day: string
+          location_code: string
+          sku: string
+          units_in_transit?: number | null
+          units_on_hand?: number | null
+          units_on_order?: number | null
+          units_sold?: number | null
+        }
+        Update: {
+          day?: string
+          location_code?: string
+          sku?: string
+          units_in_transit?: number | null
+          units_on_hand?: number | null
+          units_on_order?: number | null
+          units_sold?: number | null
+        }
+        Relationships: []
+      }
       knowledge_usage: {
         Row: {
           id: string
@@ -325,6 +379,66 @@ export type Database = {
           subheading?: string | null
           updated_at?: string | null
           updated_by?: string | null
+        }
+        Relationships: []
+      }
+      locations: {
+        Row: {
+          code: string
+          name: string
+          order_days: string | null
+          production_lead_time: number | null
+          shipping_lead_time: number | null
+        }
+        Insert: {
+          code: string
+          name: string
+          order_days?: string | null
+          production_lead_time?: number | null
+          shipping_lead_time?: number | null
+        }
+        Update: {
+          code?: string
+          name?: string
+          order_days?: string | null
+          production_lead_time?: number | null
+          shipping_lead_time?: number | null
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          cost_price: number
+          group_1: string | null
+          group_2: string | null
+          group_3: string | null
+          minimum_order_quantity: number | null
+          name: string
+          pack_size: number | null
+          sales_price: number
+          sku: string
+        }
+        Insert: {
+          cost_price: number
+          group_1?: string | null
+          group_2?: string | null
+          group_3?: string | null
+          minimum_order_quantity?: number | null
+          name: string
+          pack_size?: number | null
+          sales_price: number
+          sku: string
+        }
+        Update: {
+          cost_price?: number
+          group_1?: string | null
+          group_2?: string | null
+          group_3?: string | null
+          minimum_order_quantity?: number | null
+          name?: string
+          pack_size?: number | null
+          sales_price?: number
+          sku?: string
         }
         Relationships: []
       }
