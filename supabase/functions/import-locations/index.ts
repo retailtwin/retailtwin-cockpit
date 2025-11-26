@@ -90,10 +90,19 @@ serve(async (req) => {
       throw new Error('No valid records found in CSV');
     }
 
+    // Transform records to match database schema (store_code -> code)
+    const locationRecords = records.map(r => ({
+      code: r.store_code,
+      name: r.name,
+      production_lead_time: r.production_lead_time,
+      shipping_lead_time: r.shipping_lead_time,
+      order_days: r.order_days
+    }));
+
     // Direct insert using Supabase client
     const { error: insertError } = await supabase
       .from('locations')
-      .upsert(records, { 
+      .upsert(locationRecords, { 
         onConflict: 'code',
         ignoreDuplicates: false 
       });

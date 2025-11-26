@@ -114,17 +114,13 @@ serve(async (req) => {
     let totalInserted = 0;
     
     type FactDailyRecord = {
-      d: string;
+      day: string;
       location_code: string;
       sku: string;
       units_sold: string;
-      on_hand_units: string;
-      on_order_units: string;
-      in_transit_units: string;
-      on_hand_units_sim: string;
-      target_units: string;
-      economic_units: string;
-      economic_overstock_units: string;
+      units_on_hand: string;
+      units_on_order: string;
+      units_in_transit: string;
     } | null;
     
     for (let i = 0; i < dataLines.length; i += batchSize) {
@@ -150,17 +146,13 @@ serve(async (req) => {
             }
             
             return {
-              d: dateStr,
+              day: dateStr,
               location_code: parts[1].trim().replace('.0', ''),
               sku: parts[3].trim().replace('.0', ''),
               units_sold: parts[9].trim() || '0',
-              on_hand_units: parts[12].trim() || '',
-              on_order_units: parts[16].trim() || '0',
-              in_transit_units: parts[18].trim() || '0',
-              on_hand_units_sim: parts[14].trim() || '',
-              target_units: parts[6].trim() || '',  // Green
-              economic_units: parts[20].trim() || '',  // UnitsEco
-              economic_overstock_units: parts[22].trim() || ''  // UnitsEcoOverstock
+              units_on_hand: parts[12].trim() || '0',
+              units_on_order: parts[16].trim() || '0',
+              units_in_transit: parts[18].trim() || '0'
             };
           } catch (error) {
             console.error(`Error parsing line ${i + lineIndex}:`, error);
@@ -175,9 +167,12 @@ serve(async (req) => {
         continue;
       }
 
-      const { error } = await supabaseClient.rpc('insert_fact_daily_batch', {
-        records
-      });
+      const { error } = await supabaseClient
+        .from('fact_daily')
+        .upsert(records, {
+          onConflict: 'day,location_code,sku',
+          ignoreDuplicates: false
+        });
 
       if (error) {
         const supportId = crypto.randomUUID();
