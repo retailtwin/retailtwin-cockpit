@@ -558,7 +558,7 @@ export default function DataImport() {
       const salesCSV = await readFileAsText(selectedFiles.sales!);
       const { data: salesResult, error: salesError } = await supabase.functions.invoke(
         'import-fact-daily',
-        { body: { csvText: salesCSV } }
+        { body: { csvText: salesCSV, dataType: 'sales' } }
       );
       
       if (salesError) throw new Error(`Sales import failed: ${salesError.message}`);
@@ -575,7 +575,7 @@ export default function DataImport() {
       const inventoryCSV = await readFileAsText(selectedFiles.inventory!);
       const { data: invResult, error: invError } = await supabase.functions.invoke(
         'import-fact-daily',
-        { body: { csvText: inventoryCSV } }
+        { body: { csvText: inventoryCSV, dataType: 'inventory' } }
       );
       
       if (invError) throw new Error(`Inventory import failed: ${invError.message}`);
@@ -589,51 +589,6 @@ export default function DataImport() {
         records: recordCounts,
         warnings: []
       });
-
-      // Prepare dataset to get date range
-      toast({
-        title: "Preparing dataset...",
-        description: "Analyzing date ranges and metadata",
-      });
-
-      const { data: prepareResult, error: prepareError } = await supabase.functions.invoke('prepare-dataset', {
-        body: {}
-      });
-
-      if (prepareError || !prepareResult?.metadata) {
-        console.error('Prepare dataset error:', prepareError);
-        toast({
-          title: "Warning",
-          description: "Dataset metadata preparation had issues. DBM simulation skipped.",
-          variant: "default",
-        });
-      } else {
-        // Run DBM simulation with proper parameters
-        toast({
-          title: "Running DBM Simulation",
-          description: "Calculating optimal buffer management targets...",
-        });
-
-        const { startDate, endDate } = prepareResult.metadata;
-        
-        const { error: dbmError } = await supabase.functions.invoke('dbm-calculator', {
-          body: {
-            location_code: 'ALL',
-            sku: 'ALL',
-            start_date: startDate,
-            end_date: endDate
-          }
-        });
-
-        if (dbmError) {
-          console.error('DBM calculation error:', dbmError);
-          toast({
-            title: "Simulation Warning",
-            description: "Data imported but simulation had issues. You can run it manually later.",
-            variant: "default",
-          });
-        }
-      }
 
       setProcessingStep('complete');
       

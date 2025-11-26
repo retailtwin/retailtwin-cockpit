@@ -19,7 +19,8 @@ const importSchema = z.object({
     .refine(text => {
       const firstLine = text.trim().split('\n')[0];
       return firstLine.includes('d') || firstLine.includes('date');
-    }, 'CSV must have a valid header row')
+    }, 'CSV must have a valid header row'),
+  dataType: z.enum(['sales', 'inventory']).default('sales')
 });
 
 // Error sanitization function
@@ -100,7 +101,8 @@ serve(async (req) => {
       );
     }
     
-    const { csvText } = validationResult.data;
+    const { csvText, dataType } = validationResult.data;
+    console.log(`Processing ${dataType} import...`);
 
     // Parse CSV (skip header)
     const lines = csvText.trim().split('\n');
@@ -144,15 +146,29 @@ serve(async (req) => {
               return null;
             }
             
-            return {
-              day,
-              location_code: store,
-              sku: product,
-              units_sold: parseFloat(units) || 0,
-              units_on_hand: 0,
-              units_on_order: 0,
-              units_in_transit: 0
-            };
+            // Populate correct fields based on data type
+            if (dataType === 'sales') {
+              return {
+                day,
+                location_code: store,
+                sku: product,
+                units_sold: parseFloat(units) || 0,
+                units_on_hand: 0,
+                units_on_order: 0,
+                units_in_transit: 0
+              };
+            } else {
+              // inventory
+              return {
+                day,
+                location_code: store,
+                sku: product,
+                units_sold: 0,
+                units_on_hand: parseFloat(units) || 0,
+                units_on_order: 0,
+                units_in_transit: 0
+              };
+            }
           } catch (error) {
             console.error(`Error parsing line ${i + lineIndex + 2}:`, error);
             return null;
@@ -194,7 +210,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Successfully imported ${totalInserted} records` 
+        message: `Successfully imported ${totalInserted} ${dataType} records`,
+        count: totalInserted
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
