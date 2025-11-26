@@ -1070,6 +1070,14 @@ export type Database = {
         Args: { p_dataset_id: string; records: Json }
         Returns: undefined
       }
+      merge_sales_inventory_to_fact_daily: {
+        Args: { p_dataset_id: string }
+        Returns: {
+          max_date: string
+          min_date: string
+          records_created: number
+        }[]
+      }
       replace_inventory: { Args: { records: Json }; Returns: undefined }
       replace_locations: { Args: { records: Json }; Returns: undefined }
       replace_products: { Args: { records: Json }; Returns: undefined }
