@@ -65,10 +65,10 @@ const Dashboard = () => {
   const [productionLeadTime, setProductionLeadTime] = useState<number | undefined>();
   const [shippingLeadTime, setShippingLeadTime] = useState<number | undefined>();
   const [orderDays, setOrderDays] = useState<string | undefined>();
-  const [dataDateRange, setDataDateRange] = useState<{min: Date, max: Date} | null>(null);
+  const [dataDateRange, setDataDateRange] = useState<{ min: Date; max: Date } | null>(null);
   const [simulationConfigOpen, setSimulationConfigOpen] = useState(false);
   const [simulationScope, setSimulationScope] = useState<SimulationConfig | null>(null);
-  const [simulationStatus, setSimulationStatus] = useState<'idle' | 'running' | 'polling' | 'complete'>('idle');
+  const [simulationStatus, setSimulationStatus] = useState<"idle" | "running" | "polling" | "complete">("idle");
   const [periodStats, setPeriodStats] = useState<{
     totalSkus: number;
     totalSales: number;
@@ -79,7 +79,6 @@ const Dashboard = () => {
   const [isLoadingOptimalScope, setIsLoadingOptimalScope] = useState(false);
   const [validDates, setValidDates] = useState<Set<string> | null>(null);
   const [locationOrderDays, setLocationOrderDays] = useState<string | null>(null);
-
 
   // Check admin status and load settings
   useEffect(() => {
@@ -97,50 +96,50 @@ const Dashboard = () => {
     setIsLoadingOptimalScope(true);
     try {
       const scope = await findOptimalSimulationScope();
-      
+
       if (scope) {
-        console.log('Optimal scope found:', scope);
-        
+        console.log("Optimal scope found:", scope);
+
         // Set location
         setSelectedLocation(scope.location);
-        
+
         // Set date range
         const startDate = new Date(scope.dateRange.start);
         const endDate = new Date(scope.dateRange.end);
         setDateRange({
           from: startDate,
-          to: endDate
+          to: endDate,
         });
-        
-        console.log('Setting optimal date range:', { from: startDate, to: endDate });
-        
+
+        console.log("Setting optimal date range:", { from: startDate, to: endDate });
+
         // Load locations and products
         const locs = await fetchLocations();
         const prods = await fetchProducts();
         setLocations(locs);
         setProducts(prods);
-        
+
         // Load order days for optimal location
         const orderDays = await fetchLocationOrderDays(scope.location);
         setLocationOrderDays(orderDays);
-        
+
         // Load valid dates for the optimal location
-        await loadValidDates(scope.location, 'ALL');
+        await loadValidDates(scope.location, "ALL");
       } else {
-        console.log('No optimal scope found, using defaults');
+        console.log("No optimal scope found, using defaults");
         // Fallback: load locations/products and use first location
         const locs = await fetchLocations();
         const prods = await fetchProducts();
         setLocations(locs);
         setProducts(prods);
-        
+
         if (locs.length > 0) {
           setSelectedLocation(locs[0].code);
-          await loadValidDates(locs[0].code, 'ALL');
+          await loadValidDates(locs[0].code, "ALL");
         }
       }
     } catch (error) {
-      console.error('Error loading optimal scope:', error);
+      console.error("Error loading optimal scope:", error);
     } finally {
       setIsLoadingOptimalScope(false);
     }
@@ -148,34 +147,33 @@ const Dashboard = () => {
 
   const loadValidDates = async (location: string, sku: string) => {
     try {
-      const { getValidDates } = await import('@/lib/supabase-helpers');
-      const dates = await getValidDates(
-        location === 'ALL' ? undefined : location,
-        sku === 'ALL' ? undefined : sku
-      );
+      const { getValidDates } = await import("@/lib/supabase-helpers");
+      const dates = await getValidDates(location === "ALL" ? undefined : location, sku === "ALL" ? undefined : sku);
       setValidDates(dates);
       console.log(`Loaded ${dates.size} valid dates with both sales and inventory`);
     } catch (error) {
-      console.error('Error loading valid dates:', error);
+      console.error("Error loading valid dates:", error);
       setValidDates(new Set());
     }
   };
 
   const checkAdminStatus = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
         .single();
 
       setIsAdmin(!!roles);
     } catch (error) {
-      console.error('Error checking admin status:', error);
+      console.error("Error checking admin status:", error);
     }
   };
 
@@ -205,44 +203,46 @@ const Dashboard = () => {
   const fetchDataDateRange = async () => {
     try {
       // First try to get from dataset metadata
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data: datasets } = await supabase
-        .from('datasets')
-        .select('date_range_start, date_range_end')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
+        .from("datasets")
+        .select("date_range_start, date_range_end")
+        .eq("user_id", user.id)
+        .eq("status", "active")
         .limit(1)
         .single();
 
       if (datasets?.date_range_start && datasets?.date_range_end) {
         const minDate = new Date(datasets.date_range_start);
         const maxDate = new Date(datasets.date_range_end);
-        
+
         setDataDateRange({
           min: minDate,
-          max: maxDate
+          max: maxDate,
         });
-        
-        console.log('Date range from dataset metadata:', { minDate, maxDate });
+
+        console.log("Date range from dataset metadata:", { minDate, maxDate });
         return;
       }
     } catch (error) {
-      console.log('No dataset metadata found, falling back to data query');
+      console.log("No dataset metadata found, falling back to data query");
     }
 
     // Fallback to querying actual data
-    const { data, error } = await supabase.rpc('get_data_date_range');
+    const { data, error } = await supabase.rpc("get_data_date_range");
     if (data && data.length > 0) {
       const minDate = new Date(data[0].min_date);
       const maxDate = new Date(data[0].max_date);
-      
+
       setDataDateRange({
         min: minDate,
-        max: maxDate
+        max: maxDate,
       });
-      console.log('Date range from data:', { minDate, maxDate });
+      console.log("Date range from data:", { minDate, maxDate });
     }
   };
 
@@ -250,10 +250,7 @@ const Dashboard = () => {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const [locsData, prodsData] = await Promise.all([
-          fetchLocations(),
-          fetchProducts(),
-        ]);
+        const [locsData, prodsData] = await Promise.all([fetchLocations(), fetchProducts()]);
 
         setLocations(locsData);
         setProducts(prodsData);
@@ -263,15 +260,14 @@ const Dashboard = () => {
           setSelectedLocation("ALL");
           setSelectedProduct("ALL");
         }
-        
+
         // Load date range and set default to full inventory range
         await fetchDataDateRange();
       } catch (error) {
         console.error("Error loading initial data:", error);
         toast({
           title: "Error loading data",
-          description:
-            "Could not load locations and products. Please refresh.",
+          description: "Could not load locations and products. Please refresh.",
           variant: "destructive",
         });
       } finally {
@@ -288,12 +284,8 @@ const Dashboard = () => {
 
     const loadData = async () => {
       try {
-        const startDate = dateRange?.from
-          ? format(dateRange.from, "yyyy-MM-dd")
-          : undefined;
-        const endDate = dateRange?.to
-          ? format(dateRange.to, "yyyy-MM-dd")
-          : undefined;
+        const startDate = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined;
+        const endDate = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined;
 
         const [kpi, facts] = await Promise.all([
           fetchKPIData(selectedLocation, selectedProduct, startDate, endDate),
@@ -328,16 +320,16 @@ const Dashboard = () => {
       try {
         const days = await fetchLocationOrderDays(selectedLocation);
         setOrderDays(days || undefined);
-        
+
         // Also reload valid dates when location/product changes
-        await loadValidDates(selectedLocation, selectedProduct || 'ALL');
+        await loadValidDates(selectedLocation, selectedProduct || "ALL");
       } catch (error) {
-        console.error('Error loading order days:', error);
+        console.error("Error loading order days:", error);
       }
     };
 
     loadOrderDays();
-    
+
     // Refresh data date range to get latest metadata
     fetchDataDateRange();
   }, [selectedLocation, selectedProduct]);
@@ -355,31 +347,28 @@ const Dashboard = () => {
     try {
       const selectedSKU = selectedProduct !== "ALL" ? selectedProduct : null;
       const selectedLoc = selectedLocation !== "ALL" ? selectedLocation : null;
-      
-      let query = supabase
-        .from('dbm_calculations')
-        .select('*')
-        .order('calculation_date', { ascending: true });
+
+      let query = supabase.from("dbm_calculations").select("*").order("calculation_date", { ascending: true });
 
       if (selectedSKU) {
-        query = query.eq('sku', selectedSKU);
+        query = query.eq("sku", selectedSKU);
       }
       if (selectedLoc) {
-        query = query.eq('location_code', selectedLoc);
+        query = query.eq("location_code", selectedLoc);
       }
       if (dateRange?.from) {
-        query = query.gte('calculation_date', format(dateRange.from, "yyyy-MM-dd"));
+        query = query.gte("calculation_date", format(dateRange.from, "yyyy-MM-dd"));
       }
       if (dateRange?.to) {
-        query = query.lte('calculation_date', format(dateRange.to, "yyyy-MM-dd"));
+        query = query.lte("calculation_date", format(dateRange.to, "yyyy-MM-dd"));
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      
+
       setDbmCalculations(data || []);
     } catch (error) {
-      console.error('Error fetching DBM calculations:', error);
+      console.error("Error fetching DBM calculations:", error);
     }
   };
 
@@ -389,7 +378,7 @@ const Dashboard = () => {
 
   const handleSimulationConfirm = async (config: SimulationConfig) => {
     setSimulationScope(config);
-    
+
     // Validate scope before running
     const isValid = await validateSimulationScope(config);
     if (isValid) {
@@ -401,19 +390,23 @@ const Dashboard = () => {
     try {
       const startDate = config.dateRange?.from
         ? format(config.dateRange.from, "yyyy-MM-dd")
-        : (dataDateRange ? format(dataDateRange.min, "yyyy-MM-dd") : "2023-01-01");
+        : dataDateRange
+          ? format(dataDateRange.min, "yyyy-MM-dd")
+          : "2023-01-01";
       const endDate = config.dateRange?.to
         ? format(config.dateRange.to, "yyyy-MM-dd")
-        : (dataDateRange ? format(dataDateRange.max, "yyyy-MM-dd") : "2023-12-31");
+        : dataDateRange
+          ? format(dataDateRange.max, "yyyy-MM-dd")
+          : "2023-12-31";
 
-      const skuParam = config.productSKUs === 'ALL' ? 'ALL' : config.productSKUs[0] || 'ALL';
+      const skuParam = config.productSKUs === "ALL" ? "ALL" : config.productSKUs[0] || "ALL";
 
       // Query for period statistics
-      const { data: rawData, error } = await supabase.rpc('get_fact_daily_raw', {
+      const { data: rawData, error } = await supabase.rpc("get_fact_daily_raw", {
         p_location_code: config.location,
         p_sku: skuParam,
         p_start_date: startDate,
-        p_end_date: endDate
+        p_end_date: endDate,
       });
 
       if (error) throw error;
@@ -432,23 +425,25 @@ const Dashboard = () => {
       const uniqueSkus = new Set(rawData.map((row: any) => row.sku)).size;
       const daysWithData = new Set(rawData.map((row: any) => row.d)).size;
       const avgDailySales = daysWithData > 0 ? totalSales / daysWithData : 0;
-      
+
       // Calculate data completeness
-      const expectedDays = Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
+      const expectedDays = Math.ceil(
+        (new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24),
+      );
       const dataCompleteness = expectedDays > 0 ? (daysWithData / expectedDays) * 100 : 0;
 
       setPeriodStats({
         totalSkus: uniqueSkus,
         totalSales,
         daysWithData,
-        avgDailySales
+        avgDailySales,
       });
 
       // Warn if no sales (but don't block)
       if (totalSales === 0) {
         toast({
           title: "Low Sales Warning",
-          description: `Selected period (${startDate} to ${endDate}) has zero or minimal sales${skuParam !== 'ALL' ? ` for SKU ${skuParam}` : ''}. Simulation will proceed but may show limited variance. For more dynamic results, try "All Products" or Q1 2022 (Jan-Mar 2022).`,
+          description: `Selected period (${startDate} to ${endDate}) has zero or minimal sales${skuParam !== "ALL" ? ` for SKU ${skuParam}` : ""}. Simulation will proceed but may show limited variance. For more dynamic results, try "All Products" or Q1 2022 (Jan-Mar 2022).`,
           variant: "default",
           duration: 8000,
         });
@@ -459,7 +454,7 @@ const Dashboard = () => {
       if (optimalScope) {
         const qualityDrop = optimalScope.metrics.dataCompleteness - dataCompleteness;
         const salesDrop = ((optimalScope.metrics.totalSales - totalSales) / optimalScope.metrics.totalSales) * 100;
-        
+
         if (qualityDrop > 20 || salesDrop > 50) {
           toast({
             title: "Sub-Optimal Period Selected",
@@ -493,56 +488,62 @@ const Dashboard = () => {
   const runDBMAnalysis = async (config?: SimulationConfig) => {
     setIsRunningDBM(true);
     setSimulationResult(null);
-    setSimulationStatus('running');
-    
+    setSimulationStatus("running");
+
     // Use config if provided, otherwise use current filters
     const scopeConfig = config || {
       location: selectedLocation,
-      productSKUs: selectedProduct === 'ALL' ? 'ALL' : [selectedProduct],
+      productSKUs: selectedProduct === "ALL" ? "ALL" : [selectedProduct],
       dateRange: dateRange || { from: dataDateRange?.min, to: dataDateRange?.max },
-      preset: "Current Filters"
+      preset: "Current Filters",
     };
-    
+
     try {
       console.log("=== SIMULATION DEBUG START ===");
       console.log("Scope config:", scopeConfig);
-      
+
       const startDate = scopeConfig.dateRange?.from
         ? format(scopeConfig.dateRange.from, "yyyy-MM-dd")
-        : (dataDateRange ? format(dataDateRange.min, "yyyy-MM-dd") : "2023-01-01");
+        : dataDateRange
+          ? format(dataDateRange.min, "yyyy-MM-dd")
+          : "2023-01-01";
       const endDate = scopeConfig.dateRange?.to
         ? format(scopeConfig.dateRange.to, "yyyy-MM-dd")
-        : (dataDateRange ? format(dataDateRange.max, "yyyy-MM-dd") : "2023-12-31");
+        : dataDateRange
+          ? format(dataDateRange.max, "yyyy-MM-dd")
+          : "2023-12-31";
 
       // Determine SKU parameter for RPC call
-      const skuParam = scopeConfig.productSKUs === 'ALL' ? 'ALL' : scopeConfig.productSKUs[0] || 'ALL';
-      
-      console.log("Parameters:", { 
-        location: scopeConfig.location, 
-        sku: skuParam, 
-        startDate, 
-        endDate 
+      const skuParam = scopeConfig.productSKUs === "ALL" ? "ALL" : scopeConfig.productSKUs[0] || "ALL";
+
+      console.log("Parameters:", {
+        location: scopeConfig.location,
+        sku: skuParam,
+        startDate,
+        endDate,
       });
-      
+
       // Check auth state
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       console.log("User authenticated:", !!user, "User ID:", user?.id);
-      
+
       if (user) {
-        const { data: isAdmin } = await supabase.rpc('has_role', {
+        const { data: isAdmin } = await supabase.rpc("has_role", {
           _user_id: user.id,
-          _role: 'admin'
+          _role: "admin",
         });
         console.log("Is admin:", isAdmin);
       }
 
       // Fetch raw fact_daily data using scope config
       console.log("Fetching raw data via RPC...");
-      const { data: rawData, error: fetchError } = await supabase.rpc('get_fact_daily_raw', {
+      const { data: rawData, error: fetchError } = await supabase.rpc("get_fact_daily_raw", {
         p_location_code: scopeConfig.location,
         p_sku: skuParam,
         p_start_date: startDate,
-        p_end_date: endDate
+        p_end_date: endDate,
       });
 
       console.log("RPC response - Data count:", rawData?.length, "Error:", fetchError);
@@ -561,29 +562,27 @@ const Dashboard = () => {
 
       // Call the dbm-calculator Edge Function - don't wait too long
       console.log("Invoking dbm-calculator edge function...");
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('timeout')), 25000)
-      );
-      
-      const functionPromise = supabase.functions.invoke('dbm-calculator', {
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 25000));
+
+      const functionPromise = supabase.functions.invoke("run-dbm-analysis", {
         body: {
           location_code: scopeConfig.location,
           sku: skuParam,
           start_date: startDate,
-          end_date: endDate
-        }
+          end_date: endDate,
+        },
       });
 
       let result: any = null;
       let timedOut = false;
 
       try {
-        const { data, error } = await Promise.race([functionPromise, timeoutPromise]) as any;
+        const { data, error } = (await Promise.race([functionPromise, timeoutPromise])) as any;
         console.log("Edge function response - Data:", data, "Error:", error);
         if (error) throw error;
         result = data;
       } catch (error: any) {
-        if (error.message === 'timeout') {
+        if (error.message === "timeout") {
           timedOut = true;
           console.log("Edge function timed out, starting background polling...");
         } else {
@@ -595,7 +594,7 @@ const Dashboard = () => {
       // If we got a result immediately, process it
       if (result && !timedOut) {
         setSimulationResult(result);
-        
+
         if (result?.summary) {
           setSimulationStats({
             totalSkus: result.summary.totalSkus || 0,
@@ -612,7 +611,7 @@ const Dashboard = () => {
           duration: 5000,
         });
 
-        setSimulationStatus('complete');
+        setSimulationStatus("complete");
 
         // Reload data
         const [kpi, facts] = await Promise.all([
@@ -622,10 +621,9 @@ const Dashboard = () => {
         setKpiData(kpi);
         setFactDaily(facts);
         setIsRunningDBM(false);
-        
       } else {
         // Function timed out, poll for results
-        setSimulationStatus('polling');
+        setSimulationStatus("polling");
         toast({
           title: "Simulation Running",
           description: "Processing in background. Checking for results...",
@@ -634,32 +632,29 @@ const Dashboard = () => {
         // Poll for updated records
         let pollAttempts = 0;
         const maxAttempts = 15; // 15 attempts × 2 seconds = 30 seconds max
-        
+
         const pollInterval = setInterval(async () => {
           pollAttempts++;
-          
+
           try {
             // Check if economic_units have been updated (indicator that simulation ran)
-            const { data: updatedData, error: pollError } = await supabase.rpc('get_fact_daily_raw', {
+            const { data: updatedData, error: pollError } = await supabase.rpc("get_fact_daily_raw", {
               p_location_code: scopeConfig.location,
               p_sku: skuParam,
               p_start_date: startDate,
-              p_end_date: endDate
+              p_end_date: endDate,
             });
 
             if (pollError) throw pollError;
 
             // Check if any records have economic_units calculated
-            const hasResults = updatedData?.some((row: any) => 
-              row.economic_units !== null && row.economic_units > 0
-            );
+            const hasResults = updatedData?.some((row: any) => row.economic_units !== null && row.economic_units > 0);
 
             if (hasResults) {
               clearInterval(pollInterval);
-              
-              const recordsWithEconomic = updatedData?.filter((row: any) => 
-                row.economic_units !== null && row.economic_units > 0
-              ).length || 0;
+
+              const recordsWithEconomic =
+                updatedData?.filter((row: any) => row.economic_units !== null && row.economic_units > 0).length || 0;
 
               toast({
                 title: "Simulation Complete!",
@@ -667,7 +662,7 @@ const Dashboard = () => {
                 duration: 5000,
               });
 
-              setSimulationStatus('complete');
+              setSimulationStatus("complete");
 
               // Reload data to show updated values
               const [kpi, facts] = await Promise.all([
@@ -679,32 +674,32 @@ const Dashboard = () => {
               setIsRunningDBM(false);
             } else if (pollAttempts >= maxAttempts) {
               clearInterval(pollInterval);
-              
+
               toast({
                 title: "Simulation Timeout",
-                description: "Simulation is taking longer than expected. Please refresh the page in a moment to see results.",
+                description:
+                  "Simulation is taking longer than expected. Please refresh the page in a moment to see results.",
                 variant: "destructive",
               });
-              
-              setSimulationStatus('idle');
+
+              setSimulationStatus("idle");
               setIsRunningDBM(false);
             }
           } catch (pollError: any) {
             console.error("Polling error:", pollError);
             clearInterval(pollInterval);
-            
+
             toast({
               title: "Polling Error",
               description: "Failed to check simulation status. Please refresh the page.",
               variant: "destructive",
             });
-            
-            setSimulationStatus('idle');
+
+            setSimulationStatus("idle");
             setIsRunningDBM(false);
           }
         }, 2000); // Poll every 2 seconds
       }
-
     } catch (error: any) {
       console.error("=== SIMULATION ERROR ===");
       console.error("Error type:", error?.constructor?.name);
@@ -712,8 +707,8 @@ const Dashboard = () => {
       console.error("Error details:", error);
       console.error("Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       console.error("Stack:", error?.stack);
-      
-      setSimulationStatus('idle');
+
+      setSimulationStatus("idle");
       toast({
         title: "Simulation Failed",
         description: error.message || "Failed to run DBM simulation",
@@ -727,13 +722,13 @@ const Dashboard = () => {
   const testSimulation = async () => {
     try {
       console.log("=== TEST: Calling dbm-calculator ===");
-      const { data, error } = await supabase.functions.invoke('dbm-calculator', {
+      const { data, error } = await supabase.functions.invoke("dbm-calculator", {
         body: {
           location_code: "STORE001",
           sku: "ALL",
           start_date: "2022-01-11",
-          end_date: "2022-02-10"
-        }
+          end_date: "2022-02-10",
+        },
       });
       console.log("TEST: Response data:", data);
       console.log("TEST: Response error:", error);
@@ -755,11 +750,11 @@ const Dashboard = () => {
   const testRPC = async () => {
     try {
       console.log("=== TEST: Calling get_fact_daily_raw RPC ===");
-      const { data, error } = await supabase.rpc('get_fact_daily_raw', {
-        p_location_code: 'STORE001',
-        p_sku: 'ALL',
-        p_start_date: '2022-01-11',
-        p_end_date: '2022-02-10'
+      const { data, error } = await supabase.rpc("get_fact_daily_raw", {
+        p_location_code: "STORE001",
+        p_sku: "ALL",
+        p_start_date: "2022-01-11",
+        p_end_date: "2022-02-10",
       });
       console.log("RPC Test - Data count:", data?.length);
       console.log("RPC Test - First record:", data?.[0]);
@@ -789,14 +784,7 @@ const Dashboard = () => {
     }
 
     // Convert to CSV
-    const headers = [
-      "Date",
-      "Location",
-      "Product",
-      "Units Sold",
-      "On Hand Units",
-      "On Hand Units (Sim)",
-    ];
+    const headers = ["Date", "Location", "Product", "Units Sold", "On Hand Units", "On Hand Units (Sim)"];
     const rows = factDaily.map((row) => [
       row.d,
       row.location_code,
@@ -806,17 +794,13 @@ const Dashboard = () => {
       row.on_hand_units_sim ?? "",
     ]);
 
-    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join(
-      "\n"
-    );
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${selectedLocation}_${selectedProduct}_${
-      new Date().toISOString().split("T")[0]
-    }.csv`;
+    a.download = `${selectedLocation}_${selectedProduct}_${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
 
@@ -828,12 +812,9 @@ const Dashboard = () => {
 
   // Prepare table data with new structure: Current, Simulated, Var% columns
   // Simulated Throughput = Current TCM + MTV (since MTV = Simulated - Current)
-  const simulatedTCM =
-    (kpiData?.tcm || 0) + (kpiData?.mtv || 0);
+  const simulatedTCM = (kpiData?.tcm || 0) + (kpiData?.mtv || 0);
   const throughputVariancePct =
-    kpiData?.tcm && kpiData.tcm !== 0
-      ? ((simulatedTCM / kpiData.tcm - 1) * 100).toFixed(1) + "%"
-      : "—";
+    kpiData?.tcm && kpiData.tcm !== 0 ? ((simulatedTCM / kpiData.tcm - 1) * 100).toFixed(1) + "%" : "—";
 
   const tableData = kpiData
     ? {
@@ -842,10 +823,7 @@ const Dashboard = () => {
             metric: "Throughput (Cash Margin)",
             singleValue: null,
             current: formatCurrency(kpiData.tcm),
-            simulated:
-              kpiData.mtv !== null && kpiData.tcm !== null
-                ? formatCurrency(simulatedTCM)
-                : "—",
+            simulated: kpiData.mtv !== null && kpiData.tcm !== null ? formatCurrency(simulatedTCM) : "—",
             variance: throughputVariancePct,
           },
           {
@@ -855,31 +833,17 @@ const Dashboard = () => {
             simulated: (kpiData.service_level_sim * 100).toFixed(1) + "%",
             variance:
               kpiData.service_level > 0
-                ? (
-                    (kpiData.service_level_sim / kpiData.service_level - 1) *
-                    100
-                  ).toFixed(1) + "%"
+                ? ((kpiData.service_level_sim / kpiData.service_level - 1) * 100).toFixed(1) + "%"
                 : "—",
           },
           {
             metric: "Avg Inventory",
             singleValue: null,
-            current: formatCurrency(
-              kpiData.turns_current > 0
-                ? kpiData.tcm / kpiData.turns_current
-                : 0
-            ),
-            simulated: formatCurrency(
-              kpiData.turns_sim > 0
-                ? kpiData.tcm / kpiData.turns_sim
-                : 0
-            ),
+            current: formatCurrency(kpiData.turns_current > 0 ? kpiData.tcm / kpiData.turns_current : 0),
+            simulated: formatCurrency(kpiData.turns_sim > 0 ? kpiData.tcm / kpiData.turns_sim : 0),
             variance:
               kpiData.turns_current > 0 && kpiData.turns_sim > 0
-                ? (
-                    ((kpiData.tcm / kpiData.turns_sim) / (kpiData.tcm / kpiData.turns_current) - 1) *
-                    100
-                  ).toFixed(1) + "%"
+                ? ((kpiData.tcm / kpiData.turns_sim / (kpiData.tcm / kpiData.turns_current) - 1) * 100).toFixed(1) + "%"
                 : "—",
           },
           {
@@ -889,10 +853,7 @@ const Dashboard = () => {
             simulated: formatNumber(kpiData.turns_sim, 1),
             variance:
               kpiData.turns_current && kpiData.turns_sim
-                ? (
-                    (kpiData.turns_sim / kpiData.turns_current - 1) *
-                    100
-                  ).toFixed(1) + "%"
+                ? ((kpiData.turns_sim / kpiData.turns_current - 1) * 100).toFixed(1) + "%"
                 : "—",
           },
         ],
@@ -906,9 +867,7 @@ const Dashboard = () => {
             value: formatCurrency(kpiData.riv),
           },
         ],
-        cashGap: formatCurrency(
-          (kpiData.mtv || 0) + (kpiData.riv || 0)
-        ),
+        cashGap: formatCurrency((kpiData.mtv || 0) + (kpiData.riv || 0)),
       }
     : null;
 
@@ -975,16 +934,14 @@ const Dashboard = () => {
                 {selectedLocation === "ALL" && selectedProduct === "ALL"
                   ? "Aggregated view: All Locations & All Products"
                   : selectedLocation === "ALL"
-                  ? `Aggregated view: All Locations for ${
-                      products.find((p) => p.sku === selectedProduct)?.name ||
-                      selectedProduct
-                    }`
-                  : selectedProduct === "ALL"
-                  ? `Aggregated view: All Products at ${
-                      locations.find((l) => l.code === selectedLocation)?.name ||
-                      selectedLocation
-                    }`
-                  : "Real-time KPIs based on 21-day rolling averages"}
+                    ? `Aggregated view: All Locations for ${
+                        products.find((p) => p.sku === selectedProduct)?.name || selectedProduct
+                      }`
+                    : selectedProduct === "ALL"
+                      ? `Aggregated view: All Products at ${
+                          locations.find((l) => l.code === selectedLocation)?.name || selectedLocation
+                        }`
+                      : "Real-time KPIs based on 21-day rolling averages"}
               </p>
             </div>
             <Button
@@ -1001,18 +958,18 @@ const Dashboard = () => {
           {/* Scope Selection */}
           <div>
             <h2 className="text-xl font-semibold mb-4">Scope Selection</h2>
-        <FilterBar
-          locations={locations}
-          products={products}
-          selectedLocation={selectedLocation}
-          selectedProduct={selectedProduct}
-          dateRange={dateRange}
-          dataDateRange={dataDateRange}
-          validDates={validDates}
-          onLocationChange={setSelectedLocation}
-          onProductChange={setSelectedProduct}
-          onDateRangeChange={setDateRange}
-        />
+            <FilterBar
+              locations={locations}
+              products={products}
+              selectedLocation={selectedLocation}
+              selectedProduct={selectedProduct}
+              dateRange={dateRange}
+              dataDateRange={dataDateRange}
+              validDates={validDates}
+              onLocationChange={setSelectedLocation}
+              onProductChange={setSelectedProduct}
+              onDateRangeChange={setDateRange}
+            />
           </div>
 
           {/* Simulation Settings */}
@@ -1025,11 +982,11 @@ const Dashboard = () => {
                 orderDays={orderDays}
                 simulationStatus={simulationStatus}
               />
-              
+
               <div className="flex justify-end gap-2">
                 {isAdmin && (
                   <Button
-                    onClick={() => navigate('/settings', { state: { defaultTab: 'config' } })}
+                    onClick={() => navigate("/settings", { state: { defaultTab: "config" } })}
                     variant="outline"
                     className="gap-2"
                   >
@@ -1051,16 +1008,17 @@ const Dashboard = () => {
             {optimalScope && (
               <Card className="border-primary/20 bg-primary/5">
                 <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    📊 Optimal Scope Auto-Selected
-                  </CardTitle>
+                  <CardTitle className="text-base flex items-center gap-2">📊 Optimal Scope Auto-Selected</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3 text-sm">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <div>
                         <div className="text-muted-foreground text-xs">Period</div>
-                        <div className="font-medium">{format(new Date(optimalScope.dateRange.start), "MMM d")} - {format(new Date(optimalScope.dateRange.end), "MMM d, yyyy")}</div>
+                        <div className="font-medium">
+                          {format(new Date(optimalScope.dateRange.start), "MMM d")} -{" "}
+                          {format(new Date(optimalScope.dateRange.end), "MMM d, yyyy")}
+                        </div>
                       </div>
                       <div>
                         <div className="text-muted-foreground text-xs">Location</div>
@@ -1068,7 +1026,9 @@ const Dashboard = () => {
                       </div>
                       <div>
                         <div className="text-muted-foreground text-xs">Data Quality</div>
-                        <div className="font-medium text-green-600">{optimalScope.metrics.dataCompleteness}% complete</div>
+                        <div className="font-medium text-green-600">
+                          {optimalScope.metrics.dataCompleteness}% complete
+                        </div>
                       </div>
                       <div>
                         <div className="text-muted-foreground text-xs">SKU Overlap</div>
@@ -1077,9 +1037,15 @@ const Dashboard = () => {
                     </div>
                     <div>
                       <div className="text-muted-foreground text-xs mb-1">Top Products</div>
-                      <div className="font-medium">{optimalScope.topSkus.length} SKUs • {optimalScope.metrics.totalSales.toLocaleString()} units sold</div>
+                      <div className="font-medium">
+                        {optimalScope.topSkus.length} SKUs • {optimalScope.metrics.totalSales.toLocaleString()} units
+                        sold
+                      </div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {optimalScope.topSkus.slice(0, 3).map(s => s.sku).join(', ')}
+                        {optimalScope.topSkus
+                          .slice(0, 3)
+                          .map((s) => s.sku)
+                          .join(", ")}
                         {optimalScope.topSkus.length > 3 && ` +${optimalScope.topSkus.length - 3} more`}
                       </div>
                     </div>
@@ -1087,7 +1053,7 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             )}
-            
+
             {/* Period Statistics */}
             {periodStats && (
               <Card>
@@ -1116,7 +1082,7 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             )}
-            
+
             <div className="flex justify-center">
               <Button
                 onClick={handleOpenSimulationConfig}
@@ -1137,23 +1103,13 @@ const Dashboard = () => {
                 )}
               </Button>
             </div>
-            
+
             {/* Diagnostic Test Buttons */}
             <div className="flex justify-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={testSimulation}
-                disabled={isRunningDBM}
-              >
+              <Button variant="outline" size="sm" onClick={testSimulation} disabled={isRunningDBM}>
                 Test Edge Function
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={testRPC}
-                disabled={isRunningDBM}
-              >
+              <Button variant="outline" size="sm" onClick={testRPC} disabled={isRunningDBM}>
                 Test RPC
               </Button>
             </div>
@@ -1169,11 +1125,18 @@ const Dashboard = () => {
                     {simulationScope && (
                       <p className="text-sm text-muted-foreground mt-1">
                         {simulationScope.dateRange?.from && simulationScope.dateRange?.to && (
-                          <>{format(simulationScope.dateRange.from, "MMM d")} - {format(simulationScope.dateRange.to, "MMM d, yyyy")}</>
+                          <>
+                            {format(simulationScope.dateRange.from, "MMM d")} -{" "}
+                            {format(simulationScope.dateRange.to, "MMM d, yyyy")}
+                          </>
                         )}
                         {simulationScope.location !== "ALL" && <> • {simulationScope.location}</>}
                         {simulationScope.productSKUs !== "ALL" && simulationScope.productSKUs.length > 0 && (
-                          <> • {simulationScope.productSKUs.length} SKU{simulationScope.productSKUs.length > 1 ? 's' : ''}</>
+                          <>
+                            {" "}
+                            • {simulationScope.productSKUs.length} SKU
+                            {simulationScope.productSKUs.length > 1 ? "s" : ""}
+                          </>
                         )}
                       </p>
                     )}
@@ -1201,8 +1164,7 @@ const Dashboard = () => {
               <CardContent className="space-y-4">
                 <div className="flex gap-6 text-sm">
                   <div>
-                    <span className="font-semibold">Total Records:</span>{" "}
-                    {simulationResult.summary?.processed || 0}
+                    <span className="font-semibold">Total Records:</span> {simulationResult.summary?.processed || 0}
                   </div>
                   <div>
                     <span className="font-semibold">Increases:</span>{" "}
@@ -1214,7 +1176,10 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <span className="font-semibold">Unchanged:</span>{" "}
-                    {(simulationResult.summary?.processed || 0) - (simulationResult.summary?.increases || 0) - (simulationResult.summary?.decreases || 0) - (simulationResult.summary?.new_items || 0)}
+                    {(simulationResult.summary?.processed || 0) -
+                      (simulationResult.summary?.increases || 0) -
+                      (simulationResult.summary?.decreases || 0) -
+                      (simulationResult.summary?.new_items || 0)}
                   </div>
                 </div>
 
@@ -1239,9 +1204,7 @@ const Dashboard = () => {
                   title="Throughput"
                   value={formatCurrency(kpiData.tcm)}
                   delta7d={
-                    kpiData.tcm && kpiData.mtv !== null
-                      ? (((kpiData.tcm + kpiData.mtv) / kpiData.tcm - 1) * 100)
-                      : 0
+                    kpiData.tcm && kpiData.mtv !== null ? ((kpiData.tcm + kpiData.mtv) / kpiData.tcm - 1) * 100 : 0
                   }
                   tooltip="Total throughput (cash margin) generated from sales"
                 />
@@ -1249,9 +1212,7 @@ const Dashboard = () => {
                   title="Service Level"
                   value={`${(kpiData.service_level * 100).toFixed(1)}%`}
                   delta7d={
-                    kpiData.service_level > 0
-                      ? ((kpiData.service_level_sim / kpiData.service_level - 1) * 100)
-                      : 0
+                    kpiData.service_level > 0 ? (kpiData.service_level_sim / kpiData.service_level - 1) * 100 : 0
                   }
                   tooltip="Percentage of demand met without stockouts"
                 />
@@ -1260,7 +1221,7 @@ const Dashboard = () => {
                   value={formatNumber(kpiData.turns_current, 1)}
                   delta7d={
                     kpiData.turns_current && kpiData.turns_sim
-                      ? ((kpiData.turns_sim / kpiData.turns_current - 1) * 100)
+                      ? (kpiData.turns_sim / kpiData.turns_current - 1) * 100
                       : 0
                   }
                   tooltip="How many times inventory is sold and replaced over the period"
@@ -1277,7 +1238,7 @@ const Dashboard = () => {
                       ? (() => {
                           const currentDaysToCash = kpiData.riv / (kpiData.tcm / kpiData.days_total);
                           const simulatedDaysToCash = kpiData.riv_sim / (kpiData.tcm / kpiData.days_total);
-                          return ((simulatedDaysToCash / currentDaysToCash - 1) * 100);
+                          return (simulatedDaysToCash / currentDaysToCash - 1) * 100;
                         })()
                       : 0
                   }
@@ -1297,25 +1258,16 @@ const Dashboard = () => {
           {/* Consultative Insights */}
           {kpiData && (
             <ConsultativeInsights
-              cashGap={formatCurrency(
-                (kpiData.mtv || 0) + (kpiData.riv || 0)
-              )}
-              serviceLevelGain={
-                (kpiData.service_level_sim - kpiData.service_level) * 100
-              }
+              cashGap={formatCurrency((kpiData.mtv || 0) + (kpiData.riv || 0))}
+              serviceLevelGain={(kpiData.service_level_sim - kpiData.service_level) * 100}
               turnsImprovement={
                 kpiData.turns_sim && kpiData.turns_current
-                  ? ((kpiData.turns_sim - kpiData.turns_current) /
-                      kpiData.turns_current) *
-                    100
+                  ? ((kpiData.turns_sim - kpiData.turns_current) / kpiData.turns_current) * 100
                   : 0
               }
               stockoutReduction={
                 kpiData.service_level < 1
-                  ? (((1 - kpiData.service_level) -
-                      (1 - kpiData.service_level_sim)) /
-                      (1 - kpiData.service_level)) *
-                    100
+                  ? ((1 - kpiData.service_level - (1 - kpiData.service_level_sim)) / (1 - kpiData.service_level)) * 100
                   : 0
               }
               turnsCurrent={kpiData.turns_current}
@@ -1341,15 +1293,9 @@ const Dashboard = () => {
                   product: selectedProduct,
                   dateRange:
                     dateRange?.from && dateRange?.to
-                      ? `${format(dateRange.from, "MMM d, yyyy")} - ${format(
-                          dateRange.to,
-                          "MMM d, yyyy"
-                        )}`
-                      : dataDateRange 
-                        ? `${format(dataDateRange.min, "MMM d, yyyy")} - ${format(
-                            dataDateRange.max,
-                            "MMM d, yyyy"
-                          )}`
+                      ? `${format(dateRange.from, "MMM d, yyyy")} - ${format(dateRange.to, "MMM d, yyyy")}`
+                      : dataDateRange
+                        ? `${format(dataDateRange.min, "MMM d, yyyy")} - ${format(dataDateRange.max, "MMM d, yyyy")}`
                         : "All time",
                   dataDateRange: dataDateRange || undefined,
                   metrics: {
@@ -1373,12 +1319,7 @@ const Dashboard = () => {
         onClick={() => setAgentDockOpen(true)}
         isOpen={agentDockOpen}
         notificationCount={
-          kpiData &&
-          ((kpiData.mtv || 0) > 500 ||
-            (kpiData.riv || 0) > 1000 ||
-            kpiData.service_level < 0.95)
-            ? 1
-            : 0
+          kpiData && ((kpiData.mtv || 0) > 500 || (kpiData.riv || 0) > 1000 || kpiData.service_level < 0.95) ? 1 : 0
         }
       />
 
@@ -1392,8 +1333,8 @@ const Dashboard = () => {
           dateRange?.to
             ? format(dateRange.to, "yyyy-MM-dd")
             : factDaily.length > 0
-            ? factDaily[factDaily.length - 1].d
-            : "2023-12-31"
+              ? factDaily[factDaily.length - 1].d
+              : "2023-12-31"
         }
         onAskArchie={handleAskArchie}
         kpiData={
@@ -1410,7 +1351,7 @@ const Dashboard = () => {
             : undefined
         }
       />
-      
+
       {/* Simulation Config Dialog */}
       <SimulationConfigDialog
         open={simulationConfigOpen}
