@@ -24,7 +24,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Fetch raw data
+    // Fetch raw data ordered by location, sku, and date
     const { data: rawData, error: fetchError } = await supabase.rpc("get_fact_daily_raw", {
       p_location_code: location_code,
       p_sku: sku,
@@ -40,7 +40,24 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Fetched ${rawData.length} records, processing...`);
+    console.log(`Fetched ${rawData.length} records, grouping by SKU-location...`);
+
+    // Group records by (location_code, sku) and sort by date
+    const groups = new Map<string, any[]>();
+    for (const record of rawData) {
+      const key = `${record.location_code}|${record.sku}`;
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(record);
+    }
+
+    // Sort each group by date
+    for (const records of groups.values()) {
+      records.sort((a, b) => new Date(a.d).getTime() - new Date(b.d).getTime());
+    }
+
+    console.log(`Processing ${groups.size} SKU-location combinations...`);
 
     // Initialize DBM engine
     const engine = new DBMEngine();
@@ -49,75 +66,203 @@ serve(async (req) => {
     let decreases = 0;
     let unchanged = 0;
 
-    // Process each record through DBM algorithm
-    for (const record of rawData) {
-      const skuLocDate: SkuLocDate = {
-        store_code: record.location_code,
-        product_code: record.sku,
-        execution_date: record.d,
-        unit_on_hand: record.on_hand_units || 0,
-        unit_on_order: record.on_order_units || 0,
-        unit_in_transit: record.in_transit_units || 0,
-        unit_sales: record.units_sold || 0,
-        green: record.target_units || 1,
-        yellow: 0,
-        red: 0,
-        dbm_zone: 'green',
-        dbm_zone_previous: 'green',
-        counter_green: 0,
-        counter_yellow: 0,
-        counter_red: 0,
-        counter_overstock: 0,
-        state: 'new',
-        decision: 'new',
-        frozen: false,
-        excluded_level: 0,
-        safety_level: 1,
-        lead_time: 10,
-        last_manual: record.d,
-        last_out_of_red: record.d,
-        last_non_overstock: record.d,
-        last_decrease: record.d,
-        last_increase: record.d,
-        last_accelerated: record.d,
-        responsiveness_idle_days: 7,
-        responsiveness_up_percentage: 1.5,
-        responsiveness_down_percentage: 0.5,
-        average_weekly_sales_units: (record.units_sold || 0) * 7,
-        units_economic: 0,
-        units_economic_overstock: 0,
-        units_economic_understock: 0,
-        accelerator_condition: '',
-        accelerator_minimum_target: 1,
-        accelerator_up_multiplier: 1.0,
-        accelerator_down_multiplier: 0.67,
-        accelerator_requires_inventory: true,
-        accelerator_enable_zero_sales: true,
-      };
+    // Process each SKU-location group chronologically
+    for (const [key, records] of groups.entries()) {
+      const [loc, sk] = key.split('|');
+      console.log(`Processing ${loc}-${sk}: ${records.length} days`);
 
-      // Run DBM algorithm
-      const result = engine.executeDBMAlgorithm(skuLocDate);
-      
-      // Calculate economic units
-      const { economic, overstock } = calculateEconomicUnits(result);
+      // Track orders for this SKU-location
+      const orders: Array<{
+        created: string;
+        quantity: number;
+        units_on_order: number;
+        units_in_transit: number;
+        move_to_transit_date: string;
+        receive_date: string;
+      }> = [];
 
-      // Track changes
-      const oldTarget = record.target_units || 1;
-      const newTarget = result.green || 1;
-      if (newTarget > oldTarget) increases++;
-      else if (newTarget < oldTarget) decreases++;
-      else unchanged++;
+      let previousDay: SkuLocDate | null = null;
 
-      // Prepare update
-      updates.push({
-        location_code: record.location_code,
-        sku: record.sku,
-        d: record.d,
-        on_hand_units_sim: result.unit_on_hand,
-        target_units: newTarget,
-        economic_units: economic,
-        economic_overstock_units: overstock,
-      });
+      for (let i = 0; i < records.length; i++) {
+        const record = records[i];
+        const isFirstDay = i === 0;
+
+        let skuLocDate: SkuLocDate;
+
+        if (isFirstDay) {
+          // Day 1: Initialize with proper starting state (like SetInitialSkuLocDate)
+          const initialGreen = record.on_hand_units || 1; // Could be statistical, but starting simple
+          
+          skuLocDate = {
+            store_code: loc,
+            product_code: sk,
+            execution_date: record.d,
+            unit_on_hand: record.on_hand_units || 0,
+            unit_on_order: record.on_order_units || 0,
+            unit_in_transit: record.in_transit_units || 0,
+            unit_sales: record.units_sold || 0,
+            on_hand_units_sim: record.on_hand_units || 0, // Start simulated = actual
+            green: initialGreen,
+            yellow: 0,
+            red: 0,
+            dbm_zone: '',
+            dbm_zone_previous: '',
+            counter_green: 0,
+            counter_yellow: 0,
+            counter_red: 0,
+            counter_overstock: 0,
+            state: '', // CRITICAL: Empty string, not "new"
+            decision: '',
+            frozen: false,
+            excluded_level: 0,
+            safety_level: 1,
+            lead_time: 10,
+            last_manual: record.d,
+            last_out_of_red: '2000-01-01',
+            last_non_overstock: '2000-01-01',
+            last_decrease: '2000-01-01',
+            last_increase: '2000-01-01',
+            last_accelerated: '2000-01-01',
+            responsiveness_idle_days: 7,
+            responsiveness_up_percentage: 1.5,
+            responsiveness_down_percentage: 0.5,
+            average_weekly_sales_units: (record.units_sold || 0) * 7,
+            units_economic: 0,
+            units_economic_overstock: 0,
+            units_economic_understock: 0,
+            accelerator_condition: '',
+            accelerator_minimum_target: 1,
+            accelerator_up_multiplier: 1.0,
+            accelerator_down_multiplier: 0.67,
+            accelerator_requires_inventory: true,
+            accelerator_enable_zero_sales: true,
+          };
+        } else {
+          // Day 2+: Copy and carry forward state from previous day
+          skuLocDate = {
+            store_code: loc,
+            product_code: sk,
+            execution_date: record.d,
+            unit_on_hand: record.on_hand_units || previousDay!.unit_on_hand,
+            unit_on_order: record.on_order_units || previousDay!.unit_on_order,
+            unit_in_transit: record.in_transit_units || previousDay!.unit_in_transit,
+            unit_sales: record.units_sold || 0,
+            on_hand_units_sim: previousDay!.on_hand_units_sim || 0,
+            green: previousDay!.green || 1,
+            yellow: previousDay!.yellow || 0,
+            red: previousDay!.red || 0,
+            dbm_zone: previousDay!.dbm_zone || '',
+            dbm_zone_previous: previousDay!.dbm_zone || '',
+            counter_green: previousDay!.counter_green || 0,
+            counter_yellow: previousDay!.counter_yellow || 0,
+            counter_red: previousDay!.counter_red || 0,
+            counter_overstock: previousDay!.counter_overstock || 0,
+            state: previousDay!.state || '',
+            decision: previousDay!.decision || '',
+            frozen: previousDay!.frozen || false,
+            excluded_level: previousDay!.excluded_level || 0,
+            safety_level: previousDay!.safety_level || 1,
+            lead_time: previousDay!.lead_time || 10,
+            last_manual: previousDay!.last_manual || record.d,
+            last_out_of_red: previousDay!.last_out_of_red || '2000-01-01',
+            last_non_overstock: previousDay!.last_non_overstock || '2000-01-01',
+            last_decrease: previousDay!.last_decrease || '2000-01-01',
+            last_increase: previousDay!.last_increase || '2000-01-01',
+            last_accelerated: previousDay!.last_accelerated || '2000-01-01',
+            responsiveness_idle_days: previousDay!.responsiveness_idle_days || 7,
+            responsiveness_up_percentage: previousDay!.responsiveness_up_percentage || 1.5,
+            responsiveness_down_percentage: previousDay!.responsiveness_down_percentage || 0.5,
+            average_weekly_sales_units: (record.units_sold || 0) * 7,
+            units_economic: 0,
+            units_economic_overstock: 0,
+            units_economic_understock: 0,
+            accelerator_condition: '',
+            accelerator_minimum_target: previousDay!.accelerator_minimum_target || 1,
+            accelerator_up_multiplier: previousDay!.accelerator_up_multiplier || 1.0,
+            accelerator_down_multiplier: previousDay!.accelerator_down_multiplier || 0.67,
+            accelerator_requires_inventory: previousDay!.accelerator_requires_inventory ?? true,
+            accelerator_enable_zero_sales: previousDay!.accelerator_enable_zero_sales ?? true,
+          };
+        }
+
+        // PRE-DBM PROCESSING: Receive orders and subtract yesterday's sales
+        if (!isFirstDay && previousDay) {
+          // 1. Receive orders that arrived today
+          const ordersToReceive = orders.filter(o => o.receive_date === record.d);
+          for (const order of ordersToReceive) {
+            skuLocDate.on_hand_units_sim! += order.units_in_transit;
+            order.units_in_transit = 0;
+          }
+
+          // 2. Subtract yesterday's sales from today's simulated on-hand
+          const yesterdaySales = previousDay.unit_sales || 0;
+          const availableToSell = Math.max(0, skuLocDate.on_hand_units_sim! || 0);
+          const actualSalesSim = Math.min(yesterdaySales, availableToSell);
+          skuLocDate.on_hand_units_sim = (skuLocDate.on_hand_units_sim || 0) - actualSalesSim;
+        }
+
+        // Run DBM algorithm
+        const result = engine.executeDBMAlgorithm(skuLocDate);
+
+        // POST-DBM PROCESSING: Create orders and move orders through pipeline
+        
+        // 1. Calculate economic stock (simulated)
+        const economicStockSim = (result.on_hand_units_sim || 0) + 
+                                 orders.reduce((sum, o) => sum + o.units_on_order + o.units_in_transit, 0);
+        
+        // 2. Create order if needed (economic stock < green target)
+        const unitsToOrder = (result.green || 1) - economicStockSim;
+        if (unitsToOrder > 0) {
+          const leadTime = result.lead_time || 10;
+          const orderDate = new Date(record.d);
+          const receiveDate = new Date(orderDate);
+          receiveDate.setDate(receiveDate.getDate() + leadTime);
+
+          orders.push({
+            created: record.d,
+            quantity: unitsToOrder,
+            units_on_order: unitsToOrder,
+            units_in_transit: 0,
+            move_to_transit_date: record.d, // Simplified: immediate transit
+            receive_date: receiveDate.toISOString().split('T')[0],
+          });
+        }
+
+        // 3. Move orders from on-order to in-transit
+        const ordersToTransit = orders.filter(o => o.move_to_transit_date === record.d && o.units_on_order > 0);
+        for (const order of ordersToTransit) {
+          order.units_in_transit = order.units_on_order;
+          order.units_on_order = 0;
+        }
+
+        // 4. Calculate totals for simulated on-order and in-transit
+        const totalOnOrderSim = orders.reduce((sum, o) => sum + o.units_on_order, 0);
+        const totalInTransitSim = orders.reduce((sum, o) => sum + o.units_in_transit, 0);
+
+        // Calculate economic units
+        const { economic, overstock } = calculateEconomicUnits(result);
+
+        // Track changes
+        const oldTarget = record.target_units || 1;
+        const newTarget = result.green || 1;
+        if (newTarget > oldTarget) increases++;
+        else if (newTarget < oldTarget) decreases++;
+        else unchanged++;
+
+        // Prepare update
+        updates.push({
+          location_code: loc,
+          sku: sk,
+          d: record.d,
+          on_hand_units_sim: result.on_hand_units_sim || 0,
+          target_units: newTarget,
+          economic_units: economic,
+          economic_overstock_units: overstock,
+        });
+
+        // Store for next iteration
+        previousDay = result;
+      }
     }
 
     console.log(`Processed ${updates.length} records: ${increases} increases, ${decreases} decreases, ${unchanged} unchanged`);
