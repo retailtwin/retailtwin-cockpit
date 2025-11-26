@@ -564,7 +564,7 @@ const Dashboard = () => {
       console.log("Invoking dbm-calculator edge function...");
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 25000));
 
-      const functionPromise = supabase.functions.invoke("run-dbm-analysis", {
+      const functionPromise = supabase.functions.invoke("dbm-calculator", {
         body: {
           location_code: scopeConfig.location,
           sku: skuParam,
