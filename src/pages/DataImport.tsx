@@ -906,7 +906,23 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
       });
     }
   };
-
+  
+  const canPrepareDataset = !!(
+    dataset &&
+    (
+      (
+        dataset.total_products && dataset.total_products > 0 &&
+        ((dataset.total_sales_records && dataset.total_sales_records > 0) ||
+         (dataset.total_inventory_records && dataset.total_inventory_records > 0))
+      ) ||
+      (
+        uploadedFilesSummary &&
+        uploadedFilesSummary.records.products > 0 &&
+        (uploadedFilesSummary.records.sales > 0 || uploadedFilesSummary.records.inventory > 0)
+      )
+    )
+  );
+ 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -1240,19 +1256,14 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
                 </Button>
 
                 <Button
-                  variant="secondary"
-                  size="lg"
-                  onClick={handlePrepareDataset}
-                  disabled={
-                    batchUploading ||
-                    !dataset ||
-                    !(dataset.total_products && dataset.total_products > 0) ||
-                    !((dataset.total_sales_records && dataset.total_sales_records > 0) || (dataset.total_inventory_records && dataset.total_inventory_records > 0))
-                  }
-                >
-                  <CheckCircle className="mr-2 h-5 w-5" />
-                  Prepare Dataset
-                </Button>
+                   variant="secondary"
+                   size="lg"
+                   onClick={handlePrepareDataset}
+                   disabled={batchUploading || !canPrepareDataset}
+                 >
+                   <CheckCircle className="mr-2 h-5 w-5" />
+                   Prepare Dataset
+                 </Button>
               </div>
               
               {/* File size info */}
