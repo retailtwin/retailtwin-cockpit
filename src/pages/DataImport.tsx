@@ -590,23 +590,49 @@ export default function DataImport() {
         warnings: []
       });
 
-      // Run DBM simulation
+      // Prepare dataset to get date range
       toast({
-        title: "Running DBM Simulation",
-        description: "Calculating optimal buffer management targets...",
+        title: "Preparing dataset...",
+        description: "Analyzing date ranges and metadata",
       });
 
-      const { error: dbmError } = await supabase.functions.invoke('dbm-calculator', {
-        body: { datasetId }
+      const { data: prepareResult, error: prepareError } = await supabase.functions.invoke('prepare-dataset', {
+        body: {}
       });
 
-      if (dbmError) {
-        console.error('DBM calculation error:', dbmError);
+      if (prepareError || !prepareResult?.metadata) {
+        console.error('Prepare dataset error:', prepareError);
         toast({
-          title: "Simulation Warning",
-          description: "Data imported but simulation had issues. You can run it manually later.",
+          title: "Warning",
+          description: "Dataset metadata preparation had issues. DBM simulation skipped.",
           variant: "default",
         });
+      } else {
+        // Run DBM simulation with proper parameters
+        toast({
+          title: "Running DBM Simulation",
+          description: "Calculating optimal buffer management targets...",
+        });
+
+        const { startDate, endDate } = prepareResult.metadata;
+        
+        const { error: dbmError } = await supabase.functions.invoke('dbm-calculator', {
+          body: {
+            location_code: 'ALL',
+            sku: 'ALL',
+            start_date: startDate,
+            end_date: endDate
+          }
+        });
+
+        if (dbmError) {
+          console.error('DBM calculation error:', dbmError);
+          toast({
+            title: "Simulation Warning",
+            description: "Data imported but simulation had issues. You can run it manually later.",
+            variant: "default",
+          });
+        }
       }
 
       setProcessingStep('complete');
