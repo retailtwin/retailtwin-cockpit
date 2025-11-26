@@ -592,6 +592,19 @@ export default function DataImport() {
 
       setProcessingStep('complete');
       
+      // Update dataset record with counts
+      await supabase
+        .from('datasets')
+        .update({
+          total_locations: recordCounts.locations,
+          total_products: recordCounts.products,
+          total_sales_records: recordCounts.sales,
+          total_inventory_records: recordCounts.inventory,
+          status: 'uploaded',
+          last_updated: new Date().toISOString()
+        })
+        .eq('id', datasetId);
+      
       // Refresh dataset info
       await ensureUserHasDataset();
       
