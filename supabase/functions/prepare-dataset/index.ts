@@ -77,13 +77,9 @@ serve(async (req) => {
     }
 
     // Get unique locations and SKUs
-    const { data: locationsData, error: locError } = await supabase.rpc('get_locations', {
-      p_dataset_id: datasetId
-    });
+    const { data: locationsData, error: locError } = await supabase.rpc('get_locations');
 
-    const { data: productsData, error: prodError } = await supabase.rpc('get_products', {
-      p_dataset_id: datasetId
-    });
+    const { data: productsData, error: prodError } = await supabase.rpc('get_products');
 
     const uniqueLocations = locationsData?.length || 0;
     const uniqueSkus = productsData?.length || 0;
