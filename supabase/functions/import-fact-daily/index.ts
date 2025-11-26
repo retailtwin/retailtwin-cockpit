@@ -105,7 +105,7 @@ serve(async (req) => {
     console.log(`Processing ${dataType} import...`);
 
     // Parse CSV (skip header)
-    const lines = csvText.trim().split('\n');
+    const lines = csvText.trim().split('\n').filter(line => line.trim() !== '');
     const dataLines = lines.slice(1); // Skip header
 
     const batchSize = 1000;
