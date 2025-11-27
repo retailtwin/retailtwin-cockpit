@@ -752,6 +752,23 @@ export type Database = {
             }
             Returns: {
               d: string
+              in_transit_units: number
+              location_code: string
+              on_hand_units: number
+              on_order_units: number
+              sku: string
+              units_sold: number
+            }[]
+          }
+        | {
+            Args: {
+              p_end_date: string
+              p_location_code: string
+              p_sku: string
+              p_start_date: string
+            }
+            Returns: {
+              d: string
               economic_overstock_units: number
               economic_units: number
               in_transit_units: number
