@@ -862,6 +862,29 @@ export type Database = {
               total_days: number
             }[]
           }
+      get_kpi_data: {
+        Args: {
+          p_end_date?: string
+          p_location_code: string
+          p_sku: string
+          p_start_date?: string
+        }
+        Returns: {
+          days_total: number
+          location_code: string
+          missed_units: number
+          mtv: number
+          riv: number
+          riv_sim: number
+          service_level: number
+          service_level_sim: number
+          sku: string
+          sku_loc_days: number
+          tcm: number
+          turns_current: number
+          turns_sim: number
+        }[]
+      }
       get_kpi_data_aggregated:
         | {
             Args: {
