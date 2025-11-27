@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { DBMEngine, calculateEconomicUnits } from "./dbm-engine.ts";
 import type { SkuLocDate } from "./types.ts";
 
@@ -15,7 +16,26 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { location_code, sku, start_date, end_date, use_statistical_initial = true } = body;
+    
+    // Validate request body
+    const requestSchema = z.object({
+      location_code: z.string().regex(/^(ALL|[A-Za-z0-9._-]+)$/, 'Invalid location code format').max(50, 'Location code too long'),
+      sku: z.string().regex(/^(ALL|[A-Za-z0-9 ._-]+)$/, 'Invalid SKU format').max(100, 'SKU too long'),
+      start_date: z.string(),
+      end_date: z.string(),
+      use_statistical_initial: z.boolean().optional().default(true),
+    });
+
+    const validationResult = requestSchema.safeParse(body);
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request parameters', details: validationResult.error.issues }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { location_code, sku, start_date, end_date, use_statistical_initial } = validationResult.data;
 
     console.log(`DBM Calculation starting for location: ${location_code}, SKU: ${sku}`);
 
