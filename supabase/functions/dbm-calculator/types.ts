@@ -27,8 +27,10 @@ export interface SkuLocDate {
   
   // Safety guards
   accelerator_requires_inventory?: boolean;
-  accelerator_minimum_target?: number;
   accelerator_enable_zero_sales?: boolean;
+  
+  // Active period detection
+  is_in_active_period?: boolean;
   
   // Calculated
   green?: number; // target_units

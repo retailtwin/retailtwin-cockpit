@@ -119,6 +119,20 @@ serve(async (req) => {
       const [loc, sk] = key.split('|');
       console.log(`Processing ${loc}-${sk}: ${records.length} days`);
 
+      // Detect active period boundaries (first and last day with inventory > 0)
+      let firstActiveDay = -1;
+      let lastActiveDay = -1;
+      
+      records.forEach((record: any, idx: number) => {
+        const onHand = record.on_hand_units || 0;
+        if (onHand > 0) {
+          if (firstActiveDay === -1) firstActiveDay = idx;
+          lastActiveDay = idx;
+        }
+      });
+      
+      console.log(`Active period for ${loc}-${sk}: days ${firstActiveDay} to ${lastActiveDay} (total: ${records.length})`);
+
       // Calculate initial statistics from first 30 days (or available days)
       const initialPeriodDays = Math.min(30, records.length);
       const initialRecords = records.slice(0, initialPeriodDays);
@@ -157,23 +171,39 @@ serve(async (req) => {
         let skuLocDate: SkuLocDate;
 
         if (isFirstDay) {
-          // Day 1: Initialize with proper starting state (like SetInitialSkuLocDate)
-          let initialGreen = record.on_hand_units || 1;
-          let initInfo = `OH=[${record.on_hand_units}]`;
+          // Day 1: Initialize with proper starting state
+          const economicUnits = record.on_hand_units || 0;
+          const hasSales = (record.units_sold || 0) > 0;
           
-          // Calculate statistical initial green if enabled
-          if (use_statistical_initial && initialAvgSales > 0 && initialStDevSales > 0) {
-            const leadTime = 10; // Default, could be from location/product master
-            const statisticalGreen = (initialAvgSales * leadTime) + (2 * Math.sqrt(leadTime) * initialStDevSales);
+          let initialGreen: number;
+          let initInfo = `OH=[${record.on_hand_units}], Sales=[${record.units_sold}]`;
+          
+          // Initial green logic based on C# migration rules
+          if (economicUnits === 0 && !hasSales) {
+            initialGreen = 0; // Not yet active
+            initInfo += ` => NOT_ACTIVE=0`;
+          } else if (economicUnits === 0 && hasSales) {
+            initialGreen = 1; // Stocked out on first active day
+            initInfo += ` => STOCKOUT=1`;
+          } else {
+            // Active with inventory - use statistical or economic units (min 1)
+            initialGreen = Math.max(economicUnits, 1);
             
-            initInfo += `, STAT=${statisticalGreen.toFixed(2)}`;
-            
-            if (statisticalGreen > initialGreen) {
-              initialGreen = Math.ceil(statisticalGreen);
+            // Calculate statistical initial green if enabled
+            if (use_statistical_initial && initialAvgSales > 0 && initialStDevSales > 0) {
+              const leadTime = 10; // Default, could be from location/product master
+              const statisticalGreen = (initialAvgSales * leadTime) + (2 * Math.sqrt(leadTime) * initialStDevSales);
+              
+              initInfo += `, STAT=${statisticalGreen.toFixed(2)}`;
+              
+              if (statisticalGreen > initialGreen) {
+                initialGreen = Math.ceil(statisticalGreen);
+              }
             }
+            
+            initInfo += ` => ACTIVE=${initialGreen}`;
           }
           
-          initInfo += ` => INIT=${initialGreen}`;
           console.log(`${loc}-${sk} initialization: ${initInfo}`);
           
           skuLocDate = {
@@ -214,21 +244,32 @@ serve(async (req) => {
             units_economic_overstock: 0,
             units_economic_understock: 0,
             accelerator_condition: '',
-            accelerator_minimum_target: 1,
             accelerator_up_multiplier: 1.0,
             accelerator_down_multiplier: 0.67,
             accelerator_requires_inventory: true,
             accelerator_enable_zero_sales: true,
+            is_in_active_period: (firstActiveDay !== -1) && (i >= firstActiveDay) && (i <= lastActiveDay),
           };
         } else {
+          // Day 2+: Handle missing inventory data by copying from previous day
+          if (record.on_hand_units === null || record.on_hand_units === undefined) {
+            record.on_hand_units = previousDay!.unit_on_hand;
+          }
+          if (record.on_order_units === null || record.on_order_units === undefined) {
+            record.on_order_units = previousDay!.unit_on_order;
+          }
+          if (record.in_transit_units === null || record.in_transit_units === undefined) {
+            record.in_transit_units = previousDay!.unit_in_transit;
+          }
+          
           // Day 2+: Copy and carry forward state from previous day
           skuLocDate = {
             store_code: loc,
             product_code: sk,
             execution_date: record.d,
-            unit_on_hand: record.on_hand_units || previousDay!.unit_on_hand,
-            unit_on_order: record.on_order_units || previousDay!.unit_on_order,
-            unit_in_transit: record.in_transit_units || previousDay!.unit_in_transit,
+            unit_on_hand: record.on_hand_units,
+            unit_on_order: record.on_order_units,
+            unit_in_transit: record.in_transit_units,
             unit_sales: record.units_sold || 0,
             on_hand_units_sim: previousDay!.on_hand_units_sim || 0,
             green: previousDay!.green || 1,
@@ -260,11 +301,11 @@ serve(async (req) => {
             units_economic_overstock: 0,
             units_economic_understock: 0,
             accelerator_condition: '',
-            accelerator_minimum_target: previousDay!.accelerator_minimum_target || 1,
             accelerator_up_multiplier: previousDay!.accelerator_up_multiplier || 1.0,
             accelerator_down_multiplier: previousDay!.accelerator_down_multiplier || 0.67,
             accelerator_requires_inventory: previousDay!.accelerator_requires_inventory ?? true,
             accelerator_enable_zero_sales: previousDay!.accelerator_enable_zero_sales ?? true,
+            is_in_active_period: (firstActiveDay !== -1) && (i >= firstActiveDay) && (i <= lastActiveDay),
           };
         }
 

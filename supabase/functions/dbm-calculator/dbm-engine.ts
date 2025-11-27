@@ -150,7 +150,7 @@ export class DBMEngine {
   
   private getGreen(sl: SkuLocDate): number {
     const green = sl.green || 0;
-    const minimumTarget = sl.accelerator_minimum_target ?? 1;
+    const isInActivePeriod = sl.is_in_active_period ?? true; // Default to active for backward compatibility
     
     // Manual override
     if (sl.decision === 'manual' && this.daysBetween(sl.execution_date, sl.last_manual) === 0) {
@@ -168,8 +168,9 @@ export class DBMEngine {
       return green;
     }
     
-    // Phase 1: Initialize to minimum target if zero
-    if (green === 0) return minimumTarget;
+    // Active period minimum enforcement (hardcoded minimum = 1)
+    if (green === 0 && isInActivePeriod) return 1;
+    if (green === 0 && !isInActivePeriod) return 0;
     
     // Decrease conditions
     const canDecrease = 
@@ -177,14 +178,20 @@ export class DBMEngine {
       (sl.dbm_zone === 'green' || sl.dbm_zone === 'overstock') &&
       this.daysBetween(sl.execution_date, sl.last_non_overstock) < sl.lead_time &&
       this.daysBetween(sl.execution_date, sl.last_decrease) > sl.lead_time &&
-      green > minimumTarget;
+      green > 1;
     
     if (canDecrease) {
       const newTarget = green - Math.ceil((green - sl.excluded_level) / 3);
       
-      if (newTarget < sl.safety_level) return Math.max(sl.safety_level, minimumTarget);
-      if (newTarget < sl.excluded_level) return Math.max(sl.excluded_level, minimumTarget);
-      if (newTarget !== green) return Math.max(Math.floor(newTarget), minimumTarget);
+      // Safety level is always the floor (no configurable minimum)
+      if (newTarget < sl.safety_level) return sl.safety_level;
+      if (newTarget < sl.excluded_level) return sl.excluded_level;
+      
+      // Apply active period floor (1 if active, 0 if not)
+      if (newTarget !== green) {
+        const floorValue = isInActivePeriod ? 1 : 0;
+        return Math.max(Math.floor(newTarget), floorValue, sl.safety_level, sl.excluded_level);
+      }
     }
     
     // Increase from red
@@ -194,12 +201,14 @@ export class DBMEngine {
       return Math.floor(green + Math.ceil((green - sl.excluded_level) / 3));
     }
     
-    // Adjust to safety/excluded levels (but enforce minimum)
-    if (green < sl.safety_level) return Math.max(sl.safety_level, minimumTarget);
-    if (green < sl.excluded_level) return Math.max(sl.excluded_level, minimumTarget);
+    // Adjust to safety/excluded levels
+    if (green < sl.safety_level) return sl.safety_level;
+    if (green < sl.excluded_level) return sl.excluded_level;
     
-    // Phase 1: Enforce minimum target
-    if (green < minimumTarget) return minimumTarget;
+    // Enforce active period minimum (1 if active, 0 if not)
+    if (green < 1 && isInActivePeriod) {
+      return Math.max(1, sl.safety_level, sl.excluded_level);
+    }
     
     return green;
   }
@@ -265,7 +274,6 @@ export class DBMEngine {
   
   private getAcceleratedTarget(sl: SkuLocDate): number {
     const green = sl.green || 0;
-    const minimumTarget = sl.accelerator_minimum_target ?? 1;
     
     if (this.daysBetween(sl.execution_date, sl.last_accelerated) <= sl.responsiveness_idle_days) {
       return green;
@@ -306,7 +314,8 @@ export class DBMEngine {
         // Phase 3: Use configurable DOWN multiplier (default 0.67 = remove 2/3 of target)
         const downMultiplier = sl.accelerator_down_multiplier ?? 0.67;
         const decrease = Math.ceil(green * downMultiplier);
-        const newGreen = Math.max(green - decrease, minimumTarget);
+        const newGreen = green - decrease;
+        // Let main getGreen() enforce floors (no minimum enforcement here)
         return newGreen;
       }
     }
