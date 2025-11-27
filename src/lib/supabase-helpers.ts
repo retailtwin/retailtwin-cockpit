@@ -324,8 +324,10 @@ export async function getContiguousValidDateRange(
   
   const result = data[0];
   
-  // Convert valid_dates array to Set
-  const validDatesSet = new Set<string>(result.valid_dates || []);
+  // Convert valid_dates array to Set and normalize timestamp format to 'yyyy-MM-dd'
+  const validDatesSet = new Set<string>(
+    (result.valid_dates || []).map((d: string) => d.split(' ')[0])
+  );
   
   console.log('✅ Successfully parsed contiguous range:', {
     startDate: result.start_date,
