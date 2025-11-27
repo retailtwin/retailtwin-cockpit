@@ -5,16 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Download, FileText, AlertCircle, CheckCircle, Info, AlertTriangle, Loader2, CheckCircle2, FileSpreadsheet } from "lucide-react";
+import { Upload, Download, FileText, AlertCircle, CheckCircle, Info, AlertTriangle, Loader2, CheckCircle2, FileSpreadsheet, Pencil, FileDown } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import * as XLSX from 'xlsx';
 import { useNavigate } from "react-router-dom";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type ImportType = 'locations' | 'products' | 'sales' | 'inventory';
 
@@ -49,6 +51,10 @@ export default function DataImport() {
   
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [datasetId, setDatasetId] = useState<string | null>(null);
+  const [allDatasets, setAllDatasets] = useState<Dataset[]>([]);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [newDatasetName, setNewDatasetName] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   const [selectedFiles, setSelectedFiles] = useState<Record<ImportType, File | null>>({
     locations: null,
@@ -93,7 +99,26 @@ export default function DataImport() {
 
   useEffect(() => {
     ensureUserHasDataset();
+    loadAllDatasets();
   }, []);
+
+  const loadAllDatasets = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('datasets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('last_updated', { ascending: false });
+
+      if (error) throw error;
+      setAllDatasets(data || []);
+    } catch (error: any) {
+      console.error('Error loading datasets:', error);
+    }
+  };
 
   const ensureUserHasDataset = async () => {
     try {
@@ -902,6 +927,143 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
       });
     }
   };
+
+  const handleSwitchDataset = async (newDatasetId: string) => {
+    try {
+      const { data: selectedDataset, error } = await supabase
+        .from('datasets')
+        .select('*')
+        .eq('id', newDatasetId)
+        .single();
+
+      if (error) throw error;
+
+      setDataset(selectedDataset);
+      setDatasetId(selectedDataset.id);
+      updateExistingFilenames(selectedDataset);
+
+      toast({
+        title: "Dataset switched",
+        description: `Now viewing: ${selectedDataset.dataset_name}`,
+      });
+    } catch (error: any) {
+      console.error('Error switching dataset:', error);
+      toast({
+        variant: "destructive",
+        title: "Switch failed",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleRenameDataset = async () => {
+    if (!datasetId || !newDatasetName.trim()) return;
+
+    try {
+      const slug = newDatasetName.toLowerCase().replace(/\s+/g, '-');
+      
+      const { error } = await supabase
+        .from('datasets')
+        .update({
+          dataset_name: newDatasetName,
+          dataset_slug: slug,
+        })
+        .eq('id', datasetId);
+
+      if (error) throw error;
+
+      await ensureUserHasDataset();
+      await loadAllDatasets();
+      setShowRenameDialog(false);
+      setNewDatasetName("");
+
+      toast({
+        title: "Dataset renamed",
+        description: `Dataset renamed to: ${newDatasetName}`,
+      });
+    } catch (error: any) {
+      console.error('Error renaming dataset:', error);
+      toast({
+        variant: "destructive",
+        title: "Rename failed",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleDownloadDataset = async (fileType: ImportType | 'all') => {
+    if (downloading) return;
+
+    try {
+      setDownloading(true);
+
+      if (fileType === 'all') {
+        // Download all 4 files as Excel workbook
+        const filesToDownload: ImportType[] = ['locations', 'products', 'sales', 'inventory'];
+        const workbook = XLSX.utils.book_new();
+
+        for (const type of filesToDownload) {
+          const { data, error } = await supabase.functions.invoke('download-dataset', {
+            body: { fileType: type }
+          });
+
+          if (error) throw new Error(`Failed to download ${type}: ${error.message}`);
+
+          // Parse CSV and add to workbook
+          const lines = data.split('\n').filter((l: string) => l.trim());
+          const headers = lines[0].split(',');
+          const rows = lines.slice(1).map((line: string) => line.split(','));
+
+          const wsData = [headers, ...rows];
+          const worksheet = XLSX.utils.aoa_to_sheet(wsData);
+          
+          const sheetName = type === 'locations' ? 'Stores' : 
+                          type === 'products' ? 'Products' :
+                          type === 'sales' ? 'Sales' : 'Inventory';
+          XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        }
+
+        // Download Excel file
+        XLSX.writeFile(workbook, `${dataset?.dataset_name || 'dataset'}.xlsx`);
+
+        toast({
+          title: "Download complete",
+          description: "All data exported to Excel workbook",
+        });
+      } else {
+        // Download single CSV file
+        const { data, error } = await supabase.functions.invoke('download-dataset', {
+          body: { fileType }
+        });
+
+        if (error) throw error;
+
+        const blob = new Blob([data], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${fileType}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        toast({
+          title: "Download complete",
+          description: `${fileType}.csv has been downloaded`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Download error:', error);
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: error.message,
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
   
   const canPrepareDataset = !!(
     dataset &&
@@ -992,21 +1154,95 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
         <Card>
           <CardHeader>
             <div className="flex justify-between items-start">
-              <div>
-                <CardTitle>Dataset Information</CardTitle>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <CardTitle className="text-2xl">{dataset?.dataset_name || 'Dataset'}</CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setNewDatasetName(dataset?.dataset_name || "");
+                      setShowRenameDialog(true);
+                    }}
+                    disabled={!dataset || batchUploading}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Badge variant={dataset?.status === 'active' ? 'default' : 'secondary'}>
+                    {dataset?.status === 'active' ? 'Ready' : 'Needs Preparation'}
+                  </Badge>
+                </div>
                 <CardDescription>
                   Your active dataset for all data imports
                 </CardDescription>
               </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleClearDataset}
-                disabled={!dataset || batchUploading}
-              >
-                Clear Dataset
-              </Button>
+              <div className="flex gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!dataset || downloading}
+                    >
+                      <FileDown className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleDownloadDataset('all')}>
+                      Download All (Excel)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDownloadDataset('locations')}>
+                      Download Locations CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDownloadDataset('products')}>
+                      Download Products CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDownloadDataset('sales')}>
+                      Download Sales CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDownloadDataset('inventory')}>
+                      Download Inventory CSV
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleClearDataset}
+                  disabled={!dataset || batchUploading}
+                >
+                  Clear Dataset
+                </Button>
+              </div>
             </div>
+
+            {allDatasets.length > 1 && (
+              <div className="pt-4">
+                <Label htmlFor="dataset-selector" className="text-sm">Switch Dataset</Label>
+                <Select
+                  value={datasetId || undefined}
+                  onValueChange={handleSwitchDataset}
+                  disabled={batchUploading}
+                >
+                  <SelectTrigger id="dataset-selector" className="mt-2">
+                    <SelectValue placeholder="Select a dataset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allDatasets.map((ds) => (
+                      <SelectItem key={ds.id} value={ds.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{ds.dataset_name}</span>
+                          <Badge variant={ds.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                            {ds.status}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {dataset ? (
@@ -1358,6 +1594,42 @@ SKU002,Example Product 2,20.00,45.00,6,6,CATEGORY2,SUBCATEGORY2,SEASON2`;
           </Card>
         )}
       </div>
+
+      {/* Rename Dataset Dialog */}
+      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Dataset</DialogTitle>
+            <DialogDescription>
+              Enter a new name for your dataset
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="dataset-name">Dataset Name</Label>
+              <Input
+                id="dataset-name"
+                value={newDatasetName}
+                onChange={(e) => setNewDatasetName(e.target.value)}
+                placeholder="Enter dataset name"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleRenameDataset();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRenameDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRenameDataset} disabled={!newDatasetName.trim()}>
+              Rename
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Progress Modal */}
       <Dialog open={batchUploading} onOpenChange={() => {}}>
