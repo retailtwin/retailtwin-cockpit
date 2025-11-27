@@ -683,6 +683,50 @@ export type Database = {
               unit_price: number
             }[]
           }
+      export_public_inventory_data: {
+        Args: never
+        Returns: {
+          d: string
+          in_transit_units: number
+          location_code: string
+          on_hand_units: number
+          on_order_units: number
+          sku: string
+        }[]
+      }
+      export_public_locations_data: {
+        Args: never
+        Returns: {
+          code: string
+          name: string
+          order_days: string
+          production_lead_time: number
+          shipping_lead_time: number
+        }[]
+      }
+      export_public_products_data: {
+        Args: never
+        Returns: {
+          group_1: string
+          group_2: string
+          group_3: string
+          minimum_order_quantity: number
+          name: string
+          pack_size: number
+          sku: string
+          unit_cost: number
+          unit_price: number
+        }[]
+      }
+      export_public_sales_data: {
+        Args: never
+        Returns: {
+          d: string
+          location_code: string
+          sku: string
+          units_sold: number
+        }[]
+      }
       export_sales_data:
         | {
             Args: { p_dataset_id: string }
