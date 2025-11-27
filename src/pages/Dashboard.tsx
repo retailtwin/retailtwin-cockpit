@@ -407,15 +407,44 @@ const Dashboard = () => {
 
       const skuParam = config.productSKUs === "ALL" ? "ALL" : config.productSKUs[0] || "ALL";
 
-      // Query for period statistics
-      const { data: rawData, error } = await supabase.rpc("get_fact_daily_raw", {
-        p_location_code: config.location,
-        p_sku: skuParam,
-        p_start_date: startDate,
-        p_end_date: endDate,
-      });
+      // Query for period statistics with pagination
+      console.log(`Validating simulation scope: fetching data for ${config.location}, ${skuParam}...`);
+      
+      let rawData: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const start = page * pageSize;
+        const end = start + pageSize - 1;
+        
+        const { data: pageData, error } = await supabase
+          .rpc("get_fact_daily_raw", {
+            p_location_code: config.location,
+            p_sku: skuParam,
+            p_start_date: startDate,
+            p_end_date: endDate,
+          })
+          .range(start, end);
 
-      if (error) throw error;
+        if (error) throw error;
+        
+        if (!pageData || pageData.length === 0) {
+          hasMore = false;
+        } else {
+          rawData = rawData.concat(pageData);
+          console.log(`Validation: fetched page ${page + 1}: ${pageData.length} records (total: ${rawData.length})`);
+          
+          if (pageData.length < pageSize) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        }
+      }
+      
+      console.log(`Validation complete: ${rawData.length} total records found`);
 
       if (!rawData || rawData.length === 0) {
         toast({
