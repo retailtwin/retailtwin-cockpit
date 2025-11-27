@@ -745,23 +745,6 @@ export type Database = {
       get_fact_daily_raw:
         | {
             Args: {
-              p_end_date: string
-              p_location_code: string
-              p_sku: string
-              p_start_date: string
-            }
-            Returns: {
-              d: string
-              in_transit_units: number
-              location_code: string
-              on_hand_units: number
-              on_order_units: number
-              sku: string
-              units_sold: number
-            }[]
-          }
-        | {
-            Args: {
               p_dataset_id: string
               p_end_date: string
               p_location_code: string
@@ -779,6 +762,23 @@ export type Database = {
               on_order_units: number
               sku: string
               target_units: number
+              units_sold: number
+            }[]
+          }
+        | {
+            Args: {
+              p_end_date: string
+              p_location_code: string
+              p_sku: string
+              p_start_date: string
+            }
+            Returns: {
+              d: string
+              in_transit_units: number
+              location_code: string
+              on_hand_units: number
+              on_order_units: number
+              sku: string
               units_sold: number
             }[]
           }
