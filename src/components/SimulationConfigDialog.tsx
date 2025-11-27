@@ -285,7 +285,7 @@ export const SimulationConfigDialog = ({
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 pointer-events-auto z-[100]" align="start">
                 <div className="space-y-2">
                   <CalendarComponent
                     mode="range"
