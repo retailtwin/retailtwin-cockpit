@@ -44,19 +44,43 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Fetch raw data ordered by location, sku, and date
-    // Note: Supabase client automatically handles pagination for large result sets
-    // We use .limit() with a large number to ensure all data is fetched
-    const { data: rawData, error: fetchError } = await supabase
-      .rpc("get_fact_daily_raw", {
-        p_location_code: location_code,
-        p_sku: sku,
-        p_start_date: start_date,
-        p_end_date: end_date,
-      })
-      .limit(100000); // Set high limit to fetch all records
+    // Fetch raw data with pagination to handle PostgREST's 1000 row limit
+    console.log(`Fetching data for ${location_code}, ${sku} from ${start_date} to ${end_date}...`);
+    
+    let rawData: any[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const start = page * pageSize;
+      const end = start + pageSize - 1;
+      
+      const { data: pageData, error: fetchError } = await supabase
+        .rpc("get_fact_daily_raw", {
+          p_location_code: location_code,
+          p_sku: sku,
+          p_start_date: start_date,
+          p_end_date: end_date,
+        })
+        .range(start, end);
 
-    if (fetchError) throw fetchError;
+      if (fetchError) throw fetchError;
+      
+      if (!pageData || pageData.length === 0) {
+        hasMore = false;
+      } else {
+        rawData = rawData.concat(pageData);
+        console.log(`Fetched page ${page + 1}: ${pageData.length} records (total: ${rawData.length})`);
+        
+        // If we got less than pageSize, we've reached the end
+        if (pageData.length < pageSize) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+    }
     if (!rawData || rawData.length === 0) {
       return new Response(
         JSON.stringify({ error: "No data found for the specified filters" }),
