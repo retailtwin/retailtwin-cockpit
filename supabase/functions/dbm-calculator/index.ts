@@ -45,12 +45,16 @@ serve(async (req) => {
     );
 
     // Fetch raw data ordered by location, sku, and date
-    const { data: rawData, error: fetchError } = await supabase.rpc("get_fact_daily_raw", {
-      p_location_code: location_code,
-      p_sku: sku,
-      p_start_date: start_date,
-      p_end_date: end_date,
-    });
+    // Note: Supabase client automatically handles pagination for large result sets
+    // We use .limit() with a large number to ensure all data is fetched
+    const { data: rawData, error: fetchError } = await supabase
+      .rpc("get_fact_daily_raw", {
+        p_location_code: location_code,
+        p_sku: sku,
+        p_start_date: start_date,
+        p_end_date: end_date,
+      })
+      .limit(100000); // Set high limit to fetch all records
 
     if (fetchError) throw fetchError;
     if (!rawData || rawData.length === 0) {

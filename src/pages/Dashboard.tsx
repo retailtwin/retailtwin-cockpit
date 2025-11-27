@@ -103,15 +103,11 @@ const Dashboard = () => {
         // Set location
         setSelectedLocation(scope.location);
 
-        // Set date range
-        const startDate = new Date(scope.dateRange.start);
-        const endDate = new Date(scope.dateRange.end);
-        setDateRange({
-          from: startDate,
-          to: endDate,
-        });
+        // DON'T automatically set date range - let user choose or use full range
+        // Store optimal scope for simulation suggestions
+        setOptimalScope(scope);
 
-        console.log("Setting optimal date range:", { from: startDate, to: endDate });
+        console.log("Optimal scope loaded, will use for simulation recommendations");
 
         // Load locations and products
         const locs = await fetchLocations();
@@ -242,6 +238,16 @@ const Dashboard = () => {
         min: minDate,
         max: maxDate,
       });
+      
+      // Auto-set date range if not already set
+      setDateRange(prev => {
+        if (!prev) {
+          console.log("Auto-setting date range to full data range:", { minDate, maxDate });
+          return { from: minDate, to: maxDate };
+        }
+        return prev;
+      });
+      
       console.log("Date range from data:", { minDate, maxDate });
     }
   };
@@ -261,7 +267,7 @@ const Dashboard = () => {
           setSelectedProduct("ALL");
         }
 
-        // Load date range and set default to full inventory range
+        // Load date range - the fetchDataDateRange function will auto-set the date range
         await fetchDataDateRange();
       } catch (error) {
         console.error("Error loading initial data:", error);
