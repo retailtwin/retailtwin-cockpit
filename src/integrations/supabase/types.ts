@@ -284,8 +284,12 @@ export type Database = {
       fact_daily: {
         Row: {
           day: string
+          economic_overstock_units: number | null
+          economic_units: number | null
           location_code: string
+          on_hand_units_sim: number | null
           sku: string
+          target_units: number | null
           units_in_transit: number | null
           units_on_hand: number | null
           units_on_order: number | null
@@ -293,8 +297,12 @@ export type Database = {
         }
         Insert: {
           day: string
+          economic_overstock_units?: number | null
+          economic_units?: number | null
           location_code: string
+          on_hand_units_sim?: number | null
           sku: string
+          target_units?: number | null
           units_in_transit?: number | null
           units_on_hand?: number | null
           units_on_order?: number | null
@@ -302,8 +310,12 @@ export type Database = {
         }
         Update: {
           day?: string
+          economic_overstock_units?: number | null
+          economic_units?: number | null
           location_code?: string
+          on_hand_units_sim?: number | null
           sku?: string
+          target_units?: number | null
           units_in_transit?: number | null
           units_on_hand?: number | null
           units_on_order?: number | null
