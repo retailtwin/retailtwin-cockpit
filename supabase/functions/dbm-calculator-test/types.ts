@@ -1,72 +1,113 @@
 export interface SkuLocDate {
-  store_code: string;
-  product_code: string;
-  execution_date: string;
-  
-  // Inventory
-  unit_on_hand: number;
-  unit_on_order: number;
-  unit_in_transit: number;
-  unit_sales: number;
-  
-  // Settings
-  lead_time: number;
-  excluded_level: number;
-  safety_level: number;
-  
-  // Responsiveness
-  responsiveness_up_percentage: number;
-  responsiveness_down_percentage: number;
-  responsiveness_idle_days: number;
-  average_weekly_sales_units: number;
-  
-  // Accelerator magnitude controls
-  accelerator_up_multiplier?: number;
-  accelerator_down_multiplier?: number;
-  
-  // Safety guards
-  accelerator_requires_inventory?: boolean;
-  accelerator_minimum_target?: number;
-  accelerator_enable_zero_sales?: boolean;
-  
-  // Calculated
-  green?: number; // target_units
-  yellow: number;
-  red: number;
-  dbm_zone: string;
-  dbm_zone_previous: string;
-  
-  // Counters
+  day: string;
+  location_code: string;
+  sku: string;
+  company_id: string;
+  dataset_id?: string;
+  units_sold: number;
+  on_hand_units: number;
+  on_order_units: number;
+  in_transit_units: number;
+  on_hand_units_sim: number;
+  on_order_units_sim: number;
+  in_transit_units_sim: number;
+  target_units: number;
+  dbm_zone: string | null;
+  dbm_zone_previous: string | null;
+  red_threshold: number;
+  yellow_threshold: number;
+  counter_red: number;
   counter_green: number;
   counter_yellow: number;
-  counter_red: number;
   counter_overstock: number;
-  
-  // States
-  decision: string;
+  stockout_days: number;
+  decision: string | null;
+  last_accelerated: string | null;
+  accelerator_condition: string | null;
+  safety_level: number;
+  lead_time: number;
   frozen: boolean;
-  state: string;
-  
-  // Dates
-  last_accelerated: string;
-  last_decrease: string;
-  last_increase: string;
-  last_manual: string;
-  last_non_overstock: string;
-  last_out_of_red: string;
-  
-  // Economic
-  units_economic: number;
-  units_economic_overstock: number;
-  units_economic_understock: number;
-  
-  // Optional
-  accelerator_condition?: string;
-  accelerator_info?: string;
+  state: string | null;
 }
 
-export interface DBMSettings {
+export interface Order {
+  sku: string;
+  location_code: string;
+  company_id: string;
+  units_ordered: number;
+  units_on_order: number;
+  units_in_transit: number;
+  creation_date: string;
+  move_to_transit_date: string;
+  receive_date: string;
+  is_received: boolean;
+}
+
+export interface Settings {
+  production_lead_time: number;
+  shipping_lead_time: number;
+  red_zone_percentage: number;
+  yellow_zone_percentage: number;
+  overstock_threshold: number;
   accelerator_up_percentage: number;
   accelerator_down_percentage: number;
   acceleration_idle_days: number;
+  accelerator_minimum_target: number;
+  min_order_qty: number;
+  order_multiple: number;
+}
+
+export interface SimulationRequest {
+  company_id: string;
+  location_code?: string;
+  sku?: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface SkuLocationKPIs {
+  sku: string;
+  location_code: string;
+  simulation_days: number;
+  stockout_days: number;
+  service_level: number;
+  total_units_sold: number;
+  sum_daily_inventory: number;
+  average_inventory: number;
+  inventory_turns_annualized: number;
+  days_to_cash: number | null;
+  has_stock_on_last_day: boolean;
+  orders_placed: number;
+  buffer_increases: number;
+  buffer_decreases: number;
+  final_target: number;
+  days_in_red: number;
+  days_in_yellow: number;
+  days_in_green: number;
+  days_in_overstock: number;
+}
+
+export interface KPIs {
+  service_level: number;
+  total_simulation_days: number;
+  total_stockout_days: number;
+  fill_rate: number;
+  sku_locs_with_stock: number;
+  sku_locs_total: number;
+  snapshot_date: string;
+  inventory_turns_annualized: number;
+  days_to_cash: number | null;
+  total_units_sold: number;
+  average_inventory: number;
+}
+
+export interface SimulationResult {
+  processed_days: number;
+  sku_locations: number;
+  orders_created: number;
+  buffer_increases: number;
+  buffer_decreases: number;
+  errors: string[];
+  kpis?: KPIs;
+  by_sku_location?: SkuLocationKPIs[];
 }
