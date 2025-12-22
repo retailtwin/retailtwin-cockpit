@@ -1,8 +1,7 @@
-project_id = "zgsrbhfazvgtqbpkhabg"
+project_id = "xfuehhrpdzkdsjhfbjcd"
 
 [functions.import-fact-daily]
 verify_jwt = false
-timeout = 300
 
 [functions.import-locations]
 verify_jwt = false
@@ -21,7 +20,6 @@ verify_jwt = true
 
 [functions.dbm-calculator]
 verify_jwt = false
-timeout = 300
 
 [functions.notion-sync-knowledge]
 verify_jwt = true
