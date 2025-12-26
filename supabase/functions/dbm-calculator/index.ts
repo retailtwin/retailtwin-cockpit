@@ -146,8 +146,8 @@ serve(async (req) => {
 
     for (let i = 0; i < results.length; i += 50) {
       const batch = results.slice(i, i + 50);
-      await Promise.all(batch.map(state => 
-        supabase.from('fact_daily').update({
+      await Promise.all(batch.map(state =>
+        supabase.schema('aifo').from('fact_daily').update({
           on_hand_units_sim: state.on_hand_units_sim, on_order_units_sim: state.on_order_units_sim,
           in_transit_units_sim: state.in_transit_units_sim, target_units: state.target_units,
           dbm_zone: state.dbm_zone, dbm_zone_previous: state.dbm_zone_previous, decision: state.decision,
@@ -210,7 +210,7 @@ async function fetchAllData(supabase: any, company_id: string, location_code: st
   const allData: any[] = [];
   let offset = 0, hasMore = true;
   while (hasMore) {
-    let query = supabase.from('fact_daily').select('*').eq('company_id', company_id).gte('day', start_date).lte('day', end_date).order('day', { ascending: true }).range(offset, offset + BATCH_SIZE - 1);
+    let query = supabase.schema('aifo').from('fact_daily').select('*').eq('company_id', company_id).gte('day', start_date).lte('day', end_date).order('day', { ascending: true }).range(offset, offset + BATCH_SIZE - 1);
     if (location_code) query = query.eq('location_code', location_code);
     if (sku) query = query.eq('sku', sku);
     const { data, error } = await query;
@@ -218,11 +218,12 @@ async function fetchAllData(supabase: any, company_id: string, location_code: st
     if (data?.length > 0) { allData.push(...data); offset += data.length; hasMore = data.length === BATCH_SIZE; }
     else hasMore = false;
   }
+  console.log(`Fetched ${allData.length} records from aifo.fact_daily`);
   return allData;
 }
 
 async function loadSettings(supabase: any, companyId: string): Promise<Settings> {
-  const { data, error } = await supabase.from('system_settings').select('setting_key, setting_value').or(`company_id.is.null,company_id.eq.${companyId}`).order('company_id', { ascending: true, nullsFirst: true });
+  const { data, error } = await supabase.schema('aifo').from('system_settings').select('setting_key, setting_value').or(`company_id.is.null,company_id.eq.${companyId}`).order('company_id', { ascending: true, nullsFirst: true });
   if (error) throw error;
   const m = new Map<string, string>();
   for (const r of data || []) m.set(r.setting_key, r.setting_value);
