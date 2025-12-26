@@ -1,4 +1,5 @@
 // dbm-engine.ts - DBM 3.0 Algorithm Implementation
+// Updated: Added order_days check per C# SkuLoc.cs CreateOrder() method
 import type { SkuLocDate, Settings, Order } from './types.ts';
 
 export class DBMEngine {
@@ -6,6 +7,32 @@ export class DBMEngine {
 
   constructor(settings: Settings) {
     this.settings = settings;
+  }
+
+  /**
+   * Check if the given date is a valid order day.
+   * Based on C# SkuLoc.cs CreateOrder() method:
+   *   string day_alias = _sld.ExecutionDate.DayOfWeek.ToString().ToLower().Substring(0, 3);
+   *   is_order_day = OrderDays.Contains(day_alias) || string.IsNullOrEmpty(OrderDays);
+   * 
+   * @param dateStr - The date string (YYYY-MM-DD)
+   * @param orderDays - Comma-separated day aliases (e.g., "mon,thu") or empty for every day
+   * @returns true if orders can be placed on this day
+   */
+  private isOrderDay(dateStr: string, orderDays: string): boolean {
+    // If order_days is empty or not set, every day is an order day
+    if (!orderDays || orderDays.trim() === '') {
+      return true;
+    }
+
+    // Get the day of week as 3-letter alias (matching C# behavior)
+    const dayAliases = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const date = new Date(dateStr);
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const dayAlias = dayAliases[dayOfWeek];
+
+    // Check if this day is in the allowed order days (case-insensitive)
+    return orderDays.toLowerCase().includes(dayAlias);
   }
 
   processDay(
@@ -68,9 +95,15 @@ export class DBMEngine {
 
     let newOrder: Order | null = null;
     if (decision === 'order') {
-      newOrder = this.createOrder(state, currentDate);
-      if (newOrder && newOrder.units_ordered > 0) {
-        state.on_order_units_sim += newOrder.units_ordered;
+      // NEW: Check if today is a valid order day before creating order
+      if (this.isOrderDay(currentDate, this.settings.order_days)) {
+        newOrder = this.createOrder(state, currentDate);
+        if (newOrder && newOrder.units_ordered > 0) {
+          state.on_order_units_sim += newOrder.units_ordered;
+        }
+      } else {
+        // Not an order day - change decision to 'maintain' (wait for next order day)
+        state.decision = 'maintain';
       }
     }
 

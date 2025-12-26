@@ -1,3 +1,6 @@
+// types.ts - DBM 3.0 Type Definitions
+// Updated: Added order_days and dynamic_period settings
+
 export interface SkuLocDate {
   day: string;
   location_code: string;
@@ -55,6 +58,12 @@ export interface Settings {
   accelerator_minimum_target: number;
   min_order_qty: number;
   order_multiple: number;
+  // NEW: Order days setting (e.g., "mon,thu" or empty for daily)
+  order_days: string;
+  // NEW: Dynamic period setting (count from first inventory date)
+  dynamic_period: boolean;
+  // PLACEHOLDER: Dynamic initial target (parked for future implementation)
+  dynamic_initial_target: boolean;
 }
 
 export interface SimulationRequest {
@@ -85,6 +94,9 @@ export interface SkuLocationKPIs {
   days_in_yellow: number;
   days_in_green: number;
   days_in_overstock: number;
+  // NEW: Actual simulation days for this SKU (may differ from global if dynamic_period)
+  active_days?: number;
+  first_activity_date?: string;
 }
 
 export interface KPIs {
