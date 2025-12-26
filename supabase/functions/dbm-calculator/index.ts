@@ -21,6 +21,10 @@ serve(async (req) => {
     const request: SimulationRequest = await req.json();
     const { company_id, location_code, sku, start_date, end_date } = request;
 
+    // Treat "ALL", "All Products", "9999", or empty string as undefined (no filter)
+    const effectiveSku = (sku && sku !== 'ALL' && sku !== 'All Products') ? sku : undefined;
+    const effectiveLocation = (location_code && location_code !== '9999' && location_code !== 'ALL') ? location_code : undefined;
+
     if (!company_id || !start_date || !end_date) {
       throw new Error('Missing required fields: company_id, start_date, end_date');
     }
@@ -35,8 +39,8 @@ serve(async (req) => {
 
     const settings = await loadSettings(supabase, company_id);
     console.log(`Settings loaded: order_days="${settings.order_days}", dynamic_period=${settings.dynamic_period}`);
-    
-    const rawData = await fetchAllData(supabase, company_id, location_code, sku, start_date, end_date);
+
+    const rawData = await fetchAllData(supabase, company_id, effectiveLocation, effectiveSku, start_date, end_date);
     
     if (rawData.length === 0) {
       return new Response(JSON.stringify({ success: true, result: { processed_days: 0, sku_locations: 0, orders_created: 0, buffer_increases: 0, buffer_decreases: 0, errors: [], kpis: null } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
