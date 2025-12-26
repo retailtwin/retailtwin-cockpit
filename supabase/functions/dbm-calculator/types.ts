@@ -1,5 +1,5 @@
 // types.ts - DBM 3.0 Type Definitions
-// Updated: Added order_days and dynamic_period settings
+// Updated: Added date tracking fields for stock activity validation
 
 export interface SkuLocDate {
   day: string;
@@ -31,6 +31,12 @@ export interface SkuLocDate {
   lead_time: number;
   frozen: boolean;
   state: string | null;
+  // NEW: Date tracking fields for stock activity validation (matches C# reference)
+  last_out_of_red: string | null;      // When SKU last exited red zone
+  last_increase: string | null;         // When target was last increased
+  last_decrease: string | null;         // When target was last decreased
+  last_manual: string | null;           // When last manual intervention occurred
+  last_non_overstock: string | null;    // When SKU was last not in overstock
 }
 
 export interface Order {

@@ -1,5 +1,5 @@
 // dbm-engine.ts - DBM 3.0 Algorithm Implementation
-// Updated: Added order_days check per C# SkuLoc.cs CreateOrder() method
+// Updated: Added date tracking and stock activity validation (matches C# reference)
 import type { SkuLocDate, Settings, Order } from './types.ts';
 
 export class DBMEngine {
@@ -14,7 +14,7 @@ export class DBMEngine {
    * Based on C# SkuLoc.cs CreateOrder() method:
    *   string day_alias = _sld.ExecutionDate.DayOfWeek.ToString().ToLower().Substring(0, 3);
    *   is_order_day = OrderDays.Contains(day_alias) || string.IsNullOrEmpty(OrderDays);
-   * 
+   *
    * @param dateStr - The date string (YYYY-MM-DD)
    * @param orderDays - Comma-separated day aliases (e.g., "mon,thu") or empty for every day
    * @returns true if orders can be placed on this day
@@ -41,7 +41,7 @@ export class DBMEngine {
     orders: Order[],
     currentDate: string
   ): { state: SkuLocDate; newOrder: Order | null } {
-    
+
     const state: SkuLocDate = { ...current };
 
     if (previous) {
@@ -57,6 +57,12 @@ export class DBMEngine {
       state.last_accelerated = previous.last_accelerated;
       state.dbm_zone_previous = previous.dbm_zone;
       state.safety_level = previous.safety_level;
+      // NEW: Carry forward date tracking fields
+      state.last_out_of_red = previous.last_out_of_red;
+      state.last_increase = previous.last_increase;
+      state.last_decrease = previous.last_decrease;
+      state.last_manual = previous.last_manual;
+      state.last_non_overstock = previous.last_non_overstock;
     } else {
       state.on_hand_units_sim = state.on_hand_units;
       state.on_order_units_sim = state.on_order_units;
@@ -78,6 +84,12 @@ export class DBMEngine {
       state.counter_overstock = 0;
       state.stockout_days = 0;
       state.dbm_zone_previous = null;
+      // NEW: Initialize date tracking fields on first day
+      state.last_out_of_red = null;
+      state.last_increase = null;
+      state.last_decrease = null;
+      state.last_manual = null;
+      state.last_non_overstock = currentDate; // Start as "not overstock"
     }
 
     this.processOrderArrivals(state, orders, currentDate);
@@ -85,6 +97,9 @@ export class DBMEngine {
     this.calculateZones(state);
     this.determineZone(state);
     this.updateCounters(state);
+
+    // NEW: Update date tracking based on zone transitions
+    this.updateDateTracking(state, currentDate);
 
     const decision = this.getDecision(state, currentDate);
     state.decision = decision;
@@ -110,10 +125,31 @@ export class DBMEngine {
     return { state, newOrder };
   }
 
+  /**
+   * NEW: Update date tracking fields based on zone transitions
+   * Matches C# reference GetLastOutOfRed(), GetLastNonOverstock() logic
+   */
+  private updateDateTracking(state: SkuLocDate, currentDate: string): void {
+    const previousZone = state.dbm_zone_previous;
+    const currentZone = state.dbm_zone;
+
+    // Track when exiting red zone (C# GetLastOutOfRed logic)
+    // Update last_out_of_red when transitioning FROM red TO any other zone
+    if (previousZone === 'red' && currentZone !== 'red') {
+      state.last_out_of_red = currentDate;
+    }
+
+    // Track when NOT in overstock (C# GetLastNonOverstock logic)
+    // Update last_non_overstock whenever we're not in overstock
+    if (currentZone !== 'overstock') {
+      state.last_non_overstock = currentDate;
+    }
+  }
+
   private processOrderArrivals(state: SkuLocDate, orders: Order[], currentDate: string): void {
     const skuOrders = orders.filter(
-      o => o.sku === state.sku && 
-           o.location_code === state.location_code && 
+      o => o.sku === state.sku &&
+           o.location_code === state.location_code &&
            !o.is_received
     );
 
@@ -152,7 +188,7 @@ export class DBMEngine {
 
   private determineZone(state: SkuLocDate): void {
     const stock = state.on_hand_units_sim;
-    
+
     if (stock <= state.red_threshold) {
       state.dbm_zone = 'red';
     } else if (stock <= state.yellow_threshold) {
@@ -179,36 +215,63 @@ export class DBMEngine {
   }
 
   /**
-   * CORRECTED Decision Logic (per Document 4)
-   * Priority order in RED zone:
-   *   1. Check if counter >= lead_time AND cooldown passed -> "increase"
-   *   2. Check if at/below safety level -> "order"
-   *   3. Otherwise -> "maintain"
+   * CORRECTED Decision Logic (per C# reference DBM.cs GetGreen())
+   * 
+   * RED zone INCREASE conditions (C# lines 404-412):
+   *   1. counter_red > lead_time
+   *   2. zone === 'red'
+   *   3. days since last_out_of_red < lead_time (recent red exit = valid increase)
+   * 
+   * GREEN zone DECREASE conditions (C# lines 368-402):
+   *   1. counter_green > lead_time
+   *   2. zone === 'green' or 'overstock'
+   *   3. days since last_non_overstock < lead_time (recent stock activity)
+   *   4. days since last_decrease > lead_time (cooldown between decreases)
+   *   5. target > 1 (minimum floor)
    */
   private getDecision(state: SkuLocDate, currentDate: string): string {
     if (state.frozen) {
       return 'maintain';
     }
 
-    const daysSinceAcceleration = this.daysBetween(state.last_accelerated, currentDate);
-    const cooldownPassed = daysSinceAcceleration >= this.settings.acceleration_idle_days;
+    const leadTime = state.lead_time;
 
-    // RED ZONE LOGIC
+    // RED ZONE LOGIC (matches C# GetGreen lines 404-412)
     if (state.dbm_zone === 'red') {
-      // FIRST: Check for buffer increase (counter threshold + cooldown)
-      if (state.counter_red >= state.lead_time && cooldownPassed) {
+      // Check for buffer INCREASE
+      const daysSinceOutOfRed = this.daysBetween(state.last_out_of_red, currentDate);
+      
+      // C# condition: counter > lead_time AND daysSinceOutOfRed < lead_time
+      // The daysSinceOutOfRed < lead_time means: we recently exited red, then re-entered
+      // This validates that the red zone is "real" (not just startup noise)
+      if (state.counter_red > leadTime && daysSinceOutOfRed < leadTime) {
         return 'increase';
       }
-      // SECOND: Check for order (at or below safety level)
+      
+      // Check for ORDER (at or below safety level)
       if (state.on_hand_units_sim <= state.safety_level) {
         return 'order';
       }
       return 'maintain';
     }
 
-    // GREEN ZONE LOGIC
-    if (state.dbm_zone === 'green') {
-      if (state.counter_green >= state.lead_time && cooldownPassed) {
+    // GREEN/OVERSTOCK ZONE LOGIC (matches C# GetGreen lines 368-402)
+    if (state.dbm_zone === 'green' || state.dbm_zone === 'overstock') {
+      // Check for buffer DECREASE
+      const daysSinceNonOverstock = this.daysBetween(state.last_non_overstock, currentDate);
+      const daysSinceLastDecrease = this.daysBetween(state.last_decrease, currentDate);
+      
+      // C# conditions for decrease:
+      // 1. counter_green > lead_time (been in green long enough)
+      // 2. daysSinceNonOverstock < lead_time (recent stock activity validates decrease)
+      // 3. daysSinceLastDecrease > lead_time (cooldown between decreases)
+      // 4. target > 1 (don't decrease below minimum)
+      if (
+        state.counter_green > leadTime &&
+        daysSinceNonOverstock < leadTime &&
+        daysSinceLastDecrease > leadTime &&
+        state.target_units > 1
+      ) {
         return 'decrease';
       }
     }
@@ -226,20 +289,24 @@ export class DBMEngine {
       const maxIncrease = Math.ceil(currentTarget * 1.5);
       newTarget = Math.min(newTarget, maxIncrease);
       state.accelerator_condition = 'INCREASED';
+      // NEW: Track when increase happened
+      state.last_increase = currentDate;
     } else {
       const factor = 1 - this.settings.accelerator_down_percentage;
       newTarget = Math.floor(currentTarget * factor);
       const floor = Math.max(state.safety_level, this.settings.accelerator_minimum_target);
       newTarget = Math.max(newTarget, floor);
       state.accelerator_condition = 'DECREASED';
+      // NEW: Track when decrease happened
+      state.last_decrease = currentDate;
     }
 
     state.target_units = newTarget;
     state.last_accelerated = currentDate;
-    
+
     // Update safety_level proportionally
     state.safety_level = Math.max(1, Math.floor(newTarget * this.settings.red_zone_percentage));
-    
+
     this.calculateZones(state);
   }
 
@@ -297,7 +364,7 @@ export function calculateEconomicUnits(state: SkuLocDate): {
 } {
   const totalInventory = state.on_hand_units_sim + state.on_order_units_sim + state.in_transit_units_sim;
   const target = state.target_units;
-  
+
   return {
     economic: Math.min(totalInventory, target),
     overstock: Math.max(0, totalInventory - target),

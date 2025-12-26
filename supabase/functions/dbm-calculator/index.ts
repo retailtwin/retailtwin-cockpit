@@ -1,5 +1,5 @@
 // index.ts - DBM Calculator Edge Function
-// Updated: Added order_days and dynamic_period settings support
+// Updated: Added date tracking field support for stock activity validation
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { DBMEngine } from './dbm-engine.ts';
@@ -41,7 +41,7 @@ serve(async (req) => {
     console.log(`Settings loaded: order_days="${settings.order_days}", dynamic_period=${settings.dynamic_period}`);
 
     const rawData = await fetchAllData(supabase, company_id, effectiveLocation, effectiveSku, start_date, end_date);
-    
+
     if (rawData.length === 0) {
       return new Response(JSON.stringify({ success: true, result: { processed_days: 0, sku_locations: 0, orders_created: 0, buffer_increases: 0, buffer_decreases: 0, errors: [], kpis: null } }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -51,7 +51,7 @@ serve(async (req) => {
     const allOrders: Order[] = [];
     const results: SkuLocDate[] = [];
     const skuLocationKPIs: SkuLocationKPIs[] = [];
-    
+
     let totalBufferIncreases = 0, totalBufferDecreases = 0, totalOrdersCreated = 0;
     let grandTotalStockoutDays = 0, grandTotalUnitsSold = 0, grandSumDailyInventory = 0, skuLocsWithStockOnLastDay = 0;
     let grandTotalActiveDays = 0; // NEW: Track total active days across all SKU-Locations
@@ -65,12 +65,12 @@ serve(async (req) => {
       // NEW: Find the first day with activity (inventory or sales) for dynamic_period
       let firstActivityIndex = 0;
       let firstActivityDate: string | null = null;
-      
+
       if (settings.dynamic_period) {
         // Find first day where there's either inventory > 0 or sales > 0
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
-          if ((row.on_hand_units > 0) || (row.units_sold > 0) || 
+          if ((row.on_hand_units > 0) || (row.units_sold > 0) ||
               (row.on_order_units > 0) || (row.in_transit_units > 0)) {
             firstActivityIndex = i;
             firstActivityDate = row.day;
@@ -80,13 +80,13 @@ serve(async (req) => {
       }
 
       // Calculate active days for this SKU-Location
-      const activeDays = settings.dynamic_period 
-        ? rows.length - firstActivityIndex 
+      const activeDays = settings.dynamic_period
+        ? rows.length - firstActivityIndex
         : rows.length;
 
       // Process rows (starting from first activity if dynamic_period is enabled)
       const startIndex = settings.dynamic_period ? firstActivityIndex : 0;
-      
+
       for (let i = startIndex; i < rows.length; i++) {
         const row = rows[i];
         const isFirstDay = previous === null;
@@ -114,7 +114,7 @@ serve(async (req) => {
 
       const lastState = previous;
       const stockoutDays = lastState.stockout_days;
-      
+
       // NEW: Use active days instead of simulation days for averages
       const avgInventory = activeDays > 0 ? sumDailyInventory / activeDays : 0;
       const hasStockOnLastDay = lastState.on_hand_units_sim > 0;
@@ -148,32 +148,47 @@ serve(async (req) => {
       if (hasStockOnLastDay) skuLocsWithStockOnLastDay++;
     }
 
+    // UPDATED: Persist results including date tracking fields
     for (let i = 0; i < results.length; i += 50) {
       const batch = results.slice(i, i + 50);
       await Promise.all(batch.map(state =>
         supabase.schema('aifo').from('fact_daily').update({
-          on_hand_units_sim: state.on_hand_units_sim, on_order_units_sim: state.on_order_units_sim,
-          in_transit_units_sim: state.in_transit_units_sim, target_units: state.target_units,
-          dbm_zone: state.dbm_zone, dbm_zone_previous: state.dbm_zone_previous, decision: state.decision,
-          counter_red: state.counter_red, counter_green: state.counter_green,
-          counter_yellow: state.counter_yellow, counter_overstock: state.counter_overstock,
-          stockout_days: state.stockout_days, last_accelerated: state.last_accelerated,
-          accelerator_condition: state.accelerator_condition, safety_level: state.safety_level,
+          on_hand_units_sim: state.on_hand_units_sim,
+          on_order_units_sim: state.on_order_units_sim,
+          in_transit_units_sim: state.in_transit_units_sim,
+          target_units: state.target_units,
+          dbm_zone: state.dbm_zone,
+          dbm_zone_previous: state.dbm_zone_previous,
+          decision: state.decision,
+          counter_red: state.counter_red,
+          counter_green: state.counter_green,
+          counter_yellow: state.counter_yellow,
+          counter_overstock: state.counter_overstock,
+          stockout_days: state.stockout_days,
+          last_accelerated: state.last_accelerated,
+          accelerator_condition: state.accelerator_condition,
+          safety_level: state.safety_level,
+          // NEW: Persist date tracking fields
+          last_out_of_red: state.last_out_of_red,
+          last_increase: state.last_increase,
+          last_decrease: state.last_decrease,
+          last_manual: state.last_manual,
+          last_non_overstock: state.last_non_overstock,
         }).eq('company_id', state.company_id).eq('location_code', state.location_code).eq('sku', state.sku).eq('day', state.day)
       ));
     }
 
     const numSkuLocations = skuLocationKPIs.length; // Use actual processed count
-    
+
     // NEW: Use active days for aggregate calculations when dynamic_period is enabled
-    const totalSimulationDays = settings.dynamic_period 
-      ? grandTotalActiveDays 
+    const totalSimulationDays = settings.dynamic_period
+      ? grandTotalActiveDays
       : simulationDays * numSkuLocations;
-    
+
     const aggregateServiceLevel = totalSimulationDays > 0 ? ((totalSimulationDays - grandTotalStockoutDays) / totalSimulationDays) * 100 : 0;
     const fillRate = numSkuLocations > 0 ? (skuLocsWithStockOnLastDay / numSkuLocations) * 100 : 0;
     const grandAvgInventory = totalSimulationDays > 0 ? grandSumDailyInventory / totalSimulationDays : 0;
-    
+
     // For annualized turns, use the average active days per SKU-Location
     const avgActiveDaysPerSku = numSkuLocations > 0 ? grandTotalActiveDays / numSkuLocations : simulationDays;
     const aggregateInventoryTurns = grandAvgInventory > 0 ? (grandTotalUnitsSold / grandAvgInventory) * (365 / avgActiveDaysPerSku) : 0;
@@ -272,14 +287,41 @@ function mapRowToSkuLocDate(row: any, settings: Settings, isFirstDay: boolean): 
     target = row.target_units || settings.accelerator_minimum_target;
   }
   return {
-    day: row.day, location_code: row.location_code, sku: row.sku, company_id: row.company_id, dataset_id: row.dataset_id,
-    units_sold: row.units_sold || 0, on_hand_units: row.on_hand_units || 0, on_order_units: row.on_order_units || 0, in_transit_units: row.in_transit_units || 0,
-    on_hand_units_sim: row.on_hand_units_sim || row.on_hand_units || 0, on_order_units_sim: row.on_order_units_sim || 0, in_transit_units_sim: row.in_transit_units_sim || 0, target_units: target,
-    dbm_zone: row.dbm_zone || null, dbm_zone_previous: row.dbm_zone_previous || null,
-    red_threshold: Math.floor(target * settings.red_zone_percentage), yellow_threshold: Math.floor(target * settings.yellow_zone_percentage),
-    counter_red: row.counter_red || 0, counter_green: row.counter_green || 0, counter_yellow: row.counter_yellow || 0, counter_overstock: row.counter_overstock || 0, stockout_days: row.stockout_days || 0,
-    decision: row.decision || null, last_accelerated: row.last_accelerated || null, accelerator_condition: row.accelerator_condition || null,
-    safety_level: row.safety_level || Math.max(1, Math.floor(target * settings.red_zone_percentage)), lead_time: leadTime, frozen: row.frozen || false, state: row.state || null,
+    day: row.day,
+    location_code: row.location_code,
+    sku: row.sku,
+    company_id: row.company_id,
+    dataset_id: row.dataset_id,
+    units_sold: row.units_sold || 0,
+    on_hand_units: row.on_hand_units || 0,
+    on_order_units: row.on_order_units || 0,
+    in_transit_units: row.in_transit_units || 0,
+    on_hand_units_sim: row.on_hand_units_sim || row.on_hand_units || 0,
+    on_order_units_sim: row.on_order_units_sim || 0,
+    in_transit_units_sim: row.in_transit_units_sim || 0,
+    target_units: target,
+    dbm_zone: row.dbm_zone || null,
+    dbm_zone_previous: row.dbm_zone_previous || null,
+    red_threshold: Math.floor(target * settings.red_zone_percentage),
+    yellow_threshold: Math.floor(target * settings.yellow_zone_percentage),
+    counter_red: row.counter_red || 0,
+    counter_green: row.counter_green || 0,
+    counter_yellow: row.counter_yellow || 0,
+    counter_overstock: row.counter_overstock || 0,
+    stockout_days: row.stockout_days || 0,
+    decision: row.decision || null,
+    last_accelerated: row.last_accelerated || null,
+    accelerator_condition: row.accelerator_condition || null,
+    safety_level: row.safety_level || Math.max(1, Math.floor(target * settings.red_zone_percentage)),
+    lead_time: leadTime,
+    frozen: row.frozen || false,
+    state: row.state || null,
+    // NEW: Load date tracking fields from database
+    last_out_of_red: row.last_out_of_red || null,
+    last_increase: row.last_increase || null,
+    last_decrease: row.last_decrease || null,
+    last_manual: row.last_manual || null,
+    last_non_overstock: row.last_non_overstock || null,
   };
 }
-// Deployed Mon Dec 22 20:43:35 CET 2025
+// Updated: Dec 26 2025 - Added date tracking for stock activity validation
