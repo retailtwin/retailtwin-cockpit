@@ -1,373 +1,383 @@
 // dbm-engine.ts - DBM 3.0 Algorithm Implementation
-// Updated: Added date tracking and stock activity validation (matches C# reference)
-import type { SkuLocDate, Settings, Order } from './types.ts';
+// Version: 2025-12-27 v7 - Simplified, production-ready
+// 
+// CORE PRINCIPLE: Start where you are, optimize from reality.
+//   - Initial target = current on-hand (always)
+//   - No theoretical calculations for starting position
+//
+// TWO SIGNALS:
+//   1. Inventory (zone-based): Has supply chain proven it can respond?
+//   2. Sales (responsiveness): Is demand pattern changing?
+//
+// Together: Simple, trustworthy, scalable.
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface DBMSettings {
+  lead_time: number;                    // Days to wait before adjustments (default: 3)
+  responsiveness_up_percentage: number; // Threshold for increase (default: 0.4 = 40%)
+  responsiveness_down_percentage: number; // Threshold for decrease (default: 0.2 = 20%)
+  responsiveness_idle_days: number;     // Cooldown between responsiveness adjustments (default: 3)
+}
+
+export interface SkuLocDay {
+  // Identity
+  sku_loc_key: string;
+  day: string;                          // ISO date string YYYY-MM-DD
+  
+  // Input data
+  on_hand_units: number;                // Current inventory
+  average_weekly_sales_units: number;   // Rolling average (calculated externally)
+  
+  // DBM state (persisted between days)
+  target_units: number;                 // The "Green" buffer level
+  yellow_threshold: number;             // Calculated from target
+  red_threshold: number;                // Calculated from target
+  dbm_zone: string;                     // 'overstock' | 'green' | 'yellow' | 'red'
+  dbm_zone_previous: string | null;     // Previous day's zone
+  
+  // Counters
+  counter_green: number;                // Days in green/overstock
+  counter_red: number;                  // Days in red
+  
+  // Tracking dates
+  last_out_of_red: string | null;       // Last date exited red zone
+  last_non_overstock: string | null;    // Last date NOT in overstock (null when in overstock)
+  last_decrease: string | null;         // Last zone-based decrease
+  last_accelerated: string | null;      // Last responsiveness adjustment
+  
+  // Output
+  decision: string | null;              // What action was taken
+}
+
+const DEFAULT_DATE = '2000-01-01';
+
+// ============================================================================
+// DBM ENGINE
+// ============================================================================
 
 export class DBMEngine {
-  private settings: Settings;
+  private settings: DBMSettings;
 
-  constructor(settings: Settings) {
-    this.settings = settings;
-  }
-
-  /**
-   * Check if the given date is a valid order day.
-   * Based on C# SkuLoc.cs CreateOrder() method:
-   *   string day_alias = _sld.ExecutionDate.DayOfWeek.ToString().ToLower().Substring(0, 3);
-   *   is_order_day = OrderDays.Contains(day_alias) || string.IsNullOrEmpty(OrderDays);
-   *
-   * @param dateStr - The date string (YYYY-MM-DD)
-   * @param orderDays - Comma-separated day aliases (e.g., "mon,thu") or empty for every day
-   * @returns true if orders can be placed on this day
-   */
-  private isOrderDay(dateStr: string, orderDays: string): boolean {
-    // If order_days is empty or not set, every day is an order day
-    if (!orderDays || orderDays.trim() === '') {
-      return true;
-    }
-
-    // Get the day of week as 3-letter alias (matching C# behavior)
-    const dayAliases = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-    const date = new Date(dateStr);
-    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const dayAlias = dayAliases[dayOfWeek];
-
-    // Check if this day is in the allowed order days (case-insensitive)
-    return orderDays.toLowerCase().includes(dayAlias);
-  }
-
-  processDay(
-    current: SkuLocDate,
-    previous: SkuLocDate | null,
-    orders: Order[],
-    currentDate: string
-  ): { state: SkuLocDate; newOrder: Order | null } {
-
-    const state: SkuLocDate = { ...current };
-
-    if (previous) {
-      state.on_hand_units_sim = previous.on_hand_units_sim;
-      state.on_order_units_sim = previous.on_order_units_sim;
-      state.in_transit_units_sim = previous.in_transit_units_sim;
-      state.target_units = previous.target_units;
-      state.counter_red = previous.counter_red;
-      state.counter_green = previous.counter_green;
-      state.counter_yellow = previous.counter_yellow;
-      state.counter_overstock = previous.counter_overstock;
-      state.stockout_days = previous.stockout_days;
-      state.last_accelerated = previous.last_accelerated;
-      state.dbm_zone_previous = previous.dbm_zone;
-      state.safety_level = previous.safety_level;
-      // NEW: Carry forward date tracking fields
-      state.last_out_of_red = previous.last_out_of_red;
-      state.last_increase = previous.last_increase;
-      state.last_decrease = previous.last_decrease;
-      state.last_manual = previous.last_manual;
-      state.last_non_overstock = previous.last_non_overstock;
-    } else {
-      state.on_hand_units_sim = state.on_hand_units;
-      state.on_order_units_sim = state.on_order_units;
-      state.in_transit_units_sim = state.in_transit_units;
-      // Initialize target from actual inventory if no target set
-      if (state.target_units < this.settings.accelerator_minimum_target) {
-        // Use actual on-hand as starting point, with minimum
-        const initialTarget = Math.max(
-          state.on_hand_units + state.on_order_units + state.in_transit_units,
-          this.settings.accelerator_minimum_target
-        );
-        state.target_units = initialTarget;
-      }
-      // Initialize safety_level as percentage of target
-      state.safety_level = Math.max(1, Math.floor(state.target_units * this.settings.red_zone_percentage));
-      state.counter_red = 0;
-      state.counter_green = 0;
-      state.counter_yellow = 0;
-      state.counter_overstock = 0;
-      state.stockout_days = 0;
-      state.dbm_zone_previous = null;
-      // NEW: Initialize date tracking fields on first day
-      state.last_out_of_red = null;
-      state.last_increase = null;
-      state.last_decrease = null;
-      state.last_manual = null;
-      state.last_non_overstock = currentDate; // Start as "not overstock"
-    }
-
-    this.processOrderArrivals(state, orders, currentDate);
-    this.applyDailySales(state);
-    this.calculateZones(state);
-    this.determineZone(state);
-    this.updateCounters(state);
-
-    // NEW: Update date tracking based on zone transitions
-    this.updateDateTracking(state, currentDate);
-
-    const decision = this.getDecision(state, currentDate);
-    state.decision = decision;
-
-    if (decision === 'increase' || decision === 'decrease') {
-      this.adjustBuffer(state, decision === 'increase', currentDate);
-    }
-
-    let newOrder: Order | null = null;
-    if (decision === 'order') {
-      // NEW: Check if today is a valid order day before creating order
-      if (this.isOrderDay(currentDate, this.settings.order_days)) {
-        newOrder = this.createOrder(state, currentDate);
-        if (newOrder && newOrder.units_ordered > 0) {
-          state.on_order_units_sim += newOrder.units_ordered;
-        }
-      } else {
-        // Not an order day - change decision to 'maintain' (wait for next order day)
-        state.decision = 'maintain';
-      }
-    }
-
-    return { state, newOrder };
-  }
-
-  /**
-   * NEW: Update date tracking fields based on zone transitions
-   * Matches C# reference GetLastOutOfRed(), GetLastNonOverstock() logic
-   */
-  private updateDateTracking(state: SkuLocDate, currentDate: string): void {
-    const previousZone = state.dbm_zone_previous;
-    const currentZone = state.dbm_zone;
-
-    // Track when exiting red zone (C# GetLastOutOfRed logic)
-    // Update last_out_of_red when transitioning FROM red TO any other zone
-    if (previousZone === 'red' && currentZone !== 'red') {
-      state.last_out_of_red = currentDate;
-    }
-
-    // Track when NOT in overstock (C# GetLastNonOverstock logic)
-    // Update last_non_overstock whenever we're not in overstock
-    if (currentZone !== 'overstock') {
-      state.last_non_overstock = currentDate;
-    }
-  }
-
-  private processOrderArrivals(state: SkuLocDate, orders: Order[], currentDate: string): void {
-    const skuOrders = orders.filter(
-      o => o.sku === state.sku &&
-           o.location_code === state.location_code &&
-           !o.is_received
-    );
-
-    for (const order of skuOrders) {
-      if (order.move_to_transit_date === currentDate && order.units_on_order > 0) {
-        state.on_order_units_sim -= order.units_on_order;
-        state.in_transit_units_sim += order.units_on_order;
-        order.units_in_transit = order.units_on_order;
-        order.units_on_order = 0;
-      }
-
-      if (order.receive_date === currentDate && order.units_in_transit > 0) {
-        state.in_transit_units_sim -= order.units_in_transit;
-        state.on_hand_units_sim += order.units_in_transit;
-        order.units_in_transit = 0;
-        order.is_received = true;
-      }
-    }
-
-    state.on_order_units_sim = Math.max(0, state.on_order_units_sim);
-    state.in_transit_units_sim = Math.max(0, state.in_transit_units_sim);
-  }
-
-  private applyDailySales(state: SkuLocDate): void {
-    state.on_hand_units_sim = Math.max(0, state.on_hand_units_sim - state.units_sold);
-    if (state.on_hand_units_sim === 0) {
-      state.stockout_days += 1;
-    }
-  }
-
-  private calculateZones(state: SkuLocDate): void {
-    const green = state.target_units;
-    state.red_threshold = Math.floor(green * this.settings.red_zone_percentage);
-    state.yellow_threshold = Math.floor(green * this.settings.yellow_zone_percentage);
-  }
-
-  private determineZone(state: SkuLocDate): void {
-    const stock = state.on_hand_units_sim;
-
-    if (stock <= state.red_threshold) {
-      state.dbm_zone = 'red';
-    } else if (stock <= state.yellow_threshold) {
-      state.dbm_zone = 'yellow';
-    } else if (stock > state.target_units * this.settings.overstock_threshold) {
-      state.dbm_zone = 'overstock';
-    } else {
-      state.dbm_zone = 'green';
-    }
-  }
-
-  private updateCounters(state: SkuLocDate): void {
-    if (state.dbm_zone !== 'red') state.counter_red = 0;
-    if (state.dbm_zone !== 'green') state.counter_green = 0;
-    if (state.dbm_zone !== 'yellow') state.counter_yellow = 0;
-    if (state.dbm_zone !== 'overstock') state.counter_overstock = 0;
-
-    switch (state.dbm_zone) {
-      case 'red': state.counter_red += 1; break;
-      case 'green': state.counter_green += 1; break;
-      case 'yellow': state.counter_yellow += 1; break;
-      case 'overstock': state.counter_overstock += 1; break;
-    }
-  }
-
-  /**
-   * CORRECTED Decision Logic (per C# reference DBM.cs GetGreen())
-   * 
-   * RED zone INCREASE conditions (C# lines 404-412):
-   *   1. counter_red > lead_time
-   *   2. zone === 'red'
-   *   3. days since last_out_of_red < lead_time (recent red exit = valid increase)
-   * 
-   * GREEN zone DECREASE conditions (C# lines 368-402):
-   *   1. counter_green > lead_time
-   *   2. zone === 'green' or 'overstock'
-   *   3. days since last_non_overstock < lead_time (recent stock activity)
-   *   4. days since last_decrease > lead_time (cooldown between decreases)
-   *   5. target > 1 (minimum floor)
-   */
-  private getDecision(state: SkuLocDate, currentDate: string): string {
-    if (state.frozen) {
-      return 'maintain';
-    }
-
-    const leadTime = state.lead_time;
-
-    // RED ZONE LOGIC (matches C# GetGreen lines 404-412)
-    if (state.dbm_zone === 'red') {
-      // Check for buffer INCREASE
-      const daysSinceOutOfRed = this.daysBetween(state.last_out_of_red, currentDate);
-      
-      // C# condition: counter > lead_time AND daysSinceOutOfRed < lead_time
-      // The daysSinceOutOfRed < lead_time means: we recently exited red, then re-entered
-      // This validates that the red zone is "real" (not just startup noise)
-      if (state.counter_red > leadTime && daysSinceOutOfRed < leadTime) {
-        return 'increase';
-      }
-      
-      // Check for ORDER (at or below safety level)
-      if (state.on_hand_units_sim <= state.safety_level) {
-        return 'order';
-      }
-      return 'maintain';
-    }
-
-    // GREEN/OVERSTOCK ZONE LOGIC (matches C# GetGreen lines 368-402)
-    if (state.dbm_zone === 'green' || state.dbm_zone === 'overstock') {
-      // Check for buffer DECREASE
-      const daysSinceNonOverstock = this.daysBetween(state.last_non_overstock, currentDate);
-      const daysSinceLastDecrease = this.daysBetween(state.last_decrease, currentDate);
-      
-      // C# conditions for decrease:
-      // 1. counter_green > lead_time (been in green long enough)
-      // 2. daysSinceNonOverstock < lead_time (recent stock activity validates decrease)
-      // 3. daysSinceLastDecrease > lead_time (cooldown between decreases)
-      // 4. target > 1 (don't decrease below minimum)
-      if (
-        state.counter_green > leadTime &&
-        daysSinceNonOverstock < leadTime &&
-        daysSinceLastDecrease > leadTime &&
-        state.target_units > 1
-      ) {
-        return 'decrease';
-      }
-    }
-
-    return 'maintain';
-  }
-
-  private adjustBuffer(state: SkuLocDate, isIncrease: boolean, currentDate: string): void {
-    const currentTarget = state.target_units;
-    let newTarget: number;
-
-    if (isIncrease) {
-      const factor = 1 + this.settings.accelerator_up_percentage;
-      newTarget = Math.ceil(currentTarget * factor);
-      const maxIncrease = Math.ceil(currentTarget * 1.5);
-      newTarget = Math.min(newTarget, maxIncrease);
-      state.accelerator_condition = 'INCREASED';
-      // NEW: Track when increase happened
-      state.last_increase = currentDate;
-    } else {
-      const factor = 1 - this.settings.accelerator_down_percentage;
-      newTarget = Math.floor(currentTarget * factor);
-      const floor = Math.max(state.safety_level, this.settings.accelerator_minimum_target);
-      newTarget = Math.max(newTarget, floor);
-      state.accelerator_condition = 'DECREASED';
-      // NEW: Track when decrease happened
-      state.last_decrease = currentDate;
-    }
-
-    state.target_units = newTarget;
-    state.last_accelerated = currentDate;
-
-    // Update safety_level proportionally
-    state.safety_level = Math.max(1, Math.floor(newTarget * this.settings.red_zone_percentage));
-
-    this.calculateZones(state);
-  }
-
-  private createOrder(state: SkuLocDate, currentDate: string): Order | null {
-    const totalPipeline = state.on_hand_units_sim + state.on_order_units_sim + state.in_transit_units_sim;
-    let orderQty = state.target_units - totalPipeline;
-
-    orderQty = Math.max(orderQty, this.settings.min_order_qty);
-
-    if (this.settings.order_multiple > 1) {
-      orderQty = Math.ceil(orderQty / this.settings.order_multiple) * this.settings.order_multiple;
-    }
-
-    if (orderQty <= 0) {
-      return null;
-    }
-
-    const totalLeadTime = this.settings.production_lead_time + this.settings.shipping_lead_time;
-    const moveToTransitDate = this.addDays(currentDate, this.settings.production_lead_time);
-    const receiveDate = this.addDays(currentDate, totalLeadTime);
-
-    return {
-      sku: state.sku,
-      location_code: state.location_code,
-      company_id: state.company_id,
-      units_ordered: orderQty,
-      units_on_order: orderQty,
-      units_in_transit: 0,
-      creation_date: currentDate,
-      move_to_transit_date: moveToTransitDate,
-      receive_date: receiveDate,
-      is_received: false,
+  constructor(settings?: Partial<DBMSettings>) {
+    this.settings = {
+      lead_time: settings?.lead_time ?? 3,
+      responsiveness_up_percentage: settings?.responsiveness_up_percentage ?? 0.4,
+      responsiveness_down_percentage: settings?.responsiveness_down_percentage ?? 0.2,
+      responsiveness_idle_days: settings?.responsiveness_idle_days ?? 3,
     };
   }
 
-  private daysBetween(date1: string | null, date2: string): number {
-    if (!date1) return 999;
-    const d1 = new Date(date1);
-    const d2 = new Date(date2);
-    const diffTime = Math.abs(d2.getTime() - d1.getTime());
-    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  // --------------------------------------------------------------------------
+  // MAIN ENTRY POINT
+  // --------------------------------------------------------------------------
+
+  /**
+   * Initialize a new SKU-Location on Day 1
+   * Initial target = current on-hand (always)
+   */
+  public initializeDay1(sku_loc_key: string, day: string, on_hand_units: number): SkuLocDay {
+    const target = on_hand_units;  // Always start with current on-hand
+    const { yellow, red } = this.calculateThresholds(target);
+    const zone = this.calculateZone(on_hand_units, target, yellow, red);
+    
+    return {
+      sku_loc_key,
+      day,
+      on_hand_units,
+      average_weekly_sales_units: 0,
+      target_units: target,
+      yellow_threshold: yellow,
+      red_threshold: red,
+      dbm_zone: zone,
+      dbm_zone_previous: null,
+      counter_green: zone === 'green' || zone === 'overstock' ? 1 : 0,
+      counter_red: zone === 'red' ? 1 : 0,
+      last_out_of_red: zone !== 'red' ? day : null,
+      last_non_overstock: zone !== 'overstock' ? day : null,
+      last_decrease: null,
+      last_accelerated: null,
+      decision: 'init',
+    };
   }
 
-  private addDays(dateStr: string, days: number): string {
-    const date = new Date(dateStr);
-    date.setDate(date.getDate() + days);
-    return date.toISOString().split('T')[0];
+  /**
+   * Process a single day's DBM calculation
+   * Call this for Day 2 onwards
+   */
+  public processDay(
+    previous: SkuLocDay,
+    day: string,
+    on_hand_units: number,
+    average_weekly_sales_units: number
+  ): SkuLocDay {
+    // Start with previous state
+    const sld: SkuLocDay = {
+      ...previous,
+      day,
+      on_hand_units,
+      average_weekly_sales_units,
+      dbm_zone_previous: previous.dbm_zone,
+      decision: null,
+    };
+
+    // Step 1: Calculate zone with current target
+    const { yellow, red } = this.calculateThresholds(sld.target_units);
+    sld.yellow_threshold = yellow;
+    sld.red_threshold = red;
+    sld.dbm_zone = this.calculateZone(on_hand_units, sld.target_units, yellow, red);
+
+    // Step 2: Update tracking dates
+    this.updateTrackingDates(sld);
+
+    // Step 3: Update counters
+    this.updateCounters(sld);
+
+    // Step 4: Zone-based adjustments (inventory signal)
+    this.applyZoneBasedAdjustments(sld);
+
+    // Step 5: Responsiveness adjustments (sales signal)
+    this.applyResponsivenessAdjustments(sld);
+
+    // Step 6: Recalculate thresholds if target changed
+    if (sld.decision) {
+      const newThresholds = this.calculateThresholds(sld.target_units);
+      sld.yellow_threshold = newThresholds.yellow;
+      sld.red_threshold = newThresholds.red;
+      // Recalculate zone after target change
+      sld.dbm_zone = this.calculateZone(on_hand_units, sld.target_units, newThresholds.yellow, newThresholds.red);
+    }
+
+    // Step 7: Set default decision if no action taken
+    if (!sld.decision) {
+      sld.decision = this.getDefaultDecision(sld.dbm_zone);
+    }
+
+    return sld;
+  }
+
+  // --------------------------------------------------------------------------
+  // THRESHOLD CALCULATIONS
+  // --------------------------------------------------------------------------
+
+  private calculateThresholds(target: number): { yellow: number; red: number } {
+    if (target <= 2) {
+      return { yellow: 1, red: 1 };
+    }
+    const red = Math.ceil(target / 3);
+    const yellow = red * 2;
+    return { yellow, red };
+  }
+
+  private calculateZone(onHand: number, target: number, yellow: number, red: number): string {
+    if (onHand > target) return 'overstock';
+    if (onHand > yellow) return 'green';
+    if (onHand > red) return 'yellow';
+    return 'red';
+  }
+
+  // --------------------------------------------------------------------------
+  // TRACKING DATES
+  // --------------------------------------------------------------------------
+
+  private updateTrackingDates(sld: SkuLocDay): void {
+    // last_out_of_red: Set when exiting red zone
+    if (sld.dbm_zone_previous === 'red' && sld.dbm_zone !== 'red' && sld.target_units > 1) {
+      sld.last_out_of_red = sld.day;
+    }
+    // Initialize on Day 1 equivalent (first time not in red)
+    if (!sld.last_out_of_red && sld.dbm_zone !== 'red' && sld.target_units > 1) {
+      sld.last_out_of_red = sld.day;
+    }
+
+    // last_non_overstock: Track when NOT in overstock, clear when IN overstock
+    if (sld.dbm_zone !== 'overstock' && sld.target_units > 1) {
+      sld.last_non_overstock = sld.day;
+    } else {
+      sld.last_non_overstock = null;  // Clear when in overstock
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // COUNTERS
+  // --------------------------------------------------------------------------
+
+  private updateCounters(sld: SkuLocDay): void {
+    if (sld.dbm_zone === 'green' || sld.dbm_zone === 'overstock') {
+      sld.counter_green += 1;
+      sld.counter_red = 0;
+    } else if (sld.dbm_zone === 'red') {
+      sld.counter_red += 1;
+      sld.counter_green = 0;
+    } else {
+      // Yellow zone resets both
+      sld.counter_green = 0;
+      sld.counter_red = 0;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // ZONE-BASED ADJUSTMENTS (Inventory Signal)
+  // --------------------------------------------------------------------------
+
+  private applyZoneBasedAdjustments(sld: SkuLocDay): void {
+    const leadTime = this.settings.lead_time;
+
+    // DECREASE: In green/overstock, counter exceeded, recently not in overstock
+    if (sld.dbm_zone === 'green' || sld.dbm_zone === 'overstock') {
+      const daysSinceNonOverstock = this.daysBetween(sld.day, sld.last_non_overstock);
+      const daysSinceDecrease = this.daysBetween(sld.day, sld.last_decrease);
+
+      if (
+        sld.counter_green > leadTime &&
+        daysSinceNonOverstock < leadTime &&
+        daysSinceDecrease > leadTime &&
+        sld.target_units > 1
+      ) {
+        const decrease = Math.ceil(sld.target_units / 3);
+        sld.target_units = Math.max(1, sld.target_units - decrease);
+        sld.counter_green = 0;  // Reset counter after decrease
+        sld.last_decrease = sld.day;
+        sld.decision = 'dec_from_green';
+        
+        // Recalculate zone after decrease
+        const { yellow, red } = this.calculateThresholds(sld.target_units);
+        sld.dbm_zone = this.calculateZone(sld.on_hand_units, sld.target_units, yellow, red);
+        return;
+      }
+    }
+
+    // INCREASE: In red, counter exceeded, recently exited red
+    if (sld.dbm_zone === 'red') {
+      const daysSinceOutOfRed = this.daysBetween(sld.day, sld.last_out_of_red);
+
+      if (
+        sld.counter_red > leadTime &&
+        daysSinceOutOfRed < leadTime
+      ) {
+        const increase = Math.ceil(sld.target_units / 3);
+        sld.target_units = sld.target_units + increase;
+        sld.counter_red = 1;  // Reset to 1 after increase
+        sld.decision = 'inc_from_red';
+        
+        // Recalculate zone after increase
+        const { yellow, red } = this.calculateThresholds(sld.target_units);
+        sld.dbm_zone = this.calculateZone(sld.on_hand_units, sld.target_units, yellow, red);
+        return;
+      }
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // RESPONSIVENESS ADJUSTMENTS (Sales Signal)
+  // --------------------------------------------------------------------------
+
+  private applyResponsivenessAdjustments(sld: SkuLocDay): void {
+    // Skip if zone-based adjustment already happened
+    if (sld.decision) return;
+
+    const daysSinceAccelerated = this.daysBetween(sld.day, sld.last_accelerated);
+    
+    // Must wait for cooldown period
+    if (daysSinceAccelerated <= this.settings.responsiveness_idle_days) return;
+    
+    // Must have observed sales (can't respond to unobserved demand)
+    if (sld.average_weekly_sales_units <= 0) return;
+
+    const target = sld.target_units;
+    const avgSales = sld.average_weekly_sales_units;
+
+    // INCREASE: Sales velocity high relative to target
+    // Condition: AvgWeeklySales >= up_percentage * Target
+    // Executes in ALL zones
+    const upThreshold = this.settings.responsiveness_up_percentage * target;
+    if (avgSales >= upThreshold) {
+      sld.target_units = target + Math.ceil(avgSales);
+      sld.last_accelerated = sld.day;
+      sld.decision = 'increase';
+      return;
+    }
+
+    // DECREASE: Sales velocity low relative to target
+    // Condition: AvgWeeklySales < down_percentage * Target
+    // ONLY executes in GREEN zone, floor at 2
+    if (sld.dbm_zone === 'green' && target > 2) {
+      const downThreshold = this.settings.responsiveness_down_percentage * target;
+      if (avgSales < downThreshold) {
+        const decrease = Math.ceil(target / 3);
+        sld.target_units = Math.max(2, target - decrease);
+        sld.last_accelerated = sld.day;
+        sld.decision = 'decrease';
+        return;
+      }
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // HELPERS
+  // --------------------------------------------------------------------------
+
+  private daysBetween(date1: string, date2: string | null): number {
+    if (!date2) return 99999;  // Large number if no date set
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    return Math.floor((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  private getDefaultDecision(zone: string): string {
+    switch (zone) {
+      case 'overstock': return 'overstock';
+      case 'green': return 'green_count';
+      case 'yellow': return 'yellow_count';
+      case 'red': return 'red_count';
+      default: return 'none';
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // BATCH PROCESSING
+  // --------------------------------------------------------------------------
+
+  /**
+   * Process an entire time series for a SKU-Location
+   * Input: Array of { day, on_hand_units, average_weekly_sales_units }
+   * Output: Array of SkuLocDay with all DBM calculations
+   */
+  public processTimeSeries(
+    sku_loc_key: string,
+    data: Array<{ day: string; on_hand_units: number; average_weekly_sales_units: number }>
+  ): SkuLocDay[] {
+    if (data.length === 0) return [];
+
+    const results: SkuLocDay[] = [];
+
+    // Day 1: Initialize with on-hand
+    const day1 = this.initializeDay1(sku_loc_key, data[0].day, data[0].on_hand_units);
+    day1.average_weekly_sales_units = data[0].average_weekly_sales_units;
+    results.push(day1);
+
+    // Day 2+: Process each day
+    for (let i = 1; i < data.length; i++) {
+      const previous = results[i - 1];
+      const current = this.processDay(
+        previous,
+        data[i].day,
+        data[i].on_hand_units,
+        data[i].average_weekly_sales_units
+      );
+      results.push(current);
+    }
+
+    return results;
   }
 }
 
-export function calculateEconomicUnits(state: SkuLocDate): {
-  economic: number;
-  overstock: number;
-  understock: number;
-} {
-  const totalInventory = state.on_hand_units_sim + state.on_order_units_sim + state.in_transit_units_sim;
-  const target = state.target_units;
+// ============================================================================
+// FACTORY FUNCTION
+// ============================================================================
 
-  return {
-    economic: Math.min(totalInventory, target),
-    overstock: Math.max(0, totalInventory - target),
-    understock: Math.max(0, target - totalInventory),
-  };
+export function createDBMEngine(settings?: Partial<DBMSettings>): DBMEngine {
+  return new DBMEngine(settings);
 }
